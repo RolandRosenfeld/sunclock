@@ -66,13 +66,15 @@ Zeichne/Lösche Tropische/Äquator/Polarkreise
 Schließen das Fenster
 Iconifiziere das Fenster
 Kartenfenster auffrischen
-Adjust height/width ratio to 1/2
+Adjust window width to screen size
 Vorhergehende Fenster Grösse zurück
 Synchronisieren die Fenster oder nicht
 Wechsle zwischen Uhr und Kartenfenster 
 Aktiviere Kommando (-command Option)
 Beende Programm
 Abbruch Menü
+Adjust height/width ratio of window
+Adjust height/width ratio of zoomed area
 # Short help
 Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick
 oder Tastatur zugegriffen werden kann:

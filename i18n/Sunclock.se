@@ -66,13 +66,15 @@ Rita/Radera Tropik/Ekvator/Arktik cirklar
 Slutar fönster
 Ikonifiera fönster
 Förnya kartfönster
-Adjust height/width ratio to 1/2
+Adjust window width to screen size
 Back till föregående kartfönster mått
 Synchronize windows - or not
 Växla tidszon och kartfönster 
 Aktivera kommando (-command option)
 Avsluta program
 Escape meny
+Adjust height/width ratio of window
+Adjust height/width ratio of zoomed area
 # Short help
 Sunclock har ett antal funktioner som kan åtkommas
 genom mus-klick eller tastaturet:

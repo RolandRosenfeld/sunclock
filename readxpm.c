@@ -41,37 +41,30 @@ struct Sundata * Context;
      else
          return 4;
 
-     if (  Context->geom.width == attrib.width &&
-           Context->geom.height == attrib.height) {
-         Context->xim = image; 
-	 return 0;
+     Context->xim = XCreateImage(dpy, &visual, 
+         DefaultDepth(dpy, scr), ZPixmap,0, NULL, 
+         Context->geom.width, Context->geom.height, color_pad,0);
+     XFlush(dpy);
+     if (!Context->xim) return 4;
+     Context->xim->data = (char *) salloc(Context->xim->bytes_per_line 
+                                       * Context->geom.height);
+     if (!Context->xim->data) return 4;
+     Context->ncolors = attrib.npixels;
+     if (color_depth<=8) 
+	for (j=0; j<attrib.npixels; j++) 
+           Context->daypixel[j] = (unsigned char) attrib.pixels[j];
+     for (j=0; j<Context->geom.height; j++) {
+     jp = ((j+Context->zoom.dy) * image->height)/Context->zoom.height;
+     for (i=0; i<Context->geom.width; i++) {
+        ip = ((i+Context->zoom.dx) * image->width)/Context->zoom.width;
+	b = i*bytes_per_pixel + j*Context->xim->bytes_per_line;
+	c = ip*bytes_per_pixel + jp*image->bytes_per_line;
+        for (k=0; k<bytes_per_pixel; k++)
+            Context->xim->data[b+k] = image->data[c+k];
+	}
      }
-     else {
-         Context->xim = XCreateImage(dpy, &visual, 
-              DefaultDepth(dpy, scr), ZPixmap,0, NULL, 
-              Context->geom.width, Context->geom.height, color_pad,0);
-         XFlush(dpy);
-         if (!Context->xim) return 4;
-         Context->xim->data = (char *) salloc(Context->xim->bytes_per_line 
-                                            * Context->geom.height);
-	 if (!Context->xim->data) return 4;
-	 Context->ncolors = attrib.npixels;
-	 if (color_depth<=8) 
-	    for (j=0; j<attrib.npixels; j++) 
-                Context->daypixel[j] = (unsigned char) attrib.pixels[j];
-         for (j=0; j<Context->geom.height; j++) {
-           jp = (j * image->height)/Context->geom.height;
-           for (i=0; i<Context->geom.width; i++) {
-	      ip = (i * image->width)/Context->geom.width;
-	      b = i*bytes_per_pixel + j*Context->xim->bytes_per_line;
-	      c = ip*bytes_per_pixel + jp*image->bytes_per_line;
-              for (k=0; k<bytes_per_pixel; k++)
-                   Context->xim->data[b+k] = image->data[c+k];
-	   }
-	 }
-	 XDestroyImage(image);
-	 return 0;
-     }
+     XDestroyImage(image);
+     return 0;
 }
 
 

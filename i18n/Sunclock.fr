@@ -66,13 +66,15 @@ Ouvrir une nouvelle carte/fenêtre
 Fermer la fenêtre
 Iconifier la fenêtre
 Rafraîchir la fenêtre
-Ajuster le rapport hauteur/largeur à 1/2
+Ajuster la largeur de fenêtre à la taille de l'écran
 Retour à la taille de fenêtre précédente
 Synchroniser les fenêtres - ou non
 Commuter les fenêtres carte/horloge 
 Activer la commande spécifiée par l'option -command
 Quitter le programme
 Sortir du menu
+Ajuster le rapport hauteur/largeur de la fenêtre
+Ajuster le rapport hauteur/largeur de la partie zoomée
 # Short help
 Sunclock dispose d'un certain nombre de fonctions accessibles au
 moyen de la souris ou des touches du clavier:

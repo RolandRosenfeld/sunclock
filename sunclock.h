@@ -8,6 +8,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysymdef.h>
+#include <X11/keysym.h>
 #include <X11/xpm.h>
 
 #include <stdio.h>
@@ -29,7 +30,6 @@
 
 #define PI 3.14159265358979323846
 
-#define COLORSTEPS  128            /* maximum number of colors for shading */
 #define COLORLENGTH 48             /* maximum length of color names */
 
 #define TERMINC  100		   /* Circle segments for terminator */
@@ -55,7 +55,6 @@
 #define SOLARTIME 's'
 
 #define TIMECOUNT 25
-#define PRECOUNT  TIMECOUNT-1
 #define TIMESTEP  10000
 
 enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
@@ -74,8 +73,7 @@ typedef struct Geometry {
 } Geometry;
 
 typedef struct Flags {
-        short dirty;                    /* pixmap -> window copy required */
-        short force_proj;               /* force projection */
+        short update;                   /* update image (=-1 full update) */
         short last_hint;                /* is hint changed ? */
         short firsttime;                /* is it first window mapping ? */
         short bottom;                   /* bottom strip to be cleaned */
@@ -91,7 +89,19 @@ typedef struct Flags {
         short meridian;                 /* are meridian to be shown ? */
         short parallel;                 /* are parallel to be shown ? */
         short tropics;                  /* are tropics to be shown ? */
+        short zoomsync;                 /* synchronize x and y in zoom ? */
 } Flags;
+
+typedef struct ZoomSettings {
+        double          fx;             /* zoom factor along width */
+        double          fy;             /* zoom factor along height */
+        double          fdx;            /* translation factor along width */
+        double          fdy;            /* translation factor along height */
+        int             width;          /* width of full extent zoomed area */
+        int             height;         /* height of full extent zoomed area */
+        int             dx;             /* translation along width */
+        int             dy;             /* translation along height */
+} ZoomSettings;
 
 typedef struct GClist {
         GC store;
@@ -157,22 +167,26 @@ typedef struct Sundata {
 	Geometry        mapgeom;        /* map geometry */
 	Geometry        clockgeom;      /* clock geometry */
 	Geometry        prevgeom;       /* previous geometry */
+        ZoomSettings    zoom;           /* Zoom settings ! */
         char *          clock_img_file; /* name of clock xpm file */
         char *          map_img_file;   /* name of map xpm file */
+	char *		bits;           /* pointer to char * bitmap bits */
+        short *         tr1;            /* pointer to day/night transition 1 */
+        short *         tr2;            /* pointer to day/night transition 2 */
+        int             south;          /* color code (0 / -1) at South pole */
+        double *        wave;           /* pointer to sine, cosine values */
+        Pixmap          pix;            /* pixmap */
         XImage *        xim;            /* ximage of map */ 
         char *          ximdata;        /* ximage data copy*/ 
         unsigned char * daypixel;       /* pointer to day pixels */
         unsigned char * nightpixel;     /* pointer to night pixels */
         int             ncolors;        /* number of colors in day pixels */
-        Pixmap          pix;            /* pixmap */
-	char *		bits;           /* pointer to char * bitmap bits */
-	short *		cwtab;		/* current width table (?) */
-	short *		pwtab;		/* previous width table (?) */
 	long		time;		/* time - real or fake, see flags */
 	long		projtime;	/* last time projected illumination */
         long            progress;       /* time progression (in sec) */
         long            jump;           /* time jump (in sec) */
-	int		noon;		/* position of noon */
+        double          fnoon;          /* position of noon, double prec */
+	int		noon;		/* position of noon, integer */
         int             local_day;      /* previous local day */
         int             solar_day;      /* previous solar day */
 	int		textx;		/* x where to draw the text */
@@ -180,6 +194,7 @@ typedef struct Sundata {
 	int		count;	        /* number of time iterations */
         double          sundec;         /* Sun declination */
         double          sunlon;         /* Sun longitude */
+        double          shadefactor;    /* shading factor */
         struct City     pos1;           /* first position */
         struct City     pos2;           /* second position */
         struct Mark     mark1;          /* first mark */

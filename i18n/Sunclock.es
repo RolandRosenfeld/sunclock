@@ -66,13 +66,15 @@ Abrir una nueva ventana de mapa
 Cerrar la ventana
 Minimizar ventanas
 Refrescar ventana de mapa
-Adjust height/width ratio to 1/2
+Adjust window width to screen size
 Retornar a dimensiónes anteriores de la carta
 Sincronizar las ventanas - o no
 Cambiar entre ventana mapa y ventana reloj 
 Activar comando (opción -command)
 Salir del programa
 Escapar del menú
+Adjust height/width ratio of window
+Adjust height/width ratio of zoomed area
 # Short help
 Sunclock tiene varios procedimientos internos a los que se puede
 acceder usando el ratón o el teclado.

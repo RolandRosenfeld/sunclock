@@ -66,13 +66,15 @@ Open een nieuw kaart scherm
 Sluit scherm
 Iconiseer scherm
 Ververs kaart scherm
-Adjust height/width ratio to 1/2
+Adjust window width to screen size
 Terug naar vorige schermgrootte
 Synchroniseer schermen of niet
 Schakel tussen klok en kaart scherm
 Activeer commando (-command optie)
 Verlaat programma
 Beeindig menu
+Adjust height/width ratio of window
+Adjust height/width ratio of zoomed area
 # Short help
 Sunclock heeft een aantal interne procedures welke met de muis of toetsen
 geactiveerd kunnen worden:

@@ -7,7 +7,7 @@ We now come to the more precise VMF specifications
 ==============================================================================
 
 
-#!VMF is the initial signature for the format
+%!VMF is the initial signature for the format
 
 Any character # indicates a comment until a newline character is found
 

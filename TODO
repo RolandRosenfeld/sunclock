@@ -1,9 +1,7 @@
 TODO
 ====
 
-- Implementing zoom functionality...
 - Larger data base of cities/coordinates, with level of size
 - Searching cities
 - Moon phases
 - Spherical representation of Earth (?)
-- Possibility of loading external vector maps (?)

@@ -67,12 +67,14 @@ Open new map window
 Close window
 Iconify window
 Refresh map window
-Adjust height/width ratio to 1/2
+Adjust window width to screen size
 Back to previous window size
 Synchronize windows or not
 Activate command (-command option)
 Quit program
 Escape menu
+Adjust height/width ratio of window
+Adjust height/width ratio of zoomed area
 # Short help
 Sunclock has a number of internal procedures which can be accessed
 through mouse clicks or key controls:

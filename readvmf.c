@@ -25,6 +25,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 #include "sunclock.h"
@@ -49,7 +50,7 @@ static int *palette;
 
 static char buf[128];	/* Buffer to hold input lines */
 static int *GRID;     /* Pointer to grid data */
-static int uu, cc, vv, full;
+static int uu, cc, vv, vv1, vv2, full;
 static int max_palette;
 
 char *
@@ -71,35 +72,51 @@ void
 plotdata(u, v, s)
 int u, v, s;
 {
-  int c, w;
+  int v1=0, v2=0, c, w;
 
   c = u;
-  if (c<0) c+=map->geom.width;
-  if (c>=map->geom.width) c-=map->geom.width;
+  if (c<0) c+=map->zoom.width;
+  if (c>=map->zoom.width) c-=map->zoom.width;
+  c -= map->zoom.dx;
+  v -= map->zoom.dy;
 
   if (fill_mode==0) {
-    if (s>0) grid(c,v) = s * 65536;
-    if (s<0) grid(c,v) = -s * 65536;
-    return;
+     if (c>=0 && c<(int)map->geom.width && v>=0 && v<(int)map->geom.height) {
+        if (s>0) grid(c,v) = s * 65536;
+        if (s<0) grid(c,v) = -s * 65536;
+     }
+     return;
   }
 
-  if (s>0) grid(c,v) |= s;
-  if (s<0) grid(c,v) |= -s;
+  if (c>=0 && c<(int)map->geom.width) {
+     if (v>=0 && v<(int)map->geom.height) {
+        if (s>0) grid(c,v) |= s;
+        if (s<0) grid(c,v) |= -s;
+     }
 
-  s *= 65536;
+     s *= 65536;
+      
+     if (v<0) v1=-1; else v1=v;
+     if (v>=(int)map->geom.height) v2=(int)map->geom.height-1; else v2=v;
 
-  if (u>uu)
-     for (w=0; w<=v; w++) grid(c,w) += s;
-  if (u<uu)
-     for (w=0; w<=vv; w++) grid(cc,w) -= s;
-  if (u==uu && v>vv)
-     for (w=vv+1; w<=v; w++) grid(c,w) += s;
-  if (u==uu && v<vv)
-     for (w=v+1; w<=vv; w++) grid(c,w) -= s;
+     if (u==uu) {
+        if (v>vv)
+           for (w=vv1+1; w<=v2; w++) grid(c,w) += s;
+        if (v<vv)
+           for (w=v1+1; w<=vv2; w++) grid(c,w) -= s;
+     }
+     if (u>uu)
+        for (w=0; w<=v2; w++) grid(c,w) += s;
+  }
+
+  if (u<uu && cc>=0 && cc<(int)map->geom.width)
+     for (w=0; w<=vv2; w++) grid(cc,w) -= s;
 
   uu = u;
   cc = c;
   vv = v;
+  vv1 = v1;
+  vv2 = v2;
 }
 
 int check(i,j, which)
@@ -184,7 +201,7 @@ blacknwhite_image()
     l = 1;
     u = 0;
     for (i=0; i<map->geom.width; i++) {
-      if (grid(i,j)>=65536) u = u+l;
+      if (grid(i,j)<65536) u = u+l;
       l = l+l;
       if (l==256 || i==map->geom.width-1) {
         bits[k] = u;
@@ -336,6 +353,11 @@ struct Sundata * Context;
      return 1;
   }
 
+  str = fgets(buf, 120, fd);
+  if (!str || strncmp(buf, "%!VMF", 5)) {
+     fclose(fd);
+     return 5;
+  }
   str = getdata(fd);
   if (!str) {
      fclose(fd);
@@ -441,23 +463,30 @@ struct Sundata * Context;
       }
       theta = 0.5 + ix / 65520.0;
       phi = 0.5 - iy / 65520.0;
-      uu = cc = up = u;
-      if (cc<0) cc+=map->geom.width;
-      if (cc>=map->geom.width) cc-=map->geom.width;
-      vv = vp = v;
-      u = (int) (theta * (map->geom.width-1));
-      v = (int) (phi * (map->geom.height-1));
+      cc = uu = up = u;
+
+      if (cc<0) cc+=map->zoom.width;
+      if (cc>=map->zoom.width) cc-=map->zoom.width;      
+      cc -= map->zoom.dx;
+
+      vp = v;
+      vv = vv1 = vv2 = v - map->zoom.dy;
+      if (vv1<0) vv1=-1;
+      if (vv2>=(int)map->geom.height) vv2=(int)map->geom.height-1;
+
+      u = (int) (theta * (double) (map->zoom.width-1));
+      v = (int) (phi * (double) (map->zoom.height-1));
       if (j) {
 #ifdef DEBUG
         fprintf(stderr, "Point %d/%d, Segment %d %d %d %d\n", 
                  j, num, up, vp, u, v);
 #endif
         diffu = abs(u-up);
-        if (diffu>map->geom.width/2) {
+        if (diffu>map->zoom.width/2) {
 	   if (u>up) 
-              u -= map->geom.width;
+              u -= map->zoom.width;
 	   else
-	      u += map->geom.width;
+	      u += map->zoom.width;
            diffu = abs(u-up);
 	}
         diffv = abs(v-vp);

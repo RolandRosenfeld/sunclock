@@ -99,6 +99,7 @@
        3.25  12/21/00  Dockable, multi-window version
        3.28  01/15/01  Final bug fix release of 3.2x x>=5
        3.30  02/20/01  Sunclock now loads JPG images, and images are resizable
+       3.32  03/19/01  Implementation of the zoom widget
 */
 
 #include <unistd.h>
@@ -133,6 +134,10 @@ extern char **get_dir_list();
 extern int dup_strcmp();
 extern void free_dirlist();
 
+void PopMenu();
+void PopSelector();
+void PopZoom();
+void doTimeout();
 
 char share_i18n[] = SHAREDIR"/i18n/Sunclock.**";
 char app_default[] = SHAREDIR"/Sunclockrc";
@@ -178,11 +183,15 @@ Visual		visual;
 Colormap        cmap0 = 0;
 GClist          gcl0;
 Pixlist         pxl0;
+Flags           gflags;
+ZoomSettings    gzoom;
 
 int		scr;
 int             color_depth;
 int             color_pad;
 int		bytes_per_pixel;
+int		button_pressed = 0;
+int             zoom_mode = 0;
 
 unsigned long	black;
 unsigned long	white;
@@ -197,16 +206,15 @@ Window		Menu = 0;
 Window		Selector = 0;
 Window		Zoom = 0;
 
-struct Geometry MapGeom =   { 0, 30,  30, 768, 384, 320, 160, 20 };
+struct Geometry MapGeom =   { 0, 30,  30, 792, 396, 320, 160, 20 };
 struct Geometry	ClockGeom = { 0, 30,  30, 128,  64,  48,  24, 20 };
 
-struct Geometry	MenuGeom =  { 0, 30, 430, 700,  40, 700,  40,  0 };
+struct Geometry	MenuGeom =  { 0, 30, 430, 792,  40, 700,  40,  0 };
 struct Geometry	SelGeom =   { 0, 30,  40, 600, 180, 450,  80,  0 };
-struct Geometry	ZoomGeom =  { 0, 30,  40, 500, 320, 375, 150,  0 };
+struct Geometry	ZoomGeom =  { 0, 30,  40, 490, 320, 490, 320,  0 };
 
+char            zoommenu[] = ZOOMMENU;
 int             radius[5] = {0, 2, 2, 3, 5};
-
-Flags           gflags;
 
 int             win_type = 0;
 int             spot_size = 3;
@@ -246,6 +254,8 @@ int             do_title = 1;
 int             time_jump = 0;
 int             progress_init = 0;
 
+int             zoomw, zoomh, zoomx, zoomy, zoomdx, zoomdy;
+
 unsigned int    adjust_dark;
 unsigned int	color_scale = 16;
 
@@ -254,6 +264,7 @@ long            last_time = 0;
 double		darkness = 0.5;
 double		atm_refraction = ATM_REFRACTION;
 double		atm_diffusion = ATM_DIFFUSION;
+double          *daywave, *cosval, *sinval;    /* pointers to trigo values */
 
 /* Records to hold extra marks 1 and 2 */
 
@@ -271,13 +282,15 @@ usage()
      SP"[-mapimage file] [-clockimage file]\n"
      SP"[-clock] [-dateformat string1|string2|...] [-command string]\n"
      SP"[-map] [-mapgeom +x+y] [-mapmode * <L,C,S,D,E>] [-decimal] [-dms]\n"
+     SP"[-menu] [-nomenu] [-horizshift h (map<->menu)] [-vertshift v]\n"
+     SP"[-selector] [-noselector] [-zoom] [-nozoom]\n" 
      SP"[-city name] [-position latitude longitude]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
      SP"[-nonight] [-night] [-terminator] [-twilight] [-luminosity]\n"
      SP"[-shading mode=0,1,2,3,4] [-diffusion value] [-refraction value]\n"
-     SP"[-darkness value<=1.0] [-colorscale number<=64]\n"
-     SP"[-menu] [-nomenu] [-horizshift h (map<->menu)] [-vertshift v]\n"
+     SP"[-darkness value<=1.0] [-colorscale number<=256]\n"
      SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
+     SP"[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value]\n"
      SP"[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians]\n"
      SP"[-parallels] [-noparallels] [-tropics] [-notropics]\n"
      SP"[-spotsize size(0,1,2,3,4)] [-dottedlines] [-plainlines]\n"
@@ -303,8 +316,7 @@ listmenu()
 void
 initValues()
 {
-        gflags.dirty = 1;
-	gflags.force_proj = 0;
+	gflags.update = -1;
 	gflags.last_hint = -1;
 	gflags.firsttime = 1;
         gflags.bottom = 0;
@@ -313,13 +325,19 @@ initValues()
 	gflags.hours_shown = 0;
 	gflags.progress = 0;
         gflags.dms = 0;
-        gflags.shading = 1;
+        gflags.shading = 2;
         gflags.cities = 1;
         gflags.sunpos = 1;
         gflags.meridian = 0;
         gflags.parallel = 0;
         gflags.tropics = 0;
         gflags.resized = 0;
+        gflags.zoomsync = 1;
+
+	gzoom.fx = 1.0;
+	gzoom.fy = 1.0;
+	gzoom.fdx = 0.5;
+	gzoom.fdy = 0.5;
 
         strcpy(image_dir, share_maps_dir);
         Clock_img_file = Default_vmf;
@@ -547,7 +565,7 @@ register char **		argv;
 			needMore(argc, argv);
 			color_scale = atoi(*++argv);
                         if (color_scale<=0) color_scale = 1;
-                        if (color_scale>COLORSTEPS) color_scale = COLORSTEPS;
+                        if (color_scale>256) color_scale = 256;
                         --argc;
 		}
  		else if (strcasecmp(*argv, "-textbgcolor") == 0) {
@@ -701,6 +719,40 @@ register char **		argv;
 			   time_jump = value;
 			--argc;
 		}
+		else if (strcasecmp(*argv, "-mag") == 0) {
+			needMore(argc, argv);
+			gzoom.fx = atof(*++argv);
+			if (gzoom.fx < 1) gzoom.fx = 1.0;
+			if (gzoom.fx > 100.0) gzoom.fx = 100.0;
+			gzoom.fy = gzoom.fx;
+			--argc;
+		}
+		else if (strcasecmp(*argv, "-magx") == 0) {
+			needMore(argc, argv);
+			gzoom.fx = atof(*++argv);
+			if (gzoom.fx < 1) gzoom.fx = 1.0;
+			--argc;
+		}
+		else if (strcasecmp(*argv, "-magy") == 0) {
+			needMore(argc, argv);
+			gzoom.fy = atof(*++argv);
+			if (gzoom.fy < 1) gzoom.fy = 1.0;
+			--argc;
+		}
+		else if (strcasecmp(*argv, "-dx") == 0) {
+			needMore(argc, argv);
+			gzoom.fdx = atof(*++argv);
+			if (gzoom.fdx < 0) gzoom.fdx = 0.0;
+			if (gzoom.fdx > 1.0) gzoom.fdx = 1.0;
+			--argc;
+		}
+		else if (strcasecmp(*argv, "-dy") == 0) {
+			needMore(argc, argv);
+			gzoom.fdy = atof(*++argv);
+			if (gzoom.fdy < 0) gzoom.fdy = 0.0;
+			if (gzoom.fdy > 1.0) gzoom.fdy = 1.0;
+			--argc;
+		}
 		else if (strcasecmp(*argv, "-mono") == 0) {
                         spot_size = 4;
                         mono = 1;
@@ -733,6 +785,14 @@ register char **		argv;
 			do_menu = 1;
 		else if (strcasecmp(*argv, "-nomenu") == 0)
 			do_menu = 0;
+		else if (strcasecmp(*argv, "-selector") == 0)
+			do_selector = 1;
+		else if (strcasecmp(*argv, "-noselector") == 0)
+			do_selector = 0;
+		else if (strcasecmp(*argv, "-zoom") == 0)
+			do_zoom = 1;
+		else if (strcasecmp(*argv, "-nozoom") == 0)
+			do_zoom = 0;
 		else if (strcasecmp(*argv, "-coastlines") == 0)
 		        fill_mode = 0;
 		else if (strcasecmp(*argv, "-contour") == 0)
@@ -971,6 +1031,7 @@ readrc()
 	crec->next = cities;
 	cities = crec;
     }
+    if (rc) fclose(rc);
 
     /*
      * Read language files
@@ -996,7 +1057,7 @@ readrc()
 	        if (j<7) { strcpy(Day_name[j], buf); j++; } else
         	if (k<12) { strcpy(Month_name[k], buf); k++; } else
 		if (l<L_END) { strcpy(Label[l], buf); l++; } else 
-		if (m<=N_OPTIONS) { strcpy(Help[m], buf); m++; } else 
+		if (m<=N_OPTIONS+2) { strcpy(Help[m], buf); m++; } else 
                 {
                    if (n==0) *ShortHelp = '\0';
 		   strcat(ShortHelp, buf); 
@@ -1158,10 +1219,6 @@ GClist gclist;
  	 }
 }
 
-void PopMenu();
-void PopSelector();
-void PopZoom();
-
 void
 shutDown(Context, all)
 struct Sundata * Context;
@@ -1180,14 +1237,6 @@ int all;
            XDestroyImage(Context->xim); 
            Context->xim = NULL;
 	}
-        if (Context->pwtab) {
-           free(Context->pwtab);
-	   Context->pwtab = NULL;
-	}
-	if (Context->cwtab) {
-           free(Context->cwtab);
-           Context->cwtab = NULL;
-	}
 	if (Context->ximdata) {
 	   free(Context->ximdata);
 	   Context->ximdata = NULL;
@@ -1195,6 +1244,18 @@ int all;
 	if (Context->pix) {
            XFreePixmap(dpy, Context->pix);
 	   Context->pix = 0;
+	}
+        if (Context->tr1) {
+           free(Context->tr1);
+           Context->tr1 = NULL;
+        }
+        if (Context->tr2) {
+           free(Context->tr2);
+           Context->tr2 = NULL;
+        }
+        if (Context->wave) {
+           free(Context->wave);
+           Context->wave = NULL;
 	}
         if (Context->gclist.invert) {
 	   XFreeGC(dpy, Context->gclist.invert);
@@ -1227,10 +1288,14 @@ int all;
 	      free(Context->nightpixel);
 	      Context->nightpixel = NULL;
            }
-           if (Context->clock_img_file)
+           if (Context->clock_img_file) {
               free(Context->clock_img_file);
-           if (Context->map_img_file)
+	      Context->clock_img_file = NULL;
+	   }
+           if (Context->map_img_file) {
               free(Context->map_img_file);
+	      Context->map_img_file = NULL;
+	   }
 	   if (all<0) {
 	      free(Context);
 	      if (NextContext) {
@@ -1250,9 +1315,9 @@ int all;
          	 exit(0);
  	      }
  	   }
-	   if (ParentContext) {
+	   if (ParentContext)
 	     ParentContext->next = Context->next;
-	   } else
+	   else
              Seed = Context->next;
 	   free(Context);
            if (Seed == NULL) goto endup;
@@ -1306,8 +1371,9 @@ int				num;
 	    if (num==4) {
 	      win = Zoom;
 	      Geom = &ZoomGeom;
-	      xsh.min_width = Geom->w_mini;
-              xsh.min_height = Geom->h_mini;
+	      xsh.flags |= PMaxSize;
+	      xsh.min_width = xsh.max_width = Geom->width;
+              xsh.min_height = xsh.max_height = Geom->height;
 	    }
 	    xsh.x = Geom->x;
 	    xsh.y = Geom->y;
@@ -1345,8 +1411,8 @@ int				num;
 	Window			win = 0;
 	int                     mask;
 
-	mask = VisibilityChangeMask | 
-               ExposureMask | ButtonPressMask | KeyPressMask;
+	mask = FocusChangeMask | VisibilityChangeMask | ExposureMask | 
+               ButtonPressMask | ButtonReleaseMask | KeyPressMask;
 
         switch(num) {
 
@@ -1368,7 +1434,7 @@ int				num;
 
 	   case 4:
 	        win = Zoom;
-		mask |= ResizeRedirectMask;
+		mask |= PointerMotionMask;
 		break;
 	}
 
@@ -1376,7 +1442,7 @@ int				num;
 
        	XSelectInput(dpy, win, mask);
 	XSetWMProtocols(dpy, win, &wm_delete_window, 1);
-	if (num>=2 || !do_title) setClassHints(win, num);
+	if (num>=2) setClassHints(win, num);
 }
 
 void
@@ -1472,18 +1538,20 @@ getFonts()
 	}
 
         MapGeom.strip = BigFont->max_bounds.ascent + 
-                        BigFont->max_bounds.descent + 6;
+                        BigFont->max_bounds.descent + 8;
 
         chwidth = MapGeom.strip + 5;
 
         ClockGeom.strip = SmallFont->max_bounds.ascent +
 	                  SmallFont->max_bounds.descent + 4;
 
-        MenuGeom.width = MENU_WIDTH * MapGeom.strip;
+        MenuGeom.width = MENU_WIDTH * MapGeom.strip - 6;
         MenuGeom.height = 2 * MapGeom.strip;
 
         SelGeom.width = SEL_WIDTH * MapGeom.strip;
         SelGeom.height = (11 + 4*SEL_HEIGHT)*MapGeom.strip/5;
+
+	ZoomGeom.height = 270 + 2 * MapGeom.strip;
 }
 
 unsigned long 
@@ -1605,27 +1673,11 @@ struct Sundata * Context;
 {
         XSetWindowBackground(dpy, Context->win, 
            (mono)? Context->pixlist.white : Context->pixlist.textbgcolor);
-        XClearArea(dpy, Context->win, 0, Context->geom.height, 
-                 Context->geom.width, Context->geom.strip, True);
+        XClearArea(dpy, Context->win, 0, Context->geom.height+1, 
+                 Context->geom.width, Context->geom.strip-1, False);
         XSetWindowBackground(dpy, Context->win, 
            (invert)? Context->pixlist.white : Context->pixlist.textbgcolor);
-	Context->count = PRECOUNT;
 	if (Context->flags.bottom) --Context->flags.bottom;
-}
-
-void
-exposeMap(Context)
-struct Sundata * Context;
-{
-        XClearArea(dpy, Context->win, Context->geom.width-1, Context->geom.height-1, 1, 1, True);
-}
-
-void
-updateMap(Context)
-struct Sundata * Context;
-{
-	Context->count = PRECOUNT;
-        exposeMap(Context);
 }
 
 /*
@@ -1753,12 +1805,11 @@ struct Sundata * Context;
 	double                  duration, junk;
 	time_t			gtime, stime, sr, ss, dl;
 
-        /* Context->count = PRECOUNT;
-	   Context->flags.force_proj = 1; */
 	Context->flags.last_hint = -1;
 
 	if (!Context->mark1.city) return;
 
+	time(&Context->time);
   	gtime = Context->time + Context->jump;
 
         /* Get local time at given location */
@@ -1836,26 +1887,26 @@ struct Sundata * Context;
 	char s[128];
 
 	if (Context->flags.hours_shown) return;
-        XClearArea(dpy, Context->win, 0, Context->geom.height, 
-                 Context->geom.width, MapGeom.strip, True);
+        XClearArea(dpy, Context->win, 0, Context->geom.height+1, 
+                 Context->geom.width, MapGeom.strip-1, False);
 	for (i=0; i<24; i++) {
 	    sprintf(s, "%d", i); 
    	    XDrawImageString(dpy, Context->win, Context->gclist.bigfont, 
               ((i*Context->geom.width)/24 + 2*Context->geom.width - chwidth*strlen(s)/8 +
                (int)(Context->sunlon*Context->geom.width/360.0))%Context->geom.width +1,
-              BigFont->max_bounds.ascent + Context->geom.height + 3, s, strlen(s));
+              BigFont->max_bounds.ascent + Context->geom.height + 4, s, strlen(s));
 	}
         Context->flags.hours_shown = 1;
 }
 
 void
-writeStrip(Context, gtime)
+writeStrip(Context)
 struct Sundata * Context;
-time_t gtime;
 {
 	register struct tm 	ltp;
 	register struct tm 	gtp;
 	register struct tm 	stp;
+        time_t                  gtime;
 	time_t                  stime;
  	int			i, l;
 	char		s[128];
@@ -1870,6 +1921,9 @@ time_t gtime;
 		exit(1);
 	}
 #endif
+
+	time(&Context->time);
+	gtime = Context->time + Context->jump;
 
 	if (!Context->wintype) {
 		char num[80];
@@ -2088,7 +2142,7 @@ time_t gtime;
       draw:
 	XDrawImageString(dpy, Context->win, 
              (Context->wintype)? Context->gclist.bigfont : Context->gclist.smallfont, 
-             Context->textx, Context->texty, s, l-label_shift);
+             Context->textx, Context->texty, s+label_shift, l-label_shift);
 }
 
 void
@@ -2099,11 +2153,174 @@ struct Sundata * Context;
 
         if (Context->wintype)
            Context->texty = Context->geom.height +
-                            BigFont->max_bounds.ascent + 3;
+                            BigFont->max_bounds.ascent + 4;
         else
            Context->texty = Context->geom.height +
- 	                    SmallFont->max_bounds.ascent + 2;
+ 	                    SmallFont->max_bounds.ascent + 3;
 }
+
+void
+setZoomDimension(Context)
+struct Sundata * Context;
+{
+    double rx, ry;
+
+    Context->zoom.width = (int) 
+       ((double) Context->geom.width * Context->zoom.fx + 0.25);
+    Context->zoom.height = (int)
+       ((double) Context->geom.height * Context->zoom.fy + 0.25);
+    rx = 0.5/Context->zoom.fx;
+    ry = 0.5/Context->zoom.fy;
+    if (Context->zoom.fdx<rx) Context->zoom.fdx = rx;
+    if (Context->zoom.fdy<ry) Context->zoom.fdy = ry;
+    if (Context->zoom.fdx>1.0-rx) Context->zoom.fdx = 1.0-rx;
+    if (Context->zoom.fdy>1.0-ry) Context->zoom.fdy = 1.0-ry;
+    Context->zoom.dx = (int) 
+       ((double) Context->zoom.width * (Context->zoom.fdx-rx) + 0.25);
+    Context->zoom.dy = (int)
+       ((double) Context->zoom.height * (Context->zoom.fdy-ry) + 0.25);
+    if (Context->zoom.dx+Context->geom.width>Context->zoom.width)
+        Context->zoom.dx = Context->zoom.width - Context->geom.width;
+    if (Context->zoom.dy+Context->geom.height>Context->zoom.height)
+        Context->zoom.dy = Context->zoom.height - Context->geom.height;
+
+   if (verbose && !button_pressed)
+     fprintf(stderr, "Zoom (%.2f, %.2f)  centering at (%.2f, %.2f)\n",
+	  Context->zoom.fx, Context->zoom.fy, 
+          Context->zoom.fdx, Context->zoom.fdy);
+}
+
+int setAspectZoom(Context)
+struct Sundata * Context;
+{
+   double v2;
+   int change;
+
+   change = 0;
+   zoom_mode = 0;
+   v2 = Context->zoom.fx* (double)Context->geom.width /
+             ( (double)Context->geom.height *
+               2.0 * sin(M_PI*Context->zoom.fdy) );
+   if (v2 != Context->zoom.fy) {
+      if (verbose)
+         fprintf(stderr, "Adjusting zoom area aspect (%.2f , %.2f) --> ", 
+               Context->zoom.fx , Context->zoom.fy);
+      zoom_mode = 8;
+      change = 1;
+      if (v2>100.00) {
+	 Context->zoom.fx = Context->zoom.fx * (100.0/v2);
+	 Context->zoom.fy = 100.0;
+	 zoom_mode |= 6;
+      } else
+      if (v2>=1.0) {
+	 Context->zoom.fy = v2;
+	 zoom_mode |= 4;
+      } else {
+         Context->zoom.fx = Context->zoom.fx/v2;
+	 Context->zoom.fy = 1.0;
+	 zoom_mode |= 6;
+      }
+      if (Context->zoom.fx>100.0) Context->zoom.fx = 100.0;
+      if (Context->zoom.fy != Context->zoom.fx) {
+         Context->flags.zoomsync = 0;
+	 zoom_mode |= 1;
+      }
+      if (verbose)
+         fprintf(stderr, "(%.2f , %.2f)\n", 
+                         Context->zoom.fx , Context->zoom.fy);
+   }
+   return change;
+}
+
+int setAspectWindow(Context)
+struct Sundata * Context;
+{
+   unsigned int b, i, j;
+   int change;
+   
+   change = 0;
+   i = Context->geom.width;
+   j = (unsigned int) (Context->zoom.fx * (double)Context->geom.width /
+             ( 2.0 * Context->zoom.fy * sin(M_PI*Context->zoom.fdy) ) );
+   b = DisplayHeight(dpy,scr) -Context->geom.strip - vert_drift - 5;
+   if (j<=0) j=1;
+   if (j>b) {
+       i = (Context->geom.width * b) / j;
+       j = b;
+   }
+   if (Context->wintype) {
+      if (j<MapGeom.h_mini) {
+	 i = (i * MapGeom.h_mini)/j;
+	 j = MapGeom.h_mini;
+      }
+   } else {
+      if (j<ClockGeom.h_mini) {
+	 i = (i * ClockGeom.h_mini)/j;
+	 j = ClockGeom.h_mini;
+      }
+   }
+  
+   if (Context->geom.width != i) {
+     change = 1;
+     Context->geom.width = i;
+   }
+   if (Context->geom.height != j) {
+     change = 1;
+     Context->geom.height = j;
+   }
+   if (Context->wintype) {
+      MapGeom.width = i;
+      MapGeom.height = j;
+   } else {
+      ClockGeom.width = i;
+      ClockGeom.height = j;
+   }
+   if (verbose && change)
+      fprintf(stderr, "Resizing window to width = %d , height = %d\n", i, j); 
+   return change;
+}
+
+void 
+initShading(Context) 
+struct Sundata * Context;
+{
+      int i;
+
+      if (Context->flags.shading != 2 && Context->flags.shading != 3) {
+         if (Context->tr2) {
+	    free(Context->tr2);
+            Context->tr2 = NULL;
+	 }
+      }
+      if (Context->flags.shading == 0 || Context->flags.shading == 4) {
+	 if (Context->tr1) {
+	    free(Context->tr1);
+            Context->tr1 = NULL;
+	 }
+	 return;
+      }
+
+      if (!Context->tr1)  
+         Context->tr1 = (short *) 
+                     salloc(Context->geom.width*sizeof(short));
+      for (i=0; i< (int)Context->geom.width; i++) Context->tr1[i] = 0;
+
+      if (Context->flags.shading <2) 
+         Context->shadefactor = 1.0;
+      else {
+         if (!Context->tr2)  
+            Context->tr2 = (short *) 
+                     salloc(Context->geom.width*sizeof(short));
+         for (i=0; i< (int)Context->geom.width; i++) 
+	    Context->tr2[i] = -1; /* (short)(Context->geom.height-1); */
+         if (Context->flags.shading == 2)
+            Context->shadefactor = 180.0/(M_PI*(SUN_APPRADIUS+atm_refraction));
+         else
+            Context->shadefactor = 180.0/(M_PI*(SUN_APPRADIUS+atm_diffusion));
+      }
+
+      Context->south = -1;
+}	
 
 void
 makeContext(Context, build)
@@ -2119,6 +2336,7 @@ int build;
               Context->geom = Context->mapgeom;
            else
  	      Context->geom = Context->clockgeom;
+	   Context->zoom = gzoom;
            Context->flags = gflags;
            Context->jump = time_jump;
            Context->progress = (progress_init)? progress_init : 60;
@@ -2130,6 +2348,7 @@ int build;
 	   Context->mark2.city = NULL;
 	   Context->mark2.status = 0;
            Context->pos2.tz = NULL;
+	   Context->tr1 = Context->tr2 = NULL;
            if (position.lat<=90.0) {
               Context->pos1 = position;
               Context->mark1.city = &Context->pos1;
@@ -2140,6 +2359,7 @@ int build;
 	   }
         }
         fixTextPosition(Context);
+	setZoomDimension(Context);
         Context->local_day = -1;
         Context->solar_day = -1;
         Context->xim = NULL;
@@ -2153,13 +2373,14 @@ int build;
 	}
         Context->pix = 0;
         Context->bits = 0;
-	Context->noon = -1;
-	Context->pwtab = (short *)salloc((int)(Context->geom.height * sizeof (short *)));
-	Context->cwtab = (short *)salloc((int)(Context->geom.height * sizeof (short *)));
+	Context->flags.update = -1;
 	Context->time = 0L;
 	Context->projtime = -1L;
+        Context->wave = (double *) salloc( 
+              (2*Context->geom.height+Context->geom.width)*sizeof(double));
 
-}	
+	initShading(Context);
+}
 
 /*
  *  Select Window and GC for monochrome mode
@@ -2209,8 +2430,14 @@ double lat, lon;		/* Latitude and longtitude of the city */
 
     checkMono(Context, &w, &gc);
 
-    ilat = Context->geom.height - (lat + 90) * (Context->geom.height / 180.0);
-    ilon = (180.0 + lon) * (Context->geom.width / 360.0);
+    ilon = (int) ((180.0 + lon) * ((double)Context->zoom.width / 360.0))
+                  - Context->zoom.dx ;
+    ilat = (int) ((double)Context->zoom.height 
+                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
+                  - Context->zoom.dy ;
+
+    if (ilon<0 || ilon>Context->geom.width) return;
+    if (ilat<0 || ilat>Context->geom.height) return;
 
     if (mode == 5)
        {
@@ -2278,9 +2505,12 @@ int thickness;
 
         if (!Context->wintype) return; 
 
-        checkMono(Context, &w, &gc);
+	ilat = (int) ((double) Context->zoom.height
+                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
+                  - Context->zoom.dy ;
 
-	ilat = Context->geom.height - (lat + 90) * (Context->geom.height / 180.0);
+        if (ilat<0 || ilat>=Context->geom.height) return;
+        checkMono(Context, &w, &gc);
 	i0 = Context->geom.width/2;
 	i1 = 1+i0/step;
 	for (i=-i1; i<i1; i+=1)
@@ -2330,9 +2560,12 @@ int thickness;
 
         if (!Context->wintype) return; 
 	
+	ilon = (int) ((180.0 + lon) * ((double) Context->zoom.width / 360.0))
+                   - Context->zoom.dx;
+        if (ilon<0 || ilon>=Context->geom.width) return;
+
         checkMono(Context, &w, &gc);
 
-	ilon = (180.0 + lon) * (Context->geom.width / 360.0);
 	i0 = Context->geom.height/2;
 	i1 = 1+i0/step;
 	for (i=-i1; i<i1; i+=1)
@@ -2373,12 +2606,9 @@ void
 drawBottomline(Context)
 struct Sundata * Context;
 {
-        Window w = Context->win;
-	GC gc = Context->gclist.bigfont;
-
-        checkMono(Context, &w, &gc);
-        XDrawLine(dpy, w, gc, 0, Context->geom.height-1, 
-	           Context->geom.width-1, Context->geom.height-1);
+        XDrawLine(dpy, Context->win, Context->gclist.bigfont, 
+                   0, Context->geom.height, 
+	           Context->geom.width-1, Context->geom.height);
 }
 
 void
@@ -2391,8 +2621,7 @@ struct Sundata * Context;
 	  draw_parallels(Context);
 	if (Context->flags.tropics)
 	  draw_tropics(Context);
-	if (!mono)
-	  drawBottomline(Context);
+	drawBottomline(Context);
 }
 
 void
@@ -2402,6 +2631,32 @@ struct Sundata * Context;
         drawLines(Context);
         drawCities(Context);
 	drawMarks(Context);
+}
+
+void
+showImage(Context)
+struct Sundata * Context;
+{
+
+	if (button_pressed) return;
+
+	if (Context->flags.update>=2) {
+	   if (invert)
+	       XCopyPlane(dpy, Context->pix, Context->win, 
+                    Context->gclist.store, 
+		    0, 0, Context->geom.width, Context->geom.height, 0, 0, 1);
+	   else
+               XPutImage(dpy, Context->win, Context->gclist.bigfont, 
+                    Context->xim, 0, 0, 0, 0,
+                    Context->geom.width, Context->geom.height);
+	}
+        if (Context->flags.update) {
+	   Context->flags.update = 0;
+	   if (!mono) {
+	       drawAll(Context);
+	       drawSun(Context);
+	   }
+	}
 }
 
 void
@@ -2460,102 +2715,9 @@ int     done = 0;
 	   }
 	   if (Context->mark2.city == NULL) Context->mark2.status = 0;
 	}
-	if (done) exposeMap(Context);
-}
-
-/*  PROJILLUM  --  Project illuminated area on the map.  */
-
-void
-projillum(Context)
-struct Sundata * Context;
-{
-	int i, ftf = True, ilon, ilat, lilon = 0, lilat = 0, xt;
-	double m, x, y, z, th, lon, lat, s, c;
-
-	/* Clear unoccupied cells in width table */
-
-	
-	if (Context->flags.shading)
-   	   for (i = 0; i < Context->geom.height; i++)
-		Context->pwtab[i] = -1;
-	else {
-   	   for (i = 0; i < Context->geom.height; i++)
-		Context->pwtab[i] = Context->geom.width;
-	   return;
-	}
-
-	/* Build transformation for declination */
-
-	s = sin(-dtr(Context->sundec));
-	c = cos(-dtr(Context->sundec));
-
-	/* Increment over a semicircle of illumination */
-
-	for (th = -(PI / 2); th <= PI / 2 + 0.001;
-	    th += PI / TERMINC) {
-
-		/* Transform the point through the declination rotation. */
-
-		x = -s * sin(th);
-		y = cos(th);
-		z = c * sin(th);
-
-		/* Transform the resulting co-ordinate through the
-		   map projection to obtain screen co-ordinates. */
-
-		lon = (y == 0 && x == 0) ? 0.0 : rtd(atan2(y, x));
-		lat = rtd(asin(z));
-
-		ilat = Context->geom.height 
-                       - (lat + 90.0) * (Context->geom.height / 180.0);
-		ilon = lon * (Context->geom.width / 180.0);
-
-		if (ftf) {
-
-			/* First time.  Just save start co-ordinate. */
-
-			lilon = ilon;
-			lilat = ilat;
-			ftf = False;
-		} else {
-
-			/* Trace out the line and set the width table. */
-
-			if (lilat == ilat) {
-				Context->pwtab[(Context->geom.height - 1) - ilat] = (ilon == 0)? 1 : ilon;
-			} else {
-				m = ((double) (ilon - lilon)) / (ilat - lilat);
-				for (i = lilat; i != ilat; i += sgn(ilat - lilat)) {
-					xt = lilon + floor((m * (i - lilat)) + 0.5);
-					Context->pwtab[(Context->geom.height - 1) - i] = (xt == 0)? 1 : xt;
-				}
-			}
-			lilon = ilon;
-			lilat = ilat;
-		}
-	}
-
-	/* Now tweak the widths to generate full illumination for
-	   the correct pole. */
-
-	if (Context->sundec < 0.0) {
-		ilat = Context->geom.height - 1;
-		lilat = -1;
-	} else {
-		ilat = 0;
-		lilat = 1;
-	}
-
-	for (i = ilat; i != Context->geom.height / 2; i += lilat) {
-		if (Context->pwtab[i] != -1) {
-			while (True) {
-				Context->pwtab[i] = Context->geom.width;
-				if (i == ilat)
-					break;
-				i -= lilat;
-			}
-			break;
-		}
+	if (done) {
+	   Context->flags.update = 2;
+	   showImage(Context);
 	}
 }
 
@@ -2570,6 +2732,10 @@ int t;
 	unsigned int factor;
 	unsigned char u, v, w, r, g, b;
 
+	if (invert) {
+           XDrawPoint(dpy, Context->pix, Context->gclist.invert, x, y);
+	   return;
+	}
 	i = bytes_per_pixel * x + Context->xim->bytes_per_line * y;
 
 	if (color_depth>16) {
@@ -2644,7 +2810,7 @@ int t;
 #endif
 	} else {
 	   if (t>=0) {
-	     if ((7*x+11*y) % color_scale < color_scale-t)
+	     if ((277*x+359*y) % color_scale < color_scale-t)
 	       Context->xim->data[i] = 
                  Context->nightpixel[(unsigned char)Context->ximdata[i]];
 	     else
@@ -2654,163 +2820,230 @@ int t;
 	}
 }
 
-/*  XSPAN  --  Complement a span of pixels.  Called with line in which
-	       pixels are contained, leftmost pixel in the  line,  and
-	       the number of pixels to update.  Handles wrap-around at 
-               the right edge of the screen.
-               
-               The 'state' parameter is a flag with first  3  bits set 
-               as follows:
-	       bit 0: (0/1) don't use/use progressive shading at  left 
-                      border of line
-	       bit 1: (0/1) don't use/use progressive shading at right
-                      border of line
-	       bit 2: (0/1) draw line in dark/light (or invert).
-*/
-
-void
-xspan(Context, pline, orig, npix, color)
+int
+howDark(Context, i, j)
 struct Sundata * Context;
-register int	pline;
-register int	orig;
-register int	npix;
-register int	color;
+int i, j;
 {
-        int i;
+      double light;
+      int k;
 
-        orig = (orig + Context->geom.width) % Context->geom.width;
+      light = daywave[i] * cosval[j] + sinval[j];
 
-	if (orig + npix > Context->geom.width) {
-	  if (invert) {
-	    XDrawLine(dpy, Context->pix, Context->gclist.invert, 0, pline,
-		               (orig + npix) - (Context->geom.width + 1), pline);
- 	    XDrawLine(dpy, Context->pix, Context->gclist.invert, orig, pline, 
-                                              Context->geom.width - 1, pline);
-	  } else {
-            for (i=0; i<(orig + npix) - Context->geom.width; i++)
-	        DarkenPixel(Context, i, pline, -color);
-            for (i=orig; i<Context->geom.width; i++)
-	        DarkenPixel(Context, i, pline, -color);
-	    }
-	}
-	else {
-	  if (invert)
-	     XDrawLine(dpy, Context->pix, Context->gclist.invert, orig, pline,
-			  orig + (npix - 1), pline);
-	  else {
-             for (i=orig; i<orig + npix ; i++)
-	        DarkenPixel(Context, i, pline, -color);
-	  }
-	}
+      if (Context->flags.shading == 1) {
+         if (light >= 0) k = -1; else k = 0;
+      } else {
+	 if (Context->flags.shading<=3 || light<0) 
+             light *= Context->shadefactor;
+         k = (int) (0.5*(1.0+light)*(color_scale+0.4));
+         if (k < 0) k = 0;
+         if (k >= color_scale) k = - 1;
+      }
+      return k;
 }
 
-/*  MOVETERM  --  Update illuminated portion of the globe.  */
+/*  moveNightArea  --  Update illuminated portion of the globe.  */
 
 void
-moveterm(Context, cnoon)
+moveNightArea(Context)
 struct Sundata * Context;
-int cnoon;
 {
-      int i, pl, pr, cl, cr;
+      int i, j, k, l, jmin, jmax, j0;
+      int midcolor, south, north;
+      short tr1, tr2;
+      double shift, shiftp, quot, cd, sd;
+      double f1, f2, f3; 
 
       Context->flags.hours_shown = 0;
+      if (!Context->flags.shading) return;
 
-      if (Context->flags.shading >= 2) {
-	 int j, k;
-         double light, cp, sp;
-         double f1 = 2.0*M_PI/(double)Context->geom.width;
-         double f2 = 1.0;
+      f1 = M_PI/((double) Context->zoom.height);
+      f2 = ((double) Context->zoom.height)/M_PI;
+      f3 = 1E-8 * f2;
 
-	 if (Context->flags.shading == 2)
-            f2 = 180.0 / (M_PI * (SUN_APPRADIUS + atm_refraction));
-	 else
-            f2 = 180.0 / (M_PI * (SUN_APPRADIUS + atm_diffusion));
+      shift = f1 * (double)Context->zoom.dy;
+      shiftp = 0.5*(Context->zoom.height+1) - (double) Context->zoom.dy;
+      quot = dtr(Context->sundec);
+      cd = cos(quot);
+      sd = sin(quot);
+      if (quot>0) south = 0; else south = -1;
+      north = -1-south;
 
-	 for (i = 0; i < (int)Context->geom.height; i++) {
-	    sp = M_PI*(double)((int)Context->geom.height/2
-                               -i)/((double) Context->geom.height);
-	    cp = cos(sp)*cos(dtr(Context->sundec));
-            sp = sin(sp)*sin(dtr(Context->sundec));
-            for (j=0; j<Context->geom.width; j++) {
-  	       light = cos(f1*(double)(j-cnoon))*cp+sp;
-	       if (Context->flags.shading<4 || light<0) light *= f2;
-               k = (int) (0.5*(1.0+light)*(color_scale+0.4));
-               if (k < 0) k = 0; 
-               if (k >= color_scale) k = - 1;
-	       DarkenPixel(Context, j, i, k);
+      daywave = Context->wave;
+      cosval = daywave + Context->geom.width;
+      sinval = cosval + Context->geom.height;
+
+      quot = 2.0*M_PI/(double)Context->zoom.width;
+      for (i = 0; i < (int)Context->geom.width; i++)
+  	 daywave[i] = cos(quot *(((double)i)-Context->fnoon));
+
+      for (j = 0; j < (int)Context->geom.height; j++) {
+	 quot = shift + f1 * (double)j;
+	 cosval[j] = sin(quot)*cd;
+         sinval[j] = cos(quot)*sd;
+      }
+
+      /* Shading = 1 uses tr1 as j-integer value of transition day/night */
+      /* Context->south means color value near South pole */
+      /* which is updated as south, with north = -1-south = opposite color */
+
+      if (Context->flags.shading == 1) {
+	 for (i = 0; i < (int)Context->geom.width; i++) {
+	    if (fabs(sd)>f3)
+               tr1 = (int) (shiftp+f2*atan(daywave[i]*cd/sd));
+            else
+               tr1 = 0;
+	    if (tr1<0) tr1 = 0;	    
+ 	    if (tr1>(int)Context->geom.height) tr1 = (int)Context->geom.height;
+	    if (south==Context->south) {
+               for (j = tr1; j<(int)Context->tr1[i]; j++)
+	             DarkenPixel(Context, i, j, south);
+	       for (j = (int)Context->tr1[i]; j<tr1; j++)
+	             DarkenPixel(Context, i, j, north);
+	    } else {
+	       if (tr1 <= (int)Context->tr1[i]) {
+	          for (j = 0; j<tr1; j++)
+	             DarkenPixel(Context, i, j, north);
+	          for (j = (int)Context->tr1[i]; 
+                           j<(int)Context->geom.height; j++)
+	             DarkenPixel(Context, i, j, south);
+	       } else {
+	          for (j = 0; j<(int)Context->tr1[i]; j++)
+	             DarkenPixel(Context, i, j, north);
+	          for (j = tr1; j<(int)Context->geom.height; j++)
+	             DarkenPixel(Context, i, j, south);
+	       }
 	    }
+	    Context->tr1[i] = tr1;
 	 }
+	 Context->south = south;
 	 return;
       }
 
-      for (i = 0; i < Context->geom.height; i++) {
+      /* Shading = 4 is quite straightforward... compute everything! */
 
-	     /* If line is off in new width table but is set in
-	        the old table, clear it. */
+      if (Context->flags.shading == 4) {
+         for (i = 0; i < (int)Context->geom.width; i++)
+	    for (j = 0; j< (int)Context->geom.height; j++) {
+	       DarkenPixel(Context, i, j, howDark(Context, i, j));
+	    }
+	 return;
+      }
 
-	 if (Context->cwtab[i] < 0) {
-	    if (Context->pwtab[i] >= 0)
-	       xspan(Context, i, ((Context->noon-Context->pwtab[i]/2)+Context->geom.width)%Context->geom.width,
-                        Context->pwtab[i], 0);
-	 } else {
+      /* Shading = 2,3 uses both tr1 and tr2 and is very tricky... */
+      /* If both tr1,tr2 >=0 then normal transition 
+            day -> shadow -> night  (or night -> shadow -> day)
+         Otherwise we have an "exceptional transition"
+            shadow near North pole -> (day or night) -> shadow near South pole
+         Day or night is encoded midcolor, determined as follow:
+              if tr1<0 then midcolor = Context->south
+              if tr2<0 then midcolor = -1-Context->south (opposite color)
+         Renormalize integres by  tr1=-2-tr1 if <0 tr2=-2-tr2 if <0.
+         Then tr1>tr2 are the limits for the interval where color=midcolor */
 
-	     /* Line is on in new width table.  If it was off in
-	        the old width table, just draw it. */
+      for (i = 0; i < (int)Context->geom.width; i++) {
+	 if (fabs(sd)>f3)
+	    j0 = (int) (shiftp+f2*atan(daywave[i]*cd/sd));
+	 else
+	    j0 = 0;
+	 if (j0<0) j0 = 0;
+	 if (j0>(int)Context->geom.height) j0 = (int)Context->geom.height;
+	 
+	 tr1 = 0;
+	 tr2 = (short)(Context->geom.height-1);
+	 midcolor = -2;
+	 if (Context->tr1[i] < 0) {
+	    Context->tr1[i] = -Context->tr1[i]-2;
+	    midcolor = Context->south;
+	 }
+	 if (Context->tr2[i] < 0 && midcolor==-2) {
+	    Context->tr2[i] = -Context->tr2[i]-2;
+	    midcolor = -1-Context->south;
+	 }
 
-	    if (Context->pwtab[i] < 0) {
-	       xspan(Context, i, ((cnoon-Context->cwtab[i]/2)+Context->geom.width)%Context->geom.width,
-                        Context->cwtab[i], 1);
-	    } else {
-	     /* If both the old and new spans were the entire
-	       screen, they're equivalent. */
-  	       if (Context->pwtab[i] == Context->cwtab[i] && Context->cwtab[i] == Context->geom.width) continue;
-
-	     /* The line was on in both the old and new width
-	        tables.  We must adjust the difference in the span.  */
-
-  	       pl = ((Context->noon - Context->pwtab[i]/2) + Context->geom.width) % Context->geom.width;
-	       pr = pl + Context->pwtab[i];
-	       cl = ((cnoon - Context->cwtab[i]/2) + Context->geom.width) % Context->geom.width;
-	       cr = cl + Context->cwtab[i];
-
-	     /* Check whether old or new line spans the entire screen */
-
-               if (Context->cwtab[i] == Context->geom.width) {
-		  xspan(Context, i, pr, Context->geom.width - Context->pwtab[i], 1);
-                  goto done;
+         for (j=j0; j<(int)Context->geom.height; j++) {
+            k = howDark(Context, i, j);
+	    if (k!=south) 
+ 	       DarkenPixel(Context, i, j, k);
+	    else {
+               tr2 = (short)(j-1);
+	       jmax = (int)Context->geom.height-1;
+	       if (j<jmax && howDark(Context, i, jmax) != south) {
+	          for (l=jmax; l>tr2 ; l--) {
+                     k = howDark(Context, i, l);
+	             if (k!=south) 
+ 	                DarkenPixel(Context, i, l, k);
+                     else {
+                        jmax = l;
+	                break;
+		     }
+		  }
+                  tr1 = (short)(-jmax-1);
 	       }
-
-               if (Context->pwtab[i] == Context->geom.width) {
-		  xspan(Context, i, cr, Context->geom.width - Context->cwtab[i], 0);
-		  goto done;
-	       }
-	      
-	     /* If spans are disjoint, erase old span and set new span. */
-
-	       if (pr <= cl || cr <= pl) {
-	          xspan(Context, i, pl, pr - pl, 0);
-		  xspan(Context, i, cl, cr - cl, 1);
+               if (Context->tr1[i]<=Context->tr2[i]) {
+		  if (Context->south == south) {
+		     if ((int)Context->tr2[i]<jmax) jmax=(int)Context->tr2[i];
+		  } else {
+		     if ((int)Context->tr1[i]>j) j=(int)Context->tr1[i];
+		  }
 	       } else {
-
-               /* Clear portion(s) of old span that extend 
-                  beyond end of new span. */
-		  if (pl < cl)
-		     xspan(Context, i, pl, cl - pl, 0);
-	          if (pr > cr)
-	             xspan(Context, i, cr, pr - cr, 0);
-
-	       /* Extend existing (possibly trimmed) span to
-		  correct new length. */
-	          if (cl < pl)
-	             xspan(Context, i, cl, pl - cl, 1);
-	          if (cr > pr)
-		     xspan(Context, i, pr, cr - pr, 1);
+		  if (midcolor == south) {
+		     for (l=j; l<=jmax && l<= (int)Context->tr2[i]; l++)
+                         DarkenPixel(Context, i, l, south);
+		     for (l=jmax; l>=j && l>= (int)Context->tr1[i]; l--)
+                         DarkenPixel(Context, i, l, south);
+                     break;
+		  }
 	       }
+	       for (l=j; l<=jmax; l++) DarkenPixel(Context, i, l, south);
+               break;
 	    }
 	 }
-       done:
-	 Context->pwtab[i] = Context->cwtab[i];
+
+         for (j=j0-1; j>=0; j--) {
+            k = howDark(Context, i, j);
+	    if (k!=north) 
+     	       DarkenPixel(Context, i, j, k);
+            else {
+               tr1 = (short) j+1;
+	       jmin = 0;
+	       if (j>0 && howDark(Context, i, 0) != north) {
+		  for (l=0; l<tr1; l++) {
+                     k = howDark(Context, i, l);
+	             if (k!=north) 
+ 	                DarkenPixel(Context, i, l, k);
+                     else {
+                        jmin = l;
+	                break;
+		     }
+		  }
+                  tr2 = (short)(-jmin-1);
+	       }
+               if (Context->tr1[i]<=Context->tr2[i]) {
+		  if (Context->south == south) {
+		     if ((int)Context->tr1[i]>jmin) jmin=(int)Context->tr1[i];
+		  } else {
+		     if ((int)Context->tr2[i]<j) j=(int)Context->tr2[i];
+		  }
+	       } else {
+		  if (midcolor == north) {
+		     for (l=jmin; l<=j && l<= (int)Context->tr2[i]; l++)
+                         DarkenPixel(Context, i, l, north);
+		     for (l=j; l>=jmin && l>= (int)Context->tr1[i]; l--)
+                         DarkenPixel(Context, i, l, north);
+                     break;
+		  }
+	       }
+	       for (l=jmin; l<=j; l++) DarkenPixel(Context, i, l, north);
+               break;
+	    }
+	 }
+
+         Context->tr1[i] = tr1;
+     	 Context->tr2[i] = tr2;
       }
+
+      Context->south = south;
 }
 
 /* --- */
@@ -2820,88 +3053,60 @@ void
 updateImage(Context)
 struct Sundata * Context;
 {
-	register int		i;
-	int			xl;
-	short *			wtab_swap;
+	int			noon;
+	double                  fnoon;
 
 	/* If this is a full repaint of the window, force complete
 	   recalculation. */
 
-	if (Context->noon < 0) {
-		Context->projtime = 0;
-		if (invert)
-		for (i = 0; i < Context->geom.height; i++)
-			Context->cwtab[i] = -1;
-		  else
-		for (i = 0; i < Context->geom.height; i++)
-			Context->cwtab[i] = Context->geom.width;
-	}
+	if (button_pressed) return;
 
 	time(&Context->time);
 	
 	if (mono && !Context->flags.firsttime) drawSun(Context);
 
-  	(void) sunParams(Context->time + Context->jump, &Context->sunlon, &Context->sundec, NULL);
-	xl = Context->sunlon * (Context->geom.width / 360.0);
+  	(void) sunParams(Context->time + Context->jump, 
+              &Context->sunlon, &Context->sundec, NULL);
+	fnoon = Context->sunlon * (Context->zoom.width / 360.0) 
+                         - (double) Context->zoom.dx;
+        noon = (int) fnoon;
 	Context->sunlon -= 180.0;
 
         if (mono) {
 	  drawSun(Context);
 	  if (Context->flags.firsttime) {
 	    drawAll(Context);
-	    drawBottomline(Context);
 	    Context->flags.firsttime = 0;
 	  }
 	}
 
 	/* Projecting the illumination curve  for the current seasonal
            instant is costly.  If we're running in real time, only  do
-	   it every PROJINT seconds.  */
+	   it every PROJINT seconds.
+	   If the subsolar point has moved at least one pixel, also 
+           update the illuminated area on the screen.	*/
 
-	if (Context->projtime < 0
-	    || (Context->time - Context->projtime) > PROJINT 
-            || Context->flags.force_proj) {
-		  projillum(Context);
-		  wtab_swap = Context->pwtab;
-		  Context->pwtab = Context->cwtab;
-		  Context->cwtab = wtab_swap;
-		  Context->projtime = Context->time;
-	}
-
-	/* If the subsolar point has moved at least one pixel, update
-	   the illuminated area on the screen.	*/
-
-	if (Context->noon != xl || Context->flags.force_proj) {
-		moveterm(Context, xl);
-		Context->noon = xl;
-		Context->flags.dirty = 1;
-		Context->flags.force_proj = 0;
+	if (Context->projtime < 0 || 
+            (Context->time - Context->projtime) > PROJINT ||
+            Context->noon != noon || Context->flags.update<0) {
+                Context->flags.update = 2;
+	        Context->projtime = Context->time;
+		Context->noon = noon;
+		Context->fnoon = fnoon;
+		moveNightArea(Context);
 	}
 }
 
-void
-showImage(Context)
-struct Sundata * Context;
+void setPosition1(Context, x, y)
+Sundata *Context;
+int x, y;
 {
-	time_t                  gtime;
-
-	if (Context->flags.dirty) {
-	   if (invert)
-	       XCopyPlane(dpy, Context->pix, Context->win, Context->gclist.store, 
-		    0, 0, Context->geom.width, Context->geom.height, 0, 0, 1);
-	   else
-               XPutImage(dpy, Context->win, Context->gclist.bigfont, Context->xim, 
-                    0, 0, 0, 0,
-                    Context->geom.width, Context->geom.height);
-
-	   Context->flags.dirty = 0;
-	   if (!mono) {
-	       drawAll(Context);
-	       drawSun(Context);
-	   }
-	}
-        gtime = Context->time + Context->jump;
-	writeStrip(Context, gtime);
+    Context->pos1.name = Label[L_POINT];
+    Context->pos1.lat = 90.0-((double)(y+Context->zoom.dy)/
+                              (double)Context->zoom.height)*180.0 ;
+    Context->pos1.lon = ((double)(x+Context->zoom.dx)/
+                         (double)Context->zoom.width)*360.0-180.0 ;
+    Context->mark1.city = &Context->pos1;
 }
 
 /*
@@ -2929,8 +3134,11 @@ int x, y;      /* Screen co-ordinates of mouse */
 
         /* Convert the latitude and longitude of the cities to integer */
 
-        cx = (180.0 + cptr->lon) * (Context->geom.width / 360.0);
-	cy = Context->geom.height - (cptr->lat + 90.0) * (Context->geom.height / 180.0);
+        cx = (int) ((180.0 + cptr->lon) * (Context->zoom.width / 360.0))
+                   - Context->zoom.dx;
+	cy = (int) (Context->zoom.height 
+                   - (cptr->lat + 90.0) * (Context->zoom.height / 180.0))
+	           - Context->zoom.dy;
 
 	/* Check to see if we are close enough */
 
@@ -2953,8 +3161,8 @@ int x, y;      /* Screen co-ordinates of mouse */
    	   if (Context->mark1.city) Context->mark1.city->mode = 0;
            Context->mark1.city = cptr;
            cptr->mode = 1;
-	   updateMap(Context);
 	}
+        Context->flags.update = 1;
 	break;
 
       case DISTANCES:
@@ -2968,13 +3176,9 @@ int x, y;      /* Screen co-ordinates of mouse */
         if (cptr) {
           Context->mark1.city = cptr;
           Context->mark1.city->mode = 1;
-        } else {
-          Context->pos1.name = Label[L_POINT];
-	  Context->pos1.lat = 90.0-((double)y/(double)Context->geom.height)*180.0 ;
-          Context->pos1.lon = ((double)x/(double)Context->geom.width)*360.0-180.0 ;
-	  Context->mark1.city= &Context->pos1;
-	}
-        updateMap(Context);
+        } else
+	  setPosition1(Context, x, y);
+        Context->flags.update = 2;
         break;
 
       case SOLARTIME:
@@ -2983,13 +3187,9 @@ int x, y;      /* Screen co-ordinates of mouse */
         if (cptr) {
           Context->mark1.city= cptr;
           Context->mark1.city->mode = 1;
-        } else {
-          Context->pos1.name = Label[L_POINT];
-	  Context->pos1.lat = 90.0-((double)y/(double)Context->geom.height)*180.0 ;
-          Context->pos1.lon = ((double)x/(double)Context->geom.width)*360.0-180.0 ;
-	  Context->mark1.city = &Context->pos1;
-	}
-        updateMap(Context);
+        } else
+	  setPosition1(Context, x, y);
+        Context->flags.update = 2;
         break;
 
       default:
@@ -3007,9 +3207,9 @@ int x, y;      /* Screen co-ordinates of mouse */
 void
 clearMenu()
 {
-    if (!mono)
-       XSetWindowBackground(dpy, Menu, MenuCaller->pixlist.textbgcolor);
-    XClearArea(dpy, Menu,  0, 0, MenuGeom.width, MenuGeom.height, True);
+    XSetWindowBackground(dpy, Menu, 
+       (mono)? MenuCaller->pixlist.white : MenuCaller->pixlist.textbgcolor);
+    XClearArea(dpy, Menu,  0, 0, MenuGeom.width, MenuGeom.height, False);
     XSetWindowColormap(dpy, Menu, MenuCaller->cmap);
 }
 
@@ -3018,6 +3218,7 @@ initMenu()
 {
 	char s[2];
 	char *ptr[2] = { Label[L_ESCAPE], Label[L_CONTROLS] };
+	char which[] = "CDEMPSTU";
 	int i, j, b, d;
 	GC gc;
 
@@ -3026,20 +3227,23 @@ initMenu()
 	for (i=0; i<N_OPTIONS; i++) {
 	      b = (Option[2*i+1]==';');
 	      for (j=(i+1)*chwidth-b; j<=(i+1)*chwidth+b; j++)
-	          XDrawLine(dpy, Menu, MenuCaller->gclist.bigfont, j, 0, j, MapGeom.strip);
+	          XDrawLine(dpy, Menu, MenuCaller->gclist.bigfont, 
+                      j, 0, j, MapGeom.strip);
 	      s[0]=Option[2*i];
-	      gc = MenuCaller->gclist.bigfont;
-	      if (!MenuCaller->wintype && i>=3 && i<=6) 
-                  gc=MenuCaller->gclist.imagefont;
+	      if (!MenuCaller->wintype && index(which,s[0])) 
+                 gc = MenuCaller->gclist.imagefont;
+	      else
+                 gc = MenuCaller->gclist.bigfont;
 	      XDrawImageString(dpy, Menu, gc, d+i*chwidth, 
-                  BigFont->max_bounds.ascent + 3, s, 1);
+                  BigFont->max_bounds.ascent + 4, s, 1);
 	}
 	for (i=0; i<=1; i++)
-	   XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, d +(1-i)*N_OPTIONS*chwidth,
-                     BigFont->max_bounds.ascent + i*MapGeom.strip + 3, 
+	   XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, 
+                     d +(1-i)*N_OPTIONS*chwidth,
+                     BigFont->max_bounds.ascent + i*MapGeom.strip + 4, 
 		     ptr[i], strlen(ptr[i]));
         XDrawLine(dpy, Menu, MenuCaller->gclist.bigfont, 0, MapGeom.strip, 
-                        MENU_WIDTH * MapGeom.strip, MapGeom.strip);
+                     MENU_WIDTH * MapGeom.strip, MapGeom.strip);
 }
 
 
@@ -3054,11 +3258,8 @@ struct Sundata * Context;
         if (!do_menu) 
 	  {
 	  XUnmapWindow(dpy, Menu);
-	  if (Context == MenuCaller) {
-	     MenuCaller = NULL;
-	     return;
-	     }
-          do_menu = 1;
+	  MenuCaller = NULL;
+	  return;
 	  }
 
         MenuCaller = Context;
@@ -3068,6 +3269,7 @@ struct Sundata * Context;
 	   /* To center: + (Context->geom.width - MenuGeom.width)/2; */
 	   a = Context->geom.y + Context->geom.height + Context->geom.strip + vert_shift;
            b = Context->geom.y - MenuGeom.height - vert_shift - 2*vert_drift;
+	   if (do_title) b = b-18;
            if (b < (int) MenuGeom.height ) b = MenuGeom.height;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - 2*MenuGeom.height -vert_drift -20)
@@ -3075,21 +3277,19 @@ struct Sundata * Context;
 	   MenuGeom.y = (placement<=NE)? a : b;              
 	}
         setAllHints(NULL, 2);
+        XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
+        XMapWindow(dpy, Menu);
+        XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
+        XFlush(dpy);
 	clearMenu();
-        XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
-	if (do_selector<=1)
-           XMapRaised(dpy, Menu);
-	else
-           XMapWindow(dpy, Menu);
-        XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
-        XSync(dpy, True);
+	initMenu();
 }
 
 void
 clearSelector()
 {
-    if (!mono)
-       XSetWindowBackground(dpy, Selector, SelCaller->pixlist.textbgcolor);
+    XSetWindowBackground(dpy, Selector, 
+       (mono)? SelCaller->pixlist.white : SelCaller->pixlist.textbgcolor);
     XClearArea(dpy, Selector,  0,0, SelGeom.width, SelGeom.height, True);
     XSetWindowColormap(dpy, Selector, SelCaller->cmap);
 }
@@ -3097,6 +3297,8 @@ clearSelector()
 void
 clearSelectorPartially()
 {
+    XSetWindowBackground(dpy, Selector, 
+       (mono)? SelCaller->pixlist.white : SelCaller->pixlist.textbgcolor);
     XClearArea(dpy, Selector, 0, MapGeom.strip+1, 
            SelGeom.width-2, SelGeom.height-MapGeom.strip-2, True);
 }
@@ -3107,19 +3309,21 @@ initSelector()
 	int i, j, b, d, p, q, h, skip;
 	char *s, *sp;
 	char *banner[10] = { "home", "share", "  /", "  .", "", "", 
-	                     "  K", "  W", "  !", Label[L_ESCAPE]};
+	                     "  W", "  K", "  !", Label[L_ESCAPE]};
 
 	d = chwidth/3;
 
 	if (do_selector==1) {
 
 	  for (i=0; i<=9; i++)
-             XDrawImageString(dpy, Selector, SelCaller->gclist.bigfont, d+2*i*chwidth,
-                BigFont->max_bounds.ascent + 3, banner[i], strlen(banner[i]));
+             XDrawImageString(dpy, Selector, SelCaller->gclist.bigfont, 
+                d+2*i*chwidth, BigFont->max_bounds.ascent + 4, 
+                banner[i], strlen(banner[i]));
  
           for (i=1; i<=9; i++) {
 	     h = 2*i*chwidth;
-             XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, h, 0, h, MapGeom.strip);
+             XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, h, 0, h, 
+             MapGeom.strip);
 	  }
 
 	  /* Drawing small triangular icons */
@@ -3131,20 +3335,23 @@ initSelector()
                     h-i, p+i, h+i, p+i);
 	  h = 11*chwidth;
 	  for (i=0; i<= q-p; i++)
-	      XDrawLine(dpy,Selector, SelCaller->gclist.bigfont, h-i, q-i, h+i, q-i);
+	      XDrawLine(dpy,Selector,
+                 SelCaller->gclist.bigfont, h-i, q-i, h+i, q-i);
 
 	  h = MapGeom.strip;
-          XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, 0, h, SelGeom.width, h);
+          XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, 
+              0, h, SelGeom.width, h);
 	}
 	
         do_selector = 2;
 
         XDrawImageString(dpy, Selector, SelCaller->gclist.dirfont,
-                d, BigFont->max_bounds.ascent + MapGeom.strip + 3, 
+                d, BigFont->max_bounds.ascent + MapGeom.strip + 4, 
                 image_dir, strlen(image_dir));
 
         h = 2*MapGeom.strip;
-        XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, 0, h, SelGeom.width, h);
+        XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, 
+            0, h, SelGeom.width, h);
 
 	dirtable = get_dir_list(image_dir, &num_table_entries);
 	if (dirtable)
@@ -3157,7 +3364,7 @@ initSelector()
 	   return;
 	}
 
-	skip = (4*MapGeom.strip)/5;
+	skip = (3*MapGeom.strip)/4;
 	num_lines = (SelGeom.height-2*MapGeom.strip)/skip;
         for (i=0; i<num_table_entries-selector_shift; i++) 
 	  if (i<num_lines) {
@@ -3202,11 +3409,8 @@ struct Sundata * Context;
 	  XUnmapWindow(dpy, Selector);
 	  if (dirtable) free_dirlist(dirtable);
 	  dirtable = NULL;
-	  if (Context == SelCaller) {
-	     SelCaller = NULL;
-	     return;
-	     }
-	  do_selector = 1;
+	  SelCaller = NULL;
+	  return;
 	  }
 
 	SelCaller = Context;
@@ -3219,6 +3423,7 @@ struct Sundata * Context;
            if (do_menu && Context == MenuCaller) 
                a += MenuGeom.height + vert_drift + vert_shift;
            b = Context->geom.y - SelGeom.height - vert_shift - 2*vert_drift;
+	   if (do_title) b = b-18;
            if (b < (int) MenuGeom.strip ) b = MenuGeom.height;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - SelGeom.height - vert_drift -20)
@@ -3227,36 +3432,129 @@ struct Sundata * Context;
 	}
 
         setAllHints(NULL, 3);
-        clearSelector();
         XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
         XMapRaised(dpy, Selector);
         XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
-	XSync(dpy, True);
+	XFlush(dpy);
+        clearSelector();
+	initSelector();
 }
 
 void
 clearZoom()
 {
-    if (!mono)
-       XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.textbgcolor);
-    XClearArea(dpy, Zoom,  0,0, ZoomGeom.width, ZoomGeom.height, True);
+    XSetWindowBackground(dpy, Zoom, 
+	(mono)? ZoomCaller->pixlist.white:ZoomCaller->pixlist.textbgcolor);
+    XClearArea(dpy, Zoom,  0,0, ZoomGeom.width, ZoomGeom.height, False);
     XSetWindowColormap(dpy, Zoom, ZoomCaller->cmap);
 }
 
 void
-initZoom()
+initZoom(mode)
+int mode;
 {
-    char s[]="This will be the zoom command window - still unfinished !  Click to close.";
+    int i, j, k;
+    char *num[] = { "1", "2", "5", "10", "20", "50", "100"};
+    char s[30];
 
-    XDrawImageString(dpy, Zoom, ZoomCaller->gclist.bigfont, chwidth,
-                BigFont->max_bounds.ascent + 3, s, strlen(s));
+    XSetWindowBackground(dpy, Zoom, 
+	(mono)? ZoomCaller->pixlist.white:ZoomCaller->pixlist.textbgcolor);
+
+    if (mode == -1) {
+       for (i=0; i<=7; i++) {
+	  j = i*chwidth;
+          if (i<7) {
+	     s[0] = zoommenu[i];
+	     s[1] = '\0';
+	  } else
+	     strcpy(s, Label[L_ESCAPE]);
+          XDrawImageString(dpy, Zoom, ZoomCaller->gclist.bigfont, 
+	       j + (5*chwidth)/12, 
+               BigFont->max_bounds.ascent + 274, s, strlen(s));
+          if (i>0) XDrawLine(dpy, Zoom, ZoomCaller->gclist.bigfont, 
+             j, 270, j, 270+MapGeom.strip);
+       }
+
+       for (i=0; i<=6; i++) {
+          j = 63 + (int) ( 200*log(atof(num[i]))/log(100.0));
+          k = j - chwidth*strlen(num[i])/10;
+          XDrawImageString(dpy, Zoom, ZoomCaller->gclist.bigfont, k,
+                BigFont->max_bounds.ascent + 3, num[i], strlen(num[i]));
+          k = j + BigFont->max_bounds.ascent/2 - 10;
+          XDrawImageString(dpy, Zoom, ZoomCaller->gclist.bigfont,
+                24-chwidth*strlen(num[i])/4, k , num[i], strlen(num[i]));
+          XDrawLine(dpy, Zoom, ZoomCaller->gclist.bigfont, j, 20, j, 24);
+          XDrawLine(dpy, Zoom, ZoomCaller->gclist.bigfont, 30, j-10, 34, j-10);
+       }
+
+       for (i=0; i<=1; i++)
+          XDrawLine(dpy, Zoom, ZoomCaller->gclist.bigfont, 
+             0, 270+i*MapGeom.strip, 490, 270+i*MapGeom.strip);
+       XDrawLine(dpy, Zoom, ZoomCaller->gclist.bigfont, 60, 22, 266, 22);
+       XDrawLine(dpy, Zoom, ZoomCaller->gclist.bigfont, 32, 50, 32, 256);
+    }
     XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.white);
-    XClearArea(dpy, Zoom,  30,30, 200, 100, False);
+    if ((mode & 1) && !ZoomCaller->flags.zoomsync)
+       XClearArea(dpy, Zoom,  41, 31, 9, 9, False);
+    if (mode & 2)
+       XClearArea(dpy, Zoom,  61, 31, 205, 9, False);
+    if (mode & 4)
+       XClearArea(dpy, Zoom,  41, 51, 9, 205, False);
+
+    if (ZoomCaller->geom.width >= 2*ZoomCaller->geom.height) {
+       zoomw = 412;
+       zoomh = (412*ZoomCaller->geom.height)/ZoomCaller->geom.width;
+    } else {
+       zoomh = 206;
+       zoomw = (206*ZoomCaller->geom.width)/ZoomCaller->geom.height;
+    }
+   
     XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.black);
-    XClearArea(dpy, Zoom,  50,50, 40, 20, False);
-    if (!mono)
-       XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.textbgcolor);
-    XDrawRectangle(dpy, Zoom, ZoomCaller->gclist.bigfont, 30, 30, 200, 100);
+    zoomdx = (zoomw*ZoomCaller->geom.width)/ZoomCaller->zoom.width;
+    zoomdy = (zoomh*ZoomCaller->geom.height)/ZoomCaller->zoom.height;
+    zoomx = (zoomw*ZoomCaller->zoom.dx)/ZoomCaller->zoom.width;
+    zoomy = (zoomh*ZoomCaller->zoom.dy)/ZoomCaller->zoom.height;
+
+    i = (int) ( 200.0*log(ZoomCaller->zoom.fx)/log(100.00));
+    j = (int) ( 200*log(ZoomCaller->zoom.fy)/log(100.0));
+    if (mode & 2)
+       XClearArea(dpy, Zoom,  60+i, 31, 6, 9, False);
+    if (mode & 4)
+       XClearArea(dpy, Zoom,  41, 50+j, 9, 6, False);
+
+    if (mode & 8) {
+       XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.white);
+       i = zoomw-zoomx-zoomdx-1;
+       j = zoomh-zoomy-zoomdy-1;
+       if (zoomy)
+         XClearArea(dpy, Zoom,  61, 51, zoomw-1, zoomy, False);
+       if (j>0)
+         XClearArea(dpy, Zoom,  61, 51+zoomy+zoomdy, zoomw-1, j, False);
+       if (zoomx)
+         XClearArea(dpy, Zoom,  61, 51, zoomx, zoomh-1, False);
+       if (i>0)
+         XClearArea(dpy, Zoom,  61+zoomx+zoomdx, 51, i, zoomh-1, False);
+       XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.imagecolor);
+       XClearArea(dpy, Zoom,  61+zoomx, 51+zoomy, zoomdx, zoomdy, False);
+    }
+
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.imagecolor);
+    if ((mode & 1) && ZoomCaller->flags.zoomsync)
+       XClearArea(dpy, Zoom,  41, 31, 9, 9, False);
+
+    XSetWindowBackground(dpy, Zoom, 
+       (mono)?  ZoomCaller->pixlist.white : ZoomCaller->pixlist.textbgcolor);
+
+    if (mode & 8)
+    XDrawRectangle(dpy, Zoom, ZoomCaller->gclist.bigfont, 60, 50, zoomw,zoomh);
+    if (mode == -1) {
+    XDrawRectangle(dpy, Zoom, ZoomCaller->gclist.bigfont, 40, 30, 10, 10);
+    XDrawRectangle(dpy, Zoom, ZoomCaller->gclist.bigfont, 60, 30, 206, 10);
+    XDrawRectangle(dpy, Zoom, ZoomCaller->gclist.bigfont, 40, 50, 10, 206);
+    }
+
+    XSetWindowBackground(dpy, Zoom, 
+	(mono)? ZoomCaller->pixlist.white:ZoomCaller->pixlist.textbgcolor);
 }
 
 void
@@ -3273,17 +3571,13 @@ struct Sundata * Context;
         if (!do_zoom) 
 	  {
 	  XUnmapWindow(dpy, Zoom);
-	  if (dirtable) free_dirlist(dirtable);
-	  dirtable = NULL;
-	  if (Context == ZoomCaller) {
-	     ZoomCaller = NULL;
-	     return;
-	     }
-	  do_zoom = 1;
+	  ZoomCaller = NULL;
+	  return;
 	  }
 
 	ZoomCaller = Context;
 	zoom_shift = 0;
+	zoom_mode = 0;
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
 	   ZoomGeom.x = Context->geom.x + horiz_shift - horiz_drift;
@@ -3292,6 +3586,7 @@ struct Sundata * Context;
            if (do_menu && Context == MenuCaller) 
                a += MenuGeom.height + vert_drift + vert_shift;
            b = Context->geom.y - ZoomGeom.height - vert_shift - 2*vert_drift;
+	   if (do_title) b = b-18;
            if (b < (int) MenuGeom.strip ) b = MenuGeom.height;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - ZoomGeom.height - vert_drift -20)
@@ -3300,11 +3595,12 @@ struct Sundata * Context;
 	}
 
         setAllHints(NULL, 4);
-        clearZoom();
         XMoveWindow(dpy, Zoom, ZoomGeom.x, ZoomGeom.y);
         XMapRaised(dpy, Zoom);
         XMoveWindow(dpy, Zoom, ZoomGeom.x, ZoomGeom.y);
-	XSync(dpy, True);
+	XFlush(dpy);
+        clearZoom();
+        initZoom(-1);
 }
 
 void
@@ -3312,17 +3608,22 @@ showMenuHint(Context, num)
 struct Sundata * Context;
 int num;
 {
-	char hint[128], more[128];
+        char opt;
+	char hint[128], more[128], prog_str[60];
+
 	int i,j,k,l;
+
+	if (!do_menu) return;
+	if (!Context) return;
 
 	if (num == Context->flags.last_hint) return;
         Context->flags.last_hint = num;
         sprintf(hint, " %s", Help[num]); 
+	opt = Option[2*num];
         *more = '\0';
-	if (num >=3 && num <=5)
-	    sprintf(more, " (%s)", Label[L_DEGREE]);
-	if (num >=8 && num <=11) {
-	    char prog_str[30];
+	if (index("CDS", opt))
+	   sprintf(more, " (%s)", Label[L_DEGREE]);
+	if (index("ABGJ", opt)) {
             if (Context->progress == 60) 
                 sprintf(prog_str, "1 %s", Label[L_MIN]);
 	    else
@@ -3339,27 +3640,48 @@ int num;
                 sprintf(prog_str, "30 %s", Label[L_DAYS]);
       	    else
                 sprintf(prog_str, "%ld %s", Context->progress, Label[L_SEC]);
-            sprintf(more, " ( %s %c%s   %s %.3f %s )", 
-		  Label[L_PROGRESS], (num==6)? '-':'+', prog_str, 
+            sprintf(more, " ( %s %s%s   %s %.3f %s )", 
+		  Label[L_PROGRESS], 
+                  (opt=='A')? "+":((opt=='B')? "-":""), prog_str, 
                   Label[L_TIMEJUMP], Context->jump/86400.0,
 		  Label[L_DAYS]);
 	}
-	if (Option[2*num] == 'H') {
+	if (opt == 'H') {
 	    sscanf(RELEASE, "%d %d %d", &i, &j, &k);
 	    sprintf(more, " (%s %s, %d %s %d, %s)", 
                       ProgName, VERSION, i, Month_name[j-1], k, COPYRIGHT);
 	}
-	if (Option[2*num] == 'X') {
+	if (opt == 'X') {
 	    sprintf(more, " : %s", (Command)?Command:"(null)");
 	}
         if (*more) strncat(hint, more, 120 - strlen(hint));
         l = strlen(hint);
-	if (l<120) {
+	if (l<120)
 	    for (i=l; i<120; i++) hint[i] = ' ';
-	    hint[120] = '\0';
-	}
+	hint[120] = '\0';
+
 	XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, 4, 
-              BigFont->max_bounds.ascent + MapGeom.strip + 3, 
+              BigFont->max_bounds.ascent + MapGeom.strip + 4, 
+              hint, strlen(hint));
+}
+
+void
+showZoomHint(num)
+int num;
+{
+	char *hint;
+	int i;
+
+	if (num>=7) 
+           hint = Help[N_OPTIONS];
+	else {
+	   i = 0;
+	   while (Option[2*i]!=zoommenu[num] && i<N_OPTIONS+2) ++i;
+	   hint = Help[i];
+	}
+	XClearArea(dpy, Zoom, 0,271+MapGeom.strip, 490,MapGeom.strip-1, False);
+	XDrawImageString(dpy, Zoom, ZoomCaller->gclist.bigfont, 4, 
+              274 + BigFont->max_bounds.ascent + MapGeom.strip, 
               hint, strlen(hint));
 }
 
@@ -3646,8 +3968,8 @@ struct Sundata * Context;
        gcv.function = GXinvert;
        Context->gclist.invert = XCreateGC(dpy, Context->pix, 
                GCForeground | GCBackground | GCFunction, &gcv);
-       free(Context->bits);
        if (color_alloc_failed) report_failure(path, 6);
+       free(Context->bits);
        return 0;
      } else {
        if (strcmp(path, Default_vmf)) {
@@ -3724,8 +4046,8 @@ Sundata * Context;
       }
       if (do_zoom && Context == ZoomCaller) { 
          do_zoom = 1; 
-         clearSelector();
-	 initSelector();
+         clearZoom();
+	 initZoom(-1);
       }
 }
 
@@ -3733,29 +4055,25 @@ void
 remapAuxilWins(Context)
 struct Sundata * Context;
 {
+      int i;
+
       if (do_menu || do_selector || do_zoom) {
 	 XFlush(dpy);
-	 usleep(TIMESTEP);
+	 usleep(2*TIMESTEP);
       }
 
-      if (do_menu) {
-	 do_menu = 0;
-   	 PopMenu(Context);
-         initMenu();
+      if (do_menu) { 
+         for (i=0; i<=1; i++) PopMenu(Context); 
+         initMenu(); 
       }
-
       if (do_selector) {
-	 do_selector = 0;
-	 PopSelector(Context);
-	 do_selector = 1;
+         for (i=0; i<=1; i++) PopSelector(Context);
+         do_selector = 1;
 	 initSelector();
       }
-
       if (do_zoom) {
-	 do_zoom = 0;
-	 PopZoom(Context);
-	 do_zoom = 1;
-	 initZoom();
+         for (i=0; i<=1; i++) PopZoom(Context);
+	 initZoom(-1);
       }
 }
 
@@ -3767,6 +4085,7 @@ struct Sundata * Context;
 int wintype, build;
 {
    Window win;
+   int junk;
 
    if (build) {
       struct Sundata * NewContext;
@@ -3782,6 +4101,10 @@ int wintype, build;
          Seed = NewContext;
       Context = NewContext;
       Context->wintype = wintype;
+      if (do_zoom<0) {
+	 do_zoom = 1;
+	 ZoomCaller = Context;
+      }
       if (do_selector<0) {
 	 do_selector = 1;
 	 SelCaller = Context;
@@ -3791,7 +4114,7 @@ int wintype, build;
    win = Context->win;
    if (win) {
       XSelectInput(dpy, Context->win, 0);
-      XSync(dpy, True);
+      XFlush(dpy);
    } else
       createWindow(Context, wintype);
 
@@ -3805,30 +4128,34 @@ int wintype, build;
          shutDown(Context, -1);
    }
    checkGeom(Context, 0);
+
    if (win) {
       setAllHints(Context, wintype);
-      if (Context->wintype)
-         XMoveWindow(dpy, Context->win, Context->geom.x,Context->geom.y);
+      getPlacement(Context->win, &Context->geom.x, &Context->geom.y, 
+                   &junk, &junk);
       XResizeWindow(dpy, Context->win, 
           Context->geom.width, Context->geom.height + Context->geom.strip);
-      if (!Context->wintype)
-         XMoveWindow(dpy, Context->win, Context->geom.x,Context->geom.y);
+      XFlush(dpy);
       checkLocation(Context, CityInit);
-      XSync(dpy, True);
       createWorkImage(Context);
-      if (private) resetAuxilWins(Context);
-      XSync(dpy, True);
+      XFlush(dpy);
       setProtocols(Context, Context->wintype);
+      if (private) resetAuxilWins(Context);
+      clearStrip(Context);
    } else {
       createWorkImage(Context);
       checkLocation(Context, CityInit);
       setAllHints(Context, wintype);
-      setProtocols(Context, wintype);
+      if (!do_title) 
+        setClassHints(Context->win, wintype);
       XMapWindow(dpy, Context->win);
-      XSync(dpy, True);
+      XFlush(dpy);
       usleep(2*TIMESTEP);
       if (do_title) 
         setClassHints(Context->win, wintype);
+      setProtocols(Context, wintype);
+      clearStrip(Context);
+      doTimeout(Context);
    }
    if (build)
       Context->prevgeom = Context->geom;
@@ -3838,16 +4165,6 @@ int wintype, build;
       Context->clockgeom = Context->geom;
    if (private)
       XSetWindowColormap(dpy, Context->win, Context->cmap);
-   if (do_menu) {
-      clearMenu();
-      initMenu();
-   }
-   if (do_selector) {
-      do_selector = 1;
-      clearSelector();
-      initSelector();
-   }
-   clearStrip(Context);
 }
 
 void RaiseAndFocus(win)
@@ -3858,9 +4175,6 @@ Window win;
      XSetInputFocus(dpy, win, RevertToPointerRoot, CurrentTime);
 }
 
-void
-doTimeout();
-
 /*
  *  Process key events in eventLoop
  */
@@ -3868,7 +4182,7 @@ doTimeout();
 void
 processKey(win, key)
 Window  win;
-char	key;
+KeySym	key;
 {
 	int i, old_mode;
 	struct Sundata * Context = NULL;
@@ -3876,46 +4190,49 @@ char	key;
 	Context = getContext(win);
 	if (!Context) return;
 
-        Context->count = PRECOUNT;
-
+        Context->flags.update = 1;
+	if (key>=XK_A && key<=XK_Z) key += 32;
 	old_mode = Context->flags.map_mode;
 
 	/* fprintf(stderr, "Test: <%c> %d %u\n", key, key, key); */
 
 	if (win==Selector) {
 	   switch(key) {
-	     case '\033':
+	     case XK_Escape:
                 if (do_selector) 
 	          PopSelector(Context);
 		return;
-	     case 'U':
+	     case XK_Page_Up:
 	        if (selector_shift == 0) return;
 	        selector_shift -= num_lines/2;
 	        if (selector_shift <0) selector_shift = 0;
 		break;
-	     case 'V':
+	     case XK_Page_Down:
 	        if (num_table_entries-selector_shift<num_lines) return;
 	        selector_shift += num_lines/2;
 		break;
-	     case 'R':
+	     case XK_Up:
 	        if (selector_shift == 0) return;
 	        selector_shift -= 1;
 		break;
-	     case 'T':
+	     case XK_Down:
 	        if (num_table_entries-selector_shift<num_lines) return;
 	        selector_shift += 1;
 		break;
-	     case 'P':
+	     case XK_Home:
 	        if (selector_shift == 0) return;
 	        selector_shift = 0;
 		break;
-	     case 'W':
+	     case XK_End:
 	        if (num_table_entries-selector_shift<num_lines) return;
 	        selector_shift = num_table_entries - num_lines+2;
 		break;
-	     case 'h':
-	     case 'q':
-	     case 'w':
+	     case XK_exclam:
+	     case XK_k:
+	     case XK_h:
+	     case XK_q:
+	     case XK_w:
+	     case XK_z:
 	        goto general;
 	     default :
 	        return;
@@ -3924,62 +4241,96 @@ char	key;
 	   return;
 	}
 
-        if (win==Zoom)
+        if (win==Zoom) {
+	   switch(key) {
+	     case XK_Escape:
+                if (do_zoom) 
+	          PopZoom(Context);
+		return;
+	     case XK_exclam:
+	     case XK_slash:
+	     case XK_colon:
+	     case XK_KP_Multiply:
+	     case XK_asterisk:
+	     case XK_less:
+	     case XK_greater:
+	     case XK_f:
+	     case XK_k:
+	     case XK_h:
+	     case XK_q:
+	     case XK_w:
+	        goto general;
+	     default:
+	        return;
+	   }
 	   return;
+	}
 
- general:
+     general:
         switch(key) {
-	   case '\011':
+	   case XK_Tab:
 	     Context->flags.dms = 1 -Context->flags.dms;
 	     break;
-	   case '\033':
+	   case XK_Escape:
 	     if (do_menu) PopMenu(Context);
 	     break;
-	   case '<':
+	   case XK_less:
 	     if (Context->flags.resized) {
 		Context->geom = Context->prevgeom;
                 adjustGeom(Context, 0);
                 shutDown(Context, 0);
 	        buildMap(Context, Context->wintype, 0);
+		remapAuxilWins(Context);
 		Context->flags.resized = 0;
 	     }
              break;
-	   case 'P':
+	   case XK_Home:
 	     label_shift = 0;
 	     break;
-	   case 'W':
+	   case XK_End:
 	     label_shift = 50;
 	     clearStrip(Context);
 	     break;
-	   case 'U': 
+	   case XK_Page_Up: 
 	     if (label_shift>0)
                --label_shift;
 	     break;
-	   case 'V': 
+	   case XK_Page_Down: 
 	     if (label_shift<50)
 	       ++label_shift;
 	     break;
-	   case '=':
+	   case XK_equal:
 	     do_sync = 1 - do_sync;
 	     break;
-	   case 'ª':
-	   case '*':
-             i = Context->geom.width/2;
-	     if (i>0 && Context->geom.height!=i) {
-                Context->geom.height = i;
-	        if (Context->wintype)
-	              MapGeom.height = i;
-	        else
-	              ClockGeom.height = i;
-                adjustGeom(Context, 0);
+	   case XK_greater:
+	     Context->prevgeom = Context->geom;
+             Context->geom.width = DisplayWidth(dpy, scr) - 10;
+	     MapGeom = Context->geom;
+	   case XK_KP_Divide:
+	   case XK_slash:
+	     if (setAspectWindow(Context)) {
                 shutDown(Context, 0);
 	        buildMap(Context, Context->wintype, 0);
+		if (key =='>') {
+                   Context->geom.x = 5;
+		   XMoveWindow(dpy, Context->win, 
+                      Context->geom.x, Context->geom.y);
+  	           Context->flags.resized = 1;
+		} else
+	           Context->flags.resized = 0;
 	        remapAuxilWins(Context);
-	        Context->flags.resized = 0;
 	     }
 	     break;
-	   case ' ':
-	   case '!':
+	   case XK_KP_Multiply:
+	   case XK_asterisk:
+	     if (setAspectZoom(Context)) {
+                shutDown(Context, 0);
+	        buildMap(Context, Context->wintype, 0);
+		if (do_zoom) initZoom(zoom_mode);
+	     }
+             break;
+	   case XK_space:
+	   case XK_exclam:
 	     if (Context==Seed && do_dock) return;
              Context->wintype = 1 - Context->wintype;
              if (Context->wintype)
@@ -3991,38 +4342,32 @@ char	key;
              buildMap(Context, Context->wintype, 0);
 	     remapAuxilWins(Context);
 	     return;
-	   case '­':
-	   case '-':
-	     Context->jump = 0;
-	     Context->flags.force_proj = 1;
-	     Context->flags.last_hint = -1;
-	     break;
-	   case 'a': 
+	   case XK_a: 
 	     Context->jump += Context->progress;
-	     Context->flags.force_proj = 1;
+	     Context->flags.update = -1;
 	     Context->flags.last_hint = -1;
 	     break;
-	   case 'b': 
+	   case XK_b: 
 	     Context->jump -= Context->progress;
-	     Context->flags.force_proj = 1;
+	     Context->flags.update = -1;
 	     Context->flags.last_hint = -1;
 	     break;
-	   case 'c': 
+	   case XK_c: 
 	     if (!Context->wintype) break;
 	     if (Context->flags.map_mode != COORDINATES) 
 	       Context->flags.dms = gflags.dms;
 	     else
 	       Context->flags.dms = 1 - Context->flags.dms;
 	     Context->flags.map_mode = COORDINATES;
-	     if (Context->mark1.city == &Context->pos1 || Context->mark2.city == &Context->pos2) 
-                updateMap(Context);
-             if (Context->mark1.city == &Context->pos1) Context->mark1.city = NULL;
+             if (Context->mark1.city == &Context->pos1) 
+                 Context->mark1.city = NULL;
 	     if (Context->mark1.city)
                setDayParams(Context);
              if (Context->mark2.city) Context->mark2.city->mode = 0;
              Context->mark2.city = NULL;
+	     Context->flags.update = 2;
 	     break;
-	   case 'd': 
+	   case XK_d: 
 	     if (!Context->wintype) break;
 	     if (Context->flags.map_mode != DISTANCES) 
 	       Context->flags.dms = gflags.dms;
@@ -4030,20 +4375,25 @@ char	key;
 	       Context->flags.dms = 1 - Context->flags.dms;
 	     Context->flags.map_mode = DISTANCES;
 	     break;
-	   case 'e': 
+	   case XK_e: 
 	     if (!Context->wintype) break;
 	     Context->flags.map_mode = EXTENSION;
 	     old_mode = EXTENSION;
 	     Context->flags.hours_shown = 0;
 	     show_hours(Context);
 	     break;
-	   case 'f':
+	   case XK_f:
 	     if (!do_selector)
 	        PopSelector(Context);
-	     else
-                RaiseAndFocus(Selector);
+	     else {
+	        XMapRaised(dpy, Selector);
+                if (SelCaller != Context) {
+	           PopSelector(Context);
+	           PopSelector(Context);
+		}
+	     }
 	     break;
-	   case 'g': 
+	   case XK_g: 
 	     if (!do_menu)
 	       PopMenu(Context);
              else {
@@ -4071,18 +4421,27 @@ char	key;
 		    Context->progress = 60;
 	     }
 	     break;
-	   case 'h':
+	   case XK_h:
 	     if (!do_menu) 
 	        PopMenu(Context);
-	     else
-	        if (Context->wintype)
-	           RaiseAndFocus(Menu);
+	     else {
+	        XMapRaised(dpy, Menu);
+                if (MenuCaller != Context) {
+	           PopMenu(Context);
+	           PopMenu(Context);
+		}
+	     }
 	     break;
-	   case 'i': 
+	   case XK_i: 
 	     if (Context->wintype && do_menu) PopMenu(Context);
              XIconifyWindow(dpy, Context->win, scr);
 	     break;
-	   case 'k':
+	   case XK_j:
+	     Context->jump = 0;
+	     Context->flags.update = -1;
+	     Context->flags.last_hint = -1;
+	     break;
+	   case XK_k:
              if (do_menu) PopMenu(Context);
 	     if (do_selector) PopSelector(Context);
 	     if (Context==Seed && Seed->next==NULL)
@@ -4090,103 +4449,110 @@ char	key;
 	     else
 	        shutDown(Context, 1);
 	     return;
-	   case 'l':
+	   case XK_l:
 	     if (!Context->wintype) {
 	        clearStrip(Context);
 	        if (!Context->wintype)
                    Context->flags.clock_mode = 
                      (Context->flags.clock_mode+1) % num_formats;
-	        updateMap(Context);
+	        Context->flags.update = 1;
                 break;
 	     }
 	     Context->flags.map_mode = LEGALTIME;
              if (Context->mark1.city) Context->mark1.city->mode = 0;
              if (Context->mark2.city) Context->mark2.city->mode = 0;
-             if (Context->mark1.city == &Context->pos1 || Context->mark2.city == &Context->pos2) 
-                updateMap(Context);
              Context->mark1.city = NULL;
              Context->mark2.city = NULL;
+	     Context->flags.update = 2;
 	     break;
-	   case 'm':
+	   case XK_m:
+	     if (!Context->wintype) break;
              Context->flags.meridian = 1 - Context->flags.meridian;
              if (mono) draw_meridians(Context);
-	     exposeMap(Context);
+	     Context->flags.update = 2;
 	     break;
-	   case 'n':
-	     if (invert || (color_scale == 1))
+	   case XK_n:
+	     if (invert || (color_scale == 1)) {
+		initShading(Context);
+		moveNightArea(Context);
 	        Context->flags.shading = 1 - Context->flags.shading;
+	     }
 	     else {
 	        int size;
 	        Context->flags.shading = (Context->flags.shading+1) % 5;
-		for (i = 0; i < Context->geom.height; i++)
-		    Context->cwtab[i] = Context->geom.width;
-                size = Context->xim->width*Context->xim->height*(Context->xim->bitmap_pad/8);
+                size = Context->xim->bytes_per_line*Context->xim->height;
                 memcpy(Context->xim->data, Context->ximdata, size); 
+                initShading(Context);
 	     }
-	     Context->flags.force_proj = 1;
-	     exposeMap(Context);
+	     Context->flags.update = -1;
 	     break;
-	   case 'o':
+	   case XK_o:
              Context->flags.sunpos = 1 - Context->flags.sunpos;
 	     if (mono) draw_sun(Context);
-	     exposeMap(Context);
+	     Context->flags.update = 2;
              break;
-	   case 'p':
+	   case XK_p:
+	     if (!Context->wintype) break;
              Context->flags.parallel = 1 - Context->flags.parallel;
 	     if (mono) draw_parallels(Context);
-	     exposeMap(Context);
+	     Context->flags.update = 2;
 	     break;
-	   case 'q': 
+	   case XK_q: 
 	     shutDown(Context, -1);
 	     break;
-	   case 's': 
+	   case XK_s: 
 	     if (Context->flags.map_mode != SOLARTIME) 
 	       Context->flags.dms = gflags.dms;
 	     else
 	       Context->flags.dms = 1 - Context->flags.dms;
 	     Context->flags.map_mode = SOLARTIME;
-             if (Context->mark2.city == &Context->pos2) exposeMap(Context);
              if (Context->mark2.city) Context->mark2.city->mode = 0;
              Context->mark2.city = NULL;
 	     if (Context->mark1.city)
 	       setDayParams(Context);
+             Context->flags.update = 2;
 	     break;
-	   case 't':
+	   case XK_t:
+	     if (!Context->wintype) break;
              Context->flags.tropics = 1 - Context->flags.tropics;
 	     if (mono) draw_tropics(Context);
-             exposeMap(Context);
+             Context->flags.update = 2;
 	     break;
-	   case 'u':
+	   case XK_u:
+	     if (!Context->wintype) break;
              if (mono && Context->flags.cities) drawCities(Context);
 	     Context->flags.cities = 1 - Context->flags.cities;
              if (mono && Context->flags.cities) drawCities(Context);
-             exposeMap(Context);
+             Context->flags.update = 2;
 	     break;
-	   case 'w': 
-             /* if (do_menu) PopMenu(Context); */
-	     if (Context->time<=last_time+2)
-		return;
+	   case XK_w: 
+	     if (Context->time<=last_time+2) return;
              buildMap(Context, 1, 1);
 	     last_time = Context->time;
-	     return;
-	   case 'r':
-	     clearStrip(Context);
-	     updateMap(Context);
 	     break;
-	   case 'x':
+	   case XK_r:
+	     clearStrip(Context);
+	     Context->flags.update = -1;	     
+	     break;
+	   case XK_x:
 	     if (Command) system(Command);
 	     break;
-	   case 'z':
+	   case XK_z:
 	     if (!do_zoom)
 	        PopZoom(Context);
-	     else
-                RaiseAndFocus(Zoom);
+	     else {
+	        XMapRaised(dpy, Zoom);
+                if (ZoomCaller != Context) {
+	           PopZoom(Context);
+	           PopZoom(Context);
+		}
+	     }
 	     break;
            default:
 	     if (!Context->wintype) {
 	       Context->flags.clock_mode = 
                    (1+Context->flags.clock_mode) % num_formats;
-	       updateMap(Context);
+	       Context->flags.update = 1;
 	     }
 	     break ;
 	}
@@ -4196,57 +4562,15 @@ char	key;
 
 	if (do_menu) {
           for (i=0; i<N_OPTIONS; i++)
-	      if (key == Option[2*i]+32) showMenuHint(Context, i);
+	      if (key == tolower(Option[2*i])) {
+		 showMenuHint(Context, i);
+		 break;
+	      }
 	}
 }
 
-/*
- *  Process mouse events in eventLoop
- */
-
-/*
- *  Process mouse motion events in eventLoop
- */
-
-void
-processMotion(win, x, y)
-Window  win;
-int	x, y;
-{
-int	click_pos;
-
-	if (win != Menu) return;
-	if (y>MapGeom.strip) return;
-        click_pos = x/chwidth;
-	if (click_pos >= N_OPTIONS) click_pos = N_OPTIONS;
-        showMenuHint(MenuCaller, click_pos);
-}
-
-void refreshPopups(Context, w, h)
-struct Sundata * Context;
-unsigned int w, h;
-{
-	int i;
-
-        if (w!=Context->geom.width || h!=Context->geom.height) {
-	   XFlush(dpy);
-	   usleep(3*TIMESTEP);
-           if (do_menu) for (i=0; i<=1; i++) PopMenu(Context);
-	   XFlush(dpy);
-	   usleep(TIMESTEP);
-           if (do_selector) for (i=0; i<=1; i++) PopSelector(Context);
-	   XFlush(dpy);
-	   usleep(2*TIMESTEP);
-        }
-        if (do_selector) {
-           RaiseAndFocus(Selector);
-	   if (private) 
-              XSetWindowColormap(dpy, Selector, SelCaller->cmap);
-        }
-}
-
 void 
-processSelAction(Context, a, b)
+processSelectorAction(Context, a, b)
 struct Sundata * Context;
 int a;
 int b;
@@ -4273,16 +4597,16 @@ int b;
 	     selector_shift += num_lines/2;
 	  }
 	  if (a==6) {	
-              processKey(SelCaller->win, 'k');
+	      do_selector = -1;
+              processKey(Context->win, XK_w);
 	      return;
 	  }
 	  if (a==7) {	
-	      do_selector = -1;
-              processKey(SelCaller->win, 'w');
+              processKey(Context->win, XK_k);
 	      return;
 	  }
 	  if (a==8) {	
-              processKey(SelCaller->win, '!');
+              processKey(Context->win, XK_exclam);
 	      return;
 	  }
 	  if (a>=9) {
@@ -4298,7 +4622,7 @@ int b;
 	  clearSelectorPartially();
 	  return;
 	}
-	b = (b-2*MapGeom.strip-3)/(4*MapGeom.strip/5) + selector_shift;
+	b = (b-2*MapGeom.strip-4)/(3*MapGeom.strip/4) + selector_shift;
 	if (b<num_table_entries) {
 	   char *s;
 	   s = dirtable[b];
@@ -4352,43 +4676,139 @@ int b;
 		 w = Context->geom.width;
 		 h = Context->geom.height;
 	         buildMap(Context, Context->wintype, 0);
-                 /* refreshPopups(Context, w, h); */
 	      } else free(f);
 	   }
 	}
 }
 
+void processZoomAction(Context, x, y, button, evtype)
+Sundata * Context;
+int x, y, button, evtype;
+{
+           double v1, v2;
+	   int click_pos;
+
+	   if (y>=270 && y<=270+MapGeom.strip) {
+	      click_pos = x/chwidth;
+	      if (evtype==MotionNotify) showZoomHint(click_pos);
+	      if (evtype==ButtonRelease) {
+		 if (zoommenu[click_pos]=='W') do_zoom = -1;
+		 if (click_pos<=6)
+		    processKey(Context->win, 
+                       (KeySym)tolower(zoommenu[click_pos]));
+		 else
+	            PopZoom(Context);
+	      }
+	      return;
+	   }
+	   if (button_pressed>=2) return;
+
+	   if (x>=40 && x<=50 && y>=30 && y<=40 && evtype==ButtonRelease) {
+	      Context->flags.zoomsync = 1-Context->flags.zoomsync;
+	      zoom_mode = 1;
+	      if (Context->flags.zoomsync && 
+		  Context->zoom.fx != Context->zoom.fy) {
+		 Context->zoom.fx = 
+                     sqrt(Context->zoom.fx * Context->zoom.fy);
+		 if (Context->zoom.fx > 100.0) Context->zoom.fx = 100.0;
+		 Context->zoom.fy = Context->zoom.fx;
+ 	         zoom_mode = 15;
+	      }
+	   }
+	   if (x>=60 && x<=266 && y>=30 && y<=40 && button_pressed) {
+	      if (x<63) x=63;
+	      if (x>263) x=263;
+              v1 = exp((double)(x-63)*log(100.00)/200.00);
+	      if (v1 != Context->zoom.fx) {
+		 if (v1>100.0) v1 = 100.0;
+		 Context->zoom.fx = v1;
+		 zoom_mode = 10;
+                 if (Context->flags.zoomsync) {
+                    Context->zoom.fy = Context->zoom.fx;
+		    zoom_mode = 14;
+		 }
+	      }
+	   }
+	   if (y>=50 && x<=256 && x>=40 && x<=50 && button_pressed) {
+	      if (y<53) y=53;
+	      if (y>253) x=253;
+              v2  = exp((double)(y-53)*log(100.00)/200.00);
+	      if (v2 != Context->zoom.fy) {
+		 if (v2>100.0) v2=100.0;
+		 Context->zoom.fy = v2;
+		 zoom_mode = 12;
+                 if (Context->flags.zoomsync) {
+                    Context->zoom.fx = Context->zoom.fy;
+		    zoom_mode = 14;
+		 }
+	      }
+	   }
+	   if (x>=60 && y>=50 && x<=60+zoomw && y<=50+zoomh && button_pressed) {
+              v1 = ((double)(x-60))/((double)zoomw);
+              v2 = ((double)(y-50))/((double)zoomh);
+              if (v1!=Context->zoom.fdx || v2!=Context->zoom.fdy) {
+		 Context->zoom.fdx = v1;
+		 Context->zoom.fdy = v2;
+	         zoom_mode = 8;
+	      }
+	   }
+	   if (x>=15 && x<=115 && y>=270 && y<=290 && evtype==ButtonRelease) {
+              (void) setAspectZoom(Context);
+	   }
+	   if (zoom_mode) {
+              setZoomDimension(Context);
+	      initZoom(zoom_mode);
+	   }
+	   if ((zoom_mode&14) && evtype == ButtonRelease) {
+	      shutDown(Context, 0);
+              buildMap(Context, Context->wintype, 0);
+	      zoom_mode = 0;
+	   }
+}
+
+/*
+ *  Process mouse events from eventLoop
+ */
+
 void
-processClick(win, x, y, button)
+processMouseEvent(win, x, y, button, evtype)
 Window  win;
 int	x, y;
 int     button;
+int     evtype;
 {
 char	         key;
 int	         click_pos;
+double           rx, ry, v1, v2;
 struct Sundata * Context = (struct Sundata *) NULL;
 
-        RaiseAndFocus(win);
+        if (evtype!=MotionNotify) RaiseAndFocus(win);
+	if (evtype==ButtonPress && win!=Zoom) return;
 
         if (win == Menu) {
 	   if (y>MapGeom.strip) return;
            click_pos = x/chwidth;
+	   if (evtype == MotionNotify) {
+	     if (click_pos >= N_OPTIONS) click_pos = N_OPTIONS;
+             showMenuHint(MenuCaller, click_pos);
+             return;
+	   }
 	   if (do_menu && click_pos >= N_OPTIONS) {
 	      PopMenu(MenuCaller);
 	      return;
 	   }
            key = tolower(Option[2*click_pos]);
-	   processKey(MenuCaller->win, key);
+	   processKey(win, (KeySym)key);
 	   return;
 	}
 
         if (win == Selector) {
-	   processSelAction(SelCaller, x, y);
+	   processSelectorAction(SelCaller, x, y);
 	   return;
 	}
 
         if (win == Zoom) {
-	   PopZoom(ZoomCaller);
+	   processZoomAction(ZoomCaller, x, y, button, evtype);
 	   return;
 	}
 
@@ -4398,28 +4818,51 @@ struct Sundata * Context = (struct Sundata *) NULL;
         /* Click on bottom strip of window */
         if (y >= Context->geom.height) {
 	   if (button==1) {
-	      PopMenu(Context);
+	      processKey(win, XK_h);
               return;
 	   }
            if (button==2) {
-	        processKey(win, 'l');
-		return;
+	      processKey(win, XK_l);
+	      return;
 	   }
            if (button==3) {
-	        /* Open new window */
-	        processKey(win, 'w');
-	        return;
+	      /* Open new window */
+	      processKey(win, XK_w);
+	      return;
 	   }
 	}
 
         /* Click on the map */
 	if (button==2) {
-	   PopSelector(Context);
+           processKey(win, XK_f);
 	   return;
         }
 	if (button==3) {
+	  if (do_zoom && win==ZoomCaller->win) {
+	      XMapRaised(dpy, Zoom);
+              v1 = ((double)(x+Context->zoom.dx))
+                         /((double)Context->zoom.width);
+              v2 = ((double)(y+Context->zoom.dy))
+                         /((double)Context->zoom.height);
+              rx = 0.5/Context->zoom.fx;
+              ry = 0.5/Context->zoom.fy;
+              if (v1<rx) v1 = rx;
+              if (v2<ry) v2 = ry;
+              if (v1>1.0-rx) v1 = 1.0-rx;
+              if (v2>1.0-ry) v2 = 1.0-ry;
+              if (v1!=Context->zoom.fdx || v2!=Context->zoom.fdy) {
+		 Context->zoom.fdx = v1;
+		 Context->zoom.fdy = v2;
+                 setZoomDimension(Context);
+	         zoom_mode = 8;
+	         initZoom(zoom_mode);
+	         shutDown(Context, 0);
+                 buildMap(Context, Context->wintype, 0);
+	         zoom_mode = 0;
+	      }
+	   } else
 	   /* Open zoom selector */
-	   PopZoom(Context);
+	     processKey(win, XK_z);
 	   return;
         } 
 	
@@ -4427,12 +4870,12 @@ struct Sundata * Context = (struct Sundata *) NULL;
 
 	/* It's a clock, just execute predefined command */
 	if (!Context->wintype) {
-	   processKey(win, 'x');
+	   processKey(win, XK_x);
 	   return;
 	}
 
         /* Otherwise, user wants to get info on a city or a location */
-        Context->count = PRECOUNT;
+        Context->flags.update = 1;
 
         /* Erase bottom strip to clean-up spots overlapping bottom strip */
 	if (Context->flags.bottom) clearStrip(Context);
@@ -4466,9 +4909,9 @@ Window win;
 	      if (verbose)
 	         fprintf(stderr, "Resizing Selector to %d %d\n", w, h);
 	      XSelectInput(dpy, Selector, 0);
-	      XSync(dpy, True);
+	      XFlush(dpy);
 	      XResizeWindow(dpy, Selector, w, h);
-	      XSync(dpy, True);
+	      XFlush(dpy);
 	      usleep(TIMESTEP);
               setAllHints(NULL,3);
               setProtocols(NULL,3);
@@ -4520,12 +4963,16 @@ struct Sundata * Context;
 	if (QLength(dpy))
 		return;		/* ensure events processed first */
 
-        Context->count = (Context->count+1) % TIMECOUNT;
+        if (Context->flags.update)
+           Context->count = 0;
+	else
+           Context->count = (Context->count+1) % TIMECOUNT;
 
 	if (Context->count==0) {
-		updateImage(Context);
-		showImage(Context);
-                if (mono) pulseMarks(Context);
+	   updateImage(Context);
+	   showImage(Context);
+	   writeStrip(Context);
+           if (mono) pulseMarks(Context);
 	}
 }
 
@@ -4535,21 +4982,28 @@ register Window	w;
 {
         struct Sundata * Context = (struct Sundata *)NULL;
 
-        if (w == Menu)
-	   initMenu(Context);
+        if (w == Menu) {
+	   initMenu();
+	   return;
+	}
 
-        if (w == Selector)
-           initSelector(Context);
+        if (w == Selector) {
+	   do_selector = 1;
+           initSelector();
+	   return;
+	}
 
-        if (w == Zoom)
-           initZoom(Context);
+        if (w == Zoom) {
+           initZoom(-1);
+	   return;
+	}
 
         Context = getContext(w);
 	if (!Context) return;
 
-        updateImage(Context);
-	Context->flags.dirty = 1;
+        Context->flags.update = 2;
 	showImage(Context);
+	writeStrip(Context);
 }
 
 /*
@@ -4580,13 +5034,15 @@ eventLoop()
 {
 	XEvent			ev;
 	Sundata * 		Context;
-	int			key;
+	char                    buffer[1];
+	KeySym                  keysym;
 
 	for (;;) {
 		if (XCheckIfEvent(dpy, &ev, evpred, (char *)0))
 
 			switch(ev.type) {
-		
+
+                        case FocusChangeMask:
 			case VisibilityNotify:
 			        doExpose(ev.xexpose.window);
 				break;
@@ -4607,7 +5063,7 @@ eventLoop()
 					   PopSelector(SelCaller);
 					else
 					if (ev.xexpose.window == Zoom)
-					   PopSelector(ZoomCaller);
+					   PopZoom(ZoomCaller);
 					else
 					   shutDown(
                                          getContext(ev.xexpose.window), 1);
@@ -4615,20 +5071,22 @@ eventLoop()
 				break;
 
 			case KeyPress:
-                                key = XKeycodeToKeysym(dpy,ev.xkey.keycode,0);
-				processKey(ev.xexpose.window, key & 255);
+			        XLookupString((XKeyEvent *) &ev, buffer, 
+                                              1, &keysym, NULL);
+				processKey(ev.xexpose.window, keysym);
                                 break;
 
 			case ButtonPress:
-			        processClick(ev.xexpose.window, 
-                                             ev.xbutton.x, ev.xbutton.y,
-					     ev.xbutton.button);
-				break;
-
+			case ButtonRelease:
 			case MotionNotify:
-			        processMotion(ev.xexpose.window, 
-                                              ev.xbutton.x, ev.xbutton.y);
-			        break;
+			        if (ev.type==ButtonPress)
+			           button_pressed = ev.xbutton.button;
+			        if (ev.type==ButtonRelease)
+				   button_pressed = 0;
+ 				processMouseEvent(ev.xexpose.window,
+                                             ev.xbutton.x, ev.xbutton.y,
+                                             ev.xbutton.button, ev.type);
+				break;
 
 			case ResizeRequest: 
 			        processResize(ev.xexpose.window);
@@ -4637,6 +5095,7 @@ eventLoop()
 			} else {
 			        Sundata *Which = getContext(ev.xexpose.window);
 			        usleep(TIMESTEP);
+				if (Which==NULL) Which=Seed;
 				for (Context=Seed; Context; 
                                                    Context=Context->next)
 				if (do_sync || Context == Which ||
@@ -4677,7 +5136,7 @@ int				argc;
 register char **		argv;
 {
 	char * p;
-	int    i, rem_menu;
+	int    i, rem_selector, rem_zoom, rem_menu;
 
 	ProgName = *argv;
 
@@ -4732,12 +5191,12 @@ register char **		argv;
 	if (invert && (gflags.shading>=2)) gflags.shading = 1;
 	if (color_depth>8 || mono) private = always_private = 0;
 	adjust_dark = (unsigned int) ((1.0-darkness) * 255.25);
-	rem_menu = do_menu;
-	do_menu = 0;
+	rem_menu = do_menu; do_menu = 0;
+	rem_selector = do_selector; do_selector = 0;
+	rem_zoom = do_zoom; do_zoom = 0;
 	parseFormats(ListFormats);
 
 	getFonts();
-
 
         buildMap(NULL, win_type, 1);
 
@@ -4749,6 +5208,10 @@ register char **		argv;
 
 	if (rem_menu)
 	   PopMenu(Seed);
+	if (rem_selector)
+	   PopSelector(Seed);
+	if (rem_zoom)
+	   PopZoom(Seed);
 	eventLoop();
 	exit(0);
 }

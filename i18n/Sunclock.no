@@ -66,13 +66,15 @@ Tegn/Fjern tropisk/ekvator/arktisk sirkel
 Lukker vindu
 Ikonifiserer vindu
 Forny kartvindu
-Adjust height/width ratio to 1/2
+Adjust window width to screen size
 Tilbake til forrige kartvindu
 Synchronize windows - or not
 Veksle tidssone og kartvindu
 Aktivér kommando (-command option)
 Avslutt program
 Lukk meny
+Adjust height/width ratio of window
+Adjust height/width ratio of zoomed area
 # Short help
 Sunclock har endel funksjoner som man kan komme til
 ved bruk av musklikk eller tastaturet:

@@ -190,12 +190,25 @@ Initializes coordinate values of geographical data in degrees, minutes
 and seconds. However, this can still be switched at runtime.
 .TP
 .B "\-menu "
-Raise the menu window along with the map window. This has no effect unless
-the -map option is also set.
+Raise the menu window along with the main (map, clock) window.
 .TP
 .B "\-nomenu "
-Don't raise the menu window along with the map window. This has no effect 
-if the clock is raised first.
+Don't raise the menu window along with the main (map, clock) window.
+This is the default.
+.TP
+.B "\-selector "
+Raise the selector window along with the main (map, clock) window.
+.TP
+.B "\-noselector "
+Don't raise the selector window along with the main (map, clock) window.
+This is the default.
+.TP
+.B "\-zoom "
+Raise the zoom window along with the main (map, clock) window.
+.TP
+.B "\-nozoom "
+Don't raise the zoom window along with the main (map, clock) window.
+This is the default.
 .TP
 .BI "\-mapmode * (single character = C, D, E, L or S)"
 Start the map functions in mode (C)oordinates, (D)istances, hour (E)xtension,
@@ -232,6 +245,29 @@ size spots or big spots and circles to represent cities. Size=3
 can be useful for monochrome displays on which cities are hardly
 visible, otherwise small color spots of size 1 or 2 are better).
 Default is 2 for color mode and 3 for monochrome mode.
+.TP
+.BI "\-mag " value
+Rescale the image by a magnification factor equal to <value>, which must 
+be at least equal to 1.0. This means that the window only shows a fraction 
+of the entire map namely, 1/<value> x 1/<value>. Default value is 1.0.
+.TP
+.BI "\-magx " value
+Same as for the -mag option, but only the x direction (width) is rescaled. 
+Default value for magx is 1.0.
+.TP
+.BI "\-magy " value
+Same as for the -mag option, but only the y direction (height) is rescaled. 
+Default value for magy is 1.0.
+.TP
+.BI "\-dx " value
+If the total width of the map is <width>, the upper left corner of the
+window will show the rescaled map starting at a distance from left border 
+(180 degree longitude) equal to <value> x <width>. Default dx value is 0.
+.TP
+.BI "\-dy " value
+If the total height of the map is <height>, the upper left corner of the
+window will show the rescaled map starting at a distance from top 
+border line (North pole) equal to <value> x <height>. Default dy value is 0.
 .TP
 .BI "\-coastlines "
 In the builtin vector map, generate coast lines without filling the
@@ -313,6 +349,11 @@ Sets the value of the refraction angle for tangential sun rays at sunset.
 This is related to the fact that the sun sometimes looks bigger at sunset.
 Changing the refraction degree slightly affects the computation of sunrise
 and sunset times. Default is 0.1 degree.
+.TP
+.BI "\-darkness " value (in the range 0.0 ... 1.0)
+Sets the constrast between day and night areas. A 0.0 value means that 
+the night area will not be distinguishable from day, while 1.0 means that 
+it will be completely black. Default is 0.5.
 .TP
 .BI "\-night "
 Start sunclock with the night region displayed (by default, it is).

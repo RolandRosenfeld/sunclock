@@ -66,7 +66,7 @@ Sundata * Context;
     struct jpeg_decompress_struct cinfo;
     struct error_mgr jerr;
     FILE *input_file;
-    float ratio;
+    double ratio;
     int i, j, k, l, m, prev, next, size;
     JSAMPROW scanline[1];
     char *scan, *c;
@@ -96,9 +96,9 @@ Sundata * Context;
     jpeg_read_header(&cinfo, TRUE);
 
     if (cinfo.jpeg_color_space == JCS_GRAYSCALE) return 3;
-
-    ratio = ((float) cinfo.image_width/(float) Context->geom.width + 
-             (float) cinfo.image_height/(float) Context->geom.height )/1.8;
+   
+    ratio = ((double) cinfo.image_width/(double) Context->zoom.width + 
+             (double) cinfo.image_height/(double) Context->zoom.height )/1.8;
     if (ratio>=8.0) 
       cinfo.scale_denom = 8;
     else
@@ -124,12 +124,13 @@ Sundata * Context;
     scan = (char *) salloc(3 * cinfo.output_width * sizeof(char));
 
     if (verbose)
-       fprintf(stderr, "Loading %s\n%d %d  -->  %d %d,    %d bytes per pixel\n"
-            "Rescaling JPEG data by 1/%d\n", 
-	    path,
+       fprintf(stderr, "Loading %s\n"
+	    "Rescaling JPEG data by 1/%d,  "
+            "%d %d  -->  %d %d,  %d bytes per pixel\n",
+	    path, cinfo.scale_denom,
             cinfo.image_width, cinfo.image_height, 
             Context->geom.width, Context->geom.height, 
-            bytes_per_pixel, cinfo.scale_denom);
+            bytes_per_pixel);
 
     prev = -1;
     scanline[0] = (JSAMPROW) scan;
@@ -140,12 +141,15 @@ Sundata * Context;
       }
 
     while (cinfo.output_scanline < cinfo.output_height) {
-	(void) jpeg_read_scanlines(&cinfo, scanline, (JDIMENSION) 1);
-	if (cinfo.output_scanline >= cinfo.output_height) 
-           next = Context->geom.height-1;
-	else
-	   next = ((2*cinfo.output_scanline-1) * 
-                    Context->geom.height)/(2*cinfo.output_height);
+      (void) jpeg_read_scanlines(&cinfo, scanline, (JDIMENSION) 1);
+      next = ((2*cinfo.output_scanline - 1) * Context->zoom.height)/
+                  (2*(int)cinfo.output_height) - Context->zoom.dy;
+      if (next>=0) {
+	if (next>=Context->geom.height) {
+	   next = Context->geom.height - 1;
+	   /* get loop to stop at next iteration ! */
+	   cinfo.output_scanline = cinfo.output_height;
+	}
 	for (l = prev+1; l<= next; l++) {
 	  c = Context->xim->data + l * Context->xim->bytes_per_line;
 	  k = 0;
@@ -154,7 +158,7 @@ Sundata * Context;
             k = bytes_per_pixel - 3;
 #endif
             for (i = 0; i < Context->geom.width; i++) {
-    	       j = 3 * ((i * cinfo.output_width)/Context->geom.width);
+    	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
 #ifdef BIGENDIAN
 	       c[k] = scan[j];
                c[k+1] = scan[j+1];
@@ -169,7 +173,7 @@ Sundata * Context;
           } else
 	  if (color_depth==16)
              for (i = 0; i < Context->geom.width; i++) {
-	       j = 3 * ((i * cinfo.output_width)/Context->geom.width);
+	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
 	       r = scan[j];
 	       g = scan[j+1];
 	       b = scan[j+2];
@@ -188,7 +192,7 @@ Sundata * Context;
           else
 	  if (color_depth==15)
              for (i = 0; i < Context->geom.width; i++) {
-	       j = 3 * ((i * cinfo.output_width)/Context->geom.width);
+	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
 	       r = scan[j];
 	       g = scan[j+1];
 	       b = scan[j+2];
@@ -206,11 +210,10 @@ Sundata * Context;
 	     }
 	  else {
              for (i = 0; i < Context->geom.width; i++) {
-	       j = 3 * ((i * cinfo.output_width)/Context->geom.width);
+	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
 	       r = scan[j];
 	       g = scan[j+1];
 	       b = scan[j+2];
-	       /* c[k] = (((7*g)/256)<<4) | ((r&192)>>4) | ((b&192)>>6); */
 	       c[k] = (unsigned char) 
                       (((7*g)/256)*36)+(((6*r)/256)*6)+((6*b)/256);
 	       m = (unsigned char)c[k];
@@ -222,11 +225,11 @@ Sundata * Context;
 	     }
 	  }
 	}
-	prev = next;
+        prev = next;
+      }
     }
-    free(scan);
 
-    jpeg_finish_decompress(&cinfo);
+    free(scan);
     jpeg_destroy_decompress(&cinfo);
 
     fclose(input_file);

@@ -3,11 +3,17 @@
 Starting from version 3.30 on, the recommended image format is JPEG,
 (although you can still use the .xpm or .xpm.gz format as before).
 We suggest you to download (actually very nice!) Earth maps from the
-xglobe/xplanet home sites. A bundled package of these is provided on
+xglobe/xplanet home sites
+   http://www.radcyberzine.com/xglobe/
+   http://www.vterrain.org/Imagery/whole_earth.html
+A bundled package of Earth maps is also provided on
    ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_jpg_maps.tgz
 
-The ZOOM functions are NOT YET COMPLETELY IMPLEMENTED and are currently
-disabled. They should soon appear in the 3.3x series development.
+This version now has A POWERFUL ZOOM IMPLEMENTATION !!
+If you want to get the full power of it, you can use the 11Mb jpeg Earth
+map from 
+    http://apollo.spaceports.com/~jhasting/planets.html
+    http://apollo.spaceports.com/~jhasting/earth.html
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
