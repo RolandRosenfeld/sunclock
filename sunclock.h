@@ -87,7 +87,7 @@ typedef struct Flags {
         short alloc_level;              /* allocation level */
         short resized;                  /* has window been resized ? */
         short dms;                      /* degree, minute, second mode */
-        short sun;                      /* is Sun to be shown ? */
+        short sunpos;                   /* is Sun to be shown ? */
         short cities;                   /* are cities to be shown ? */
         short meridian;                 /* are meridian to be shown ? */
         short parallel;                 /* are parallel to be shown ? */

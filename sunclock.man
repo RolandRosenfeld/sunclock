@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "Nov 18, 2000"
+.TH SUNCLOCK 1 "Dec 29, 2000"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing time and
 geographical data through point and click actions.
@@ -117,12 +117,21 @@ even when the environment makes intensive use of colors. Thanks to the
 use more than about 100 colors. Otherwise, a color quantization will
 be necessary before the map can be loaded.
 .TP
-.B "\-usememory "
-With this option, sunclock stores formerly loaded pixmap files in memory.
-This allows a slightly shorter commuting time between clock and map windows,
-at the expense of a larger memory usage. Use of this option is discouraged,
-since sunclock is anyway quite fast at loading files, at least on
-reasonably recent machines...
+.B "\-dock "
+With this option, sunclock locks the size of the first launched window,
+if this is a (small) clock. Also, this window cannot be closed unless
+all other windows are closed as well.
+.TP
+.B "\-updateall "
+With this option, sunclock updates all windows simultaneously. This, of 
+course, requires more CPU time and may slow down sunclock's operation 
+if too many windows are left open. The default is to update only the 
+active window. 
+.TP
+.B "\-title "
+With this option, sunclock provides hints to the window manager
+so that the title bars can appear. Many window managers do it anyway
+(supplying the missing hints when necessary).
 .TP
 .B \-clock
 Start in the clock state. This is the default and thus need not be

@@ -164,9 +164,6 @@ char *          CityInit = NULL;
 char *          Map_img_file = NULL;
 char *          Clock_img_file = NULL;
 
-char *          Map_img_sel = NULL;
-char *          Clock_img_sel = NULL;
-
 Display *	dpy;
 int		scr;
 Colormap        cmap0;
@@ -223,6 +220,9 @@ int             do_selector = 0;
 int             do_hint = 0;
 int		do_menu = 0;
 int             do_private = 0;
+int             do_dock = 0;
+int             do_updateall = 0;
+int             do_title = 0;
 
 int             time_jump = 0;
 int             progress_init = 0;
@@ -243,7 +243,7 @@ usage()
      fprintf(stderr, "%s: version %s, %s\nUsage:\n"
      "%s [-help] [-listmenu] [-version] [-language name]\n"
      SP"[-display name] [-bigfont name] [-smallfont name] \n"
-     SP"[-mono] [-invert] [-private]\n"
+     SP"[-mono] [-invert] [-private] [-dock] [-updateall] [-title]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
      SP"[-rcfile file] [-sharedir directory]\n"
      SP"[-mapimage file.xpm(.gz)] [-clockimage file.xpm(.gz)]\n"
@@ -293,7 +293,7 @@ initValues()
         gflags.dms = 0;
         gflags.shading = 1;
         gflags.cities = 1;
-        gflags.sun = 1;
+        gflags.sunpos = 1;
         gflags.meridian = 0;
         gflags.parallel = 0;
         gflags.tropics = 0;
@@ -663,6 +663,12 @@ register char **		argv;
 		}
 		else if (strcasecmp(*argv, "-private") == 0)
 		        do_private = 1;
+		else if (strcasecmp(*argv, "-dock") == 0)
+		        do_dock = 1;
+		else if (strcasecmp(*argv, "-updateall") == 0)
+		        do_updateall = 1;
+		else if (strcasecmp(*argv, "-title") == 0)
+		        do_title = 1;
 		else if (strcasecmp(*argv, "-clock") == 0)
 			win_type = 0;
 		else if (strcasecmp(*argv, "-map") == 0)
@@ -711,7 +717,7 @@ register char **		argv;
 			gflags.shading = 4;
 		}
 		else if (strcasecmp(*argv, "-sun") == 0) {
-			gflags.sun = 1;
+			gflags.sunpos = 1;
 		}
 		else if (strcasecmp(*argv, "-nomeridians") == 0) {
 			gflags.meridian = 0;
@@ -726,7 +732,7 @@ register char **		argv;
 			gflags.cities = 0;
 		}
 		else if (strcasecmp(*argv, "-nosun") == 0) {
-			gflags.sun = 0;
+			gflags.sunpos = 0;
 		}
 		else if (strcasecmp(*argv, "-meridians") == 0) {
 			gflags.meridian = 1;
@@ -1138,12 +1144,12 @@ int all;
 
         if (all) {
 	   last_time = 0;
-           if (Context->clock_img_file != Clock_img_file ) {
+
+           if (Context->clock_img_file)
               free(Context->clock_img_file);
-	   }
-           if (Context->clock_img_file != Map_img_file ) {
+           if (Context->map_img_file)
               free(Context->map_img_file);
-	   }
+
 	   if (all<0) {
 	      free(Context);
 	      Context = ParentContext;
@@ -1212,9 +1218,10 @@ int				num;
 	    }
 	    xsh.width = Geom->width;
 	    xsh.height = Geom->height + Geom->strip;
-	    if (Context->xim &&
+	    if ( (do_dock && !num) ||
+                 ( Context->xim &&
                  ( (Context->wintype==0 && Context->clock_img_file) ||
-                   (Context->wintype==1 && Context->map_img_file) ) ) {
+                   (Context->wintype==1 && Context->map_img_file) ) ) ) {
                 xsh.max_width = xsh.min_width = xsh.width;
                 xsh.max_height = xsh.min_height = xsh.height;
                 xsh.flags |= PMaxSize;
@@ -1249,15 +1256,30 @@ int				num;
 }
 
 void
+setClassHints(win, num)
+Window win;
+int    num;
+{
+        XClassHint xch;
+        char 			name[80];	/* Used to change icon name */
+	char *instance[4] =     { "clock", "map", "menu", "selector" };
+
+        sprintf(name, "%s %s", ProgName, VERSION);
+        XSetIconName(dpy, win, name);
+        xch.res_name = ProgName;
+        xch.res_class = "Sunclock";
+        XSetClassHint(dpy, win, &xch);
+        sprintf(name, "%s / %s", ProgName, instance[num]);
+        XStoreName(dpy, win, name);
+}
+
+void
 setProtocols(Context, num)
 struct Sundata * Context;
 int				num;
 {
-	XClassHint		xch;
 	Window			win = 0;
 	int                     mask;
-        char 			name[80];	/* Used to change icon name */
-	char *instance[4] =     { "clock", "map", "menu", "selector" };
 
 	mask = ExposureMask | ButtonPressMask | KeyPressMask;
 
@@ -1282,15 +1304,9 @@ int				num;
 
 	if (!win) return;
 
-        sprintf(name, "%s %s", ProgName, VERSION);
-        XSetIconName(dpy, win, name);
-	xch.res_name = ProgName;
-	xch.res_class = "Sunclock";
-	XSetClassHint(dpy, win, &xch);
-        sprintf(name, "%s / %s", ProgName, instance[num]);
-	XStoreName(dpy, win, name);
        	XSelectInput(dpy, win, mask);
 	XSetWMProtocols(dpy, win, &wm_delete_window, 1);
+	if (num>=2 || !do_title) setClassHints(win, num);
 }
 
 void
@@ -1975,9 +1991,8 @@ int build;
            Context->flags = gflags;
            Context->jump = time_jump;
            Context->progress = (progress_init)? progress_init : 60;
-           Context->clock_img_file = Clock_img_file;
-           Context->map_img_file = Map_img_file;
-           Context->next = NULL;
+           Context->clock_img_file = RCAlloc(Clock_img_file);
+           Context->map_img_file = RCAlloc(Map_img_file);
 	   Context->mark1.city = NULL;
 	   Context->mark1.status = 0;
            Context->pos1.tz = NULL;
@@ -2210,7 +2225,7 @@ void
 drawSun(Context)
 struct Sundata * Context;
 {
-	if (Context->flags.sun)
+	if (Context->flags.sunpos)
   	  draw_sun(Context);
 }
 
@@ -3027,7 +3042,7 @@ void
 createPixmap(Context)
 struct Sundata * Context;
 {
-   char Image_file[1024]="";
+   char *file, Image_file[1024]="";
 
    if (invert) {
      makePixmap(Context);
@@ -3038,22 +3053,13 @@ struct Sundata * Context;
      return;
    }
 
-   if (Context->wintype) {
-      if (Context->map_img_file!=NULL) {
-	if (*Context->map_img_file != '/' && *Context->map_img_file != '.' )
-	  sprintf(Image_file, "%s%s", image_dir, Context->map_img_file);
+   file = (Context->wintype)? Context->map_img_file : Context->clock_img_file;
+   if (file) {
+	if (*file != '/' && *file != '.' )
+	  sprintf(Image_file, "%s%s", image_dir, file);
 	else
-	  strcpy(Image_file, Context->map_img_file);
-      }
-   } else {
-      if (Context->clock_img_file!=NULL) {
-	if (*Context->clock_img_file != '/' && *Context->clock_img_file != '.' )
-	  sprintf(Image_file, "%s%s", image_dir, Context->clock_img_file);
-	else
-	  strcpy(Image_file, Context->clock_img_file);
-      }
+	  strcpy(Image_file, file);
    }
-
 
    Context->attrib = (XpmAttributes *) salloc(sizeof(XpmAttributes));
    Context->attrib->valuemask = XpmColormap | XpmReturnPixels;
@@ -3221,9 +3227,14 @@ int wintype, build;
    if (build) {
       struct Sundata * NewContext;
       NewContext = (struct Sundata *)salloc(sizeof(struct Sundata));
-      if (Context) 
-         Context->next = NewContext;
-      else
+      NewContext->next = NULL;
+      if (Context) {
+	if (Context->next) {
+	    NewContext->next = Context->next;
+            Context->next = NewContext;
+	} else
+            Context->next = NewContext;
+      } else
          Seed = NewContext;
       Context = NewContext;
       Context->wintype = wintype;
@@ -3246,6 +3257,10 @@ int wintype, build;
    else
       Context->clockgeom = Context->geom;
    XFlush(dpy);
+   if (do_title) {
+      usleep(4*TIMESTEP);
+      setClassHints(Context->win, wintype);
+   }
 }
 
 void RaiseAndFocus(win)
@@ -3358,6 +3373,7 @@ char	key;
 	       ++label_shift;
 	     break;
 	   case ' ':
+	     if (Context==Seed && do_dock) return;
              if (do_menu) PopMenu(Context);
              if (do_selector) PopSelector(Context);
              Context->wintype = 1 - Context->wintype;
@@ -3493,7 +3509,7 @@ char	key;
 	     exposeMap(Context);
 	     break;
 	   case 'o':
-             Context->flags.sun = 1 - Context->flags.sun;
+             Context->flags.sunpos = 1 - Context->flags.sunpos;
 	     if (mono) draw_sun(Context);
 	     exposeMap(Context);
              break;
@@ -3586,20 +3602,19 @@ int	click_pos;
         showMenuHint(MenuCaller, click_pos);
 }
 
-void freeImagefiles(Context, bool)
+void freeImageFiles(Context, bool)
 struct Sundata * Context;
 int * bool;
 {
-        if (Context->wintype) {
-	   if (Map_img_sel || Context->map_img_file) *bool = 1;
-	   if (Map_img_sel) free(Map_img_sel);
-           Map_img_sel = NULL;
-	   Context->map_img_file = NULL;
-        } else {
-	   if (Clock_img_sel || Context->clock_img_file) *bool = 1;
-	   if (Clock_img_sel) free(Clock_img_sel);
-           Clock_img_sel = NULL;
-	   Context->clock_img_file = NULL;
+	if (!Context->wintype && Context->clock_img_file) {
+	      free(Context->clock_img_file);
+              Context->clock_img_file = NULL;
+	      *bool = 1;
+	}
+	if (Context->wintype && Context->map_img_file) {
+	      free(Context->map_img_file);
+              Context->map_img_file = NULL;
+	      *bool = 1;
 	}
 }
 
@@ -3639,7 +3654,7 @@ int b;
 	  }
 	  if (a>=8) {
 	      bool=0;
-	      freeImagefiles(Context, &bool);
+	      freeImageFiles(Context, &bool);
 	      if (bool) {
                  if (do_menu) PopMenu(Context);
 		 adjustGeom(Context, 0);
@@ -3692,19 +3707,20 @@ int b;
 	      return;
 	   } else {
 	      char *f, *Image_file;
-	      Image_file = (Context->wintype)? Context->map_img_file : Context->clock_img_file;
+	      Image_file = (Context->wintype)? 
+                    Context->map_img_file : Context->clock_img_file;
 	      f = (char *)
                 salloc((strlen(image_dir)+strlen(s)+2)*sizeof(char));
 	      sprintf(f, "%s%s", image_dir, s);
 	      if (!Image_file || strcmp(f, Image_file)) {
-	         freeImagefiles(Context, &bool);
+	         freeImageFiles(Context, &bool);
                  if (do_menu) PopMenu(Context);
 		 adjustGeom(Context, 0);
 	         shutDown(Context, 0);
 		 if (Context->wintype) 
-                    Map_img_sel = Context->map_img_file = f;
+                    Context->map_img_file = f;
 		 else
-                    Clock_img_sel = Context->clock_img_file = f;
+                    Context->clock_img_file = f;
 	         buildMap(Context, Context->wintype, 0);
 		 if (do_selector) {
                     RaiseAndFocus(Selector);
@@ -3822,6 +3838,8 @@ Window win;
            Context = getContext(win);
 	   if(!Context) return;
 
+           if (Context==Seed && !Context->wintype && do_dock) return;
+
 	   if (getPlacement(win, &x, &y, &w, &h)) return;
            Context->prevgeom = Context->geom;
            h -= Context->geom.strip;
@@ -3916,6 +3934,7 @@ void
 eventLoop()
 {
 	XEvent			ev;
+	Sundata * 		Context;
 	int			key;
 
 	for (;;) {
@@ -3964,8 +3983,13 @@ eventLoop()
 			        break;
 
 			} else {
+			        Sundata *Which = getContext(ev.xexpose.window);
 			        usleep(TIMESTEP);
-				doTimeout(getContext(ev.xexpose.window));
+				for (Context=Seed; Context; 
+                                                   Context=Context->next)
+				if (do_updateall || Context == Which ||
+                                    (do_dock && Context == Seed))
+				   doTimeout(Context);
 			}
 	}
 }
@@ -4017,6 +4041,7 @@ register char **		argv;
 
 	leave = 1;
 	(void) parseArgs(argc, argv);
+	leave = 0;
 
 	dpy = XOpenDisplay(Display_name);
 	if (dpy == (Display *)NULL) {
