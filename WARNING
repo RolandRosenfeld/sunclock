@@ -6,7 +6,7 @@ We suggest you to download (actually very nice!) Earth maps from the
 xglobe/xplanet home sites
    http://www.radcyberzine.com/xglobe/
    http://www.vterrain.org/Imagery/whole_earth.html
-    http://apollo.spaceports.com/~jhasting/planets.html
+   http://apollo.spaceports.com/~jhasting/planets.html
 A bundled package of Earth maps is also provided on
    ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_jpg_maps.tgz
 
@@ -15,6 +15,12 @@ If you want to get the full power of it, you can use the huge 11Mb jpeg
 Earth map from 
     http://apollo.spaceports.com/~jhasting/earth.html
     ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_huge_earthmap.jpg
+
+Starting from version 3.38 on, a number of geometry options have been
+changed or added - possibly with a modified syntax. CHECK THE MAN PAGE 
+for the detail of changes, of type key 'h' twice within sunclock.
+Almost all options can be configured either from the command line, 
+from the ~/.sunclockrc config file or at runtime.
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

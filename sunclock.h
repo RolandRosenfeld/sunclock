@@ -18,10 +18,17 @@
 #include <time.h>
 #include "version.h"
 
+#define	FAILFONT	"fixed"
+#define MENUFONT        "6x13"
+#define MAPSTRIPFONT    "6x13"
+#define CLOCKSTRIPFONT  "6x10"
+
 #define MENU_WIDTH 38
 #define SEL_WIDTH 28
 #define SEL_HEIGHT 10
 #define MAXSHORT 32767
+#define TOPTITLEBARHEIGHT 40   /* usual height of top title bar for KDE 
+				  can put 0 instead if you don't use that! */
 
 #define abs(x) ((x) < 0 ? (-(x)) : x)			  /* Absolute value */
 #define sgn(x) (((x) < 0) ? -1 : ((x) > 0 ? 1 : 0))	  /* Extract sign */
@@ -41,7 +48,6 @@
 
 #define RECOVER         "Trying to recover.\n"
 
-#define	FAILFONT	"fixed"
 #define EARTHRADIUS_KM  6378.125
 #define EARTHRADIUS_ML  3963.180
 #define SUN_APPRADIUS   0.266      /* Sun apparent radius, in degrees */
@@ -73,6 +79,7 @@ typedef struct Geometry {
         unsigned int    h_mini;
 } Geometry;
 
+/* Behavioral flags */
 typedef struct Flags {
   /* Status flags */
         short mono;                     /* 0=color 1=invert 2=B&W */
@@ -98,6 +105,8 @@ typedef struct Flags {
         short hours_shown;              /* hours in extension mode shown? */
 } Flags;
 
+/* Zoom settings */
+
 typedef struct ZoomSettings {
         double          fx;             /* zoom factor along width */
         double          fy;             /* zoom factor along height */
@@ -110,18 +119,25 @@ typedef struct ZoomSettings {
         int             dy;             /* translation along height */
 } ZoomSettings;
 
+/* List of GCs, as name indicates! */
+
 typedef struct GClist {
+        GC clockstore;
         GC mapstore;
-        GC mapinvert;
-        GC menufont;
-        GC clockfont;
-        GC optionfont;
-        GC dirfont;
-        GC imagefont;
+        GC invert;
+
         GC choice;
         GC change;
         GC zoombg;
         GC zoomfg;
+
+        GC clockstripfont;
+        GC mapstripfont;
+        GC menufont;
+        GC optionfont;
+        GC dirfont;
+        GC imagefont;
+
         GC citycolor0;
         GC citycolor1;
         GC citycolor2;
@@ -135,22 +151,30 @@ typedef struct GClist {
         GC mooncolor;
 } GClist;
 
+/* List of Pixel values, as name indicates! */
+
 typedef struct Pixlist {
         Pixel black;
         Pixel white;
-        Pixel textbgcolor;
-        Pixel textfgcolor;
+        Pixel clockbgcolor;
+        Pixel clockfgcolor;
         Pixel mapbgcolor;
         Pixel mapfgcolor;
+        Pixel clockstripbgcolor;
+        Pixel clockstripfgcolor;
+        Pixel mapstripbgcolor;
+        Pixel mapstripfgcolor;
+        Pixel menubgcolor;
+        Pixel menufgcolor;
+        Pixel dircolor;
+        Pixel imagecolor;
+        Pixel changecolor;
+        Pixel choicecolor;
         Pixel zoombgcolor;
         Pixel zoomfgcolor;
         Pixel optionbgcolor;
         Pixel optionfgcolor;
         Pixel caretcolor;
-        Pixel dircolor;
-        Pixel imagecolor;
-        Pixel changecolor;
-        Pixel choicecolor;
         Pixel citycolor0;
         Pixel citycolor1;
         Pixel citycolor2;
@@ -164,16 +188,20 @@ typedef struct Pixlist {
         Pixel mooncolor;
 } Pixlist;
 
+/* Graphic Data */
+
 typedef struct GraphicData {
+        int             precedence;     /* ordinal number of creation */
+        int             clockstrip;     /* height of strip for clock */
+        int             mapstrip;       /* height of strip for map */
+        int             menustrip;      /* height of strip for map */
+        int             charspace;      /* menu char spacing */
+        short           links;          /* how many other Windows linked ? */
+        short           usedcolors;     /* number of colors used */
         Colormap        cmap;           /* window (private?) colormap */  
-        short links;                    /* how many other Windows linked ? */
-        short usedcolors;               /* number of colors used */
-        int   mapstrip;                 /* height of strip for map */
-        int   clockstrip;               /* height of strip for clock */
-        int   charspace;                /* menu char spacing */
-        int   precedence;               /* ordinal number of creation */
+        XFontStruct *   clockstripfont; /* clock font structure */
+        XFontStruct *   mapstripfont;   /* map font structure */
         XFontStruct *   menufont;       /* menu font structure */
-        XFontStruct *   clockfont;      /* clock font structure */
         GClist          gclist;         /* window GCs */  
         Pixlist         pixlist;        /* special color pixels */  
 } GraphicData;
@@ -198,15 +226,15 @@ typedef struct Mark {
 
 /* Sundata structure */
 typedef struct Sundata {
+        int             wintype;        /* is window map or clock ? */
         Window          win;            /* window id */
         GraphicData *   gdata;          /* associated graphical data */
-        int             wintype;        /* is window map or clock ? */
-        int             hstrip;         /* height of bottom strip */
         Geometry        geom;           /* geometry */
 	Geometry        prevgeom;       /* previous geometry */
         ZoomSettings    zoom;           /* Zoom settings of window */
         ZoomSettings    newzoom;        /* New zoom settings */
 	Flags		flags;		/* window behavioral flags */
+        int             hstrip;         /* height of bottom strip */
         char *          clock_img_file; /* name of clock xpm file */
         char *          map_img_file;   /* name of map xpm file */
 	char *		bits;           /* pointer to char * bitmap bits */

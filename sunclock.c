@@ -163,6 +163,7 @@ extern void processZoomAction();
 extern void activateZoom();
 
 extern void showOptionHint();
+extern void resetOptionLength();
 extern void setupOption();
 extern void PopOption();
 extern void activateOption();
@@ -179,16 +180,28 @@ char app_default[] = SHAREDIR"/Sunclockrc";
 char Default_vmf[] = SHAREDIR"/earthmaps/vmf/standard.vmf";
 
 char * ProgName;
-char * share_maps_dir = NULL;
+char * Title = NULL;
+
+char * ClassName = NULL;
+char * ClockClassName = NULL;
+char * MapClassName = NULL;
+char * AuxilClassName = NULL;
+
 char * Clock_img_file = NULL;
 char * Map_img_file = NULL;
-char * ClockFont_name = NULL;
+
+char * ClockStripFont_name = NULL;
+char * MapStripFont_name = NULL;
 char * MenuFont_name = NULL;
+
+char * share_maps_dir = NULL;
 char * image_dir = NULL;
 char * rc_file = NULL;
+
 char * ExternAction = NULL;
 char **DateFormat = NULL;
 char * ListFormats = NULL;
+
 char **dirtable = NULL;
 char * freq_filter = "";
 
@@ -200,13 +213,16 @@ Pixmap zoompix = 0;
 
 struct Sundata *Seed, *MenuCaller, *SelCaller, *ZoomCaller, *OptionCaller;
 
-char    TextBgColor[COLORLENGTH], TextFgColor[COLORLENGTH], 
+char    ClockBgColor[COLORLENGTH], ClockFgColor[COLORLENGTH], 
         MapBgColor[COLORLENGTH], MapFgColor[COLORLENGTH], 
+        ClockStripBgColor[COLORLENGTH], ClockStripFgColor[COLORLENGTH], 
+        MapStripBgColor[COLORLENGTH], MapStripFgColor[COLORLENGTH], 
+        MenuBgColor[COLORLENGTH], MenuFgColor[COLORLENGTH], 
+        DirColor[COLORLENGTH], ImageColor[COLORLENGTH],
+        ChangeColor[COLORLENGTH], ChoiceColor[COLORLENGTH],
         ZoomBgColor[COLORLENGTH], ZoomFgColor[COLORLENGTH], 
         OptionBgColor[COLORLENGTH], OptionFgColor[COLORLENGTH], 
         CaretColor[COLORLENGTH],
-        DirColor[COLORLENGTH], ImageColor[COLORLENGTH],
-        ChangeColor[COLORLENGTH], ChoiceColor[COLORLENGTH],
         CityColor0[COLORLENGTH], CityColor1[COLORLENGTH], 
         CityColor2[COLORLENGTH],
         MarkColor1[COLORLENGTH], MarkColor2[COLORLENGTH], 
@@ -235,11 +251,14 @@ int             runtime = 0;
 int             button_pressed = 0;
 int             control_key = 0;
 int             precedence = 0;
+int             option_changes = 1;
+int             auxil_changed = 0;
 
 int             zoom_mode = 0;
 int             zoom_active = 1;
 
 int             option_caret;
+int             option_maxlength = 0;
 int             old_option_caret = -1;
 int             old_option_length;
 
@@ -262,24 +281,24 @@ Window          Menu = 0, Selector = 0, Zoom = 0, Option = 0;
 
 struct Geometry MapGeom    = { 0, 30,  30, 792, 396, 320, 160 };
 struct Geometry ClockGeom  = { 0, 30,  30, 128,  64,  48,  24 };
-struct Geometry MenuGeom   = { 0, 30, 430, 792,  40, 700,  40 };
-struct Geometry SelGeom    = { 0, 30,  40, 600, 180, 450,  80 };
-struct Geometry ZoomGeom   = { 0, 30,  40, 500, 320, 360, 250 };
-struct Geometry OptionGeom = { 0, 30,  40, 640,  80, 640,  80 };
+struct Geometry MenuGeom   = { 0,  0,  30, 792,  40, 700,  40 };
+struct Geometry SelGeom    = { 0,  0,  30, 600, 180, 450,  80 };
+struct Geometry ZoomGeom   = { 0,  0,  30, 500, 320, 360, 250 };
+struct Geometry OptionGeom = { 0,  0,  30, 630,  80, 630,  80 };
 
 int             radius[5] = {0, 2, 2, 3, 5};
 
 int             win_type = 0;
 int             placement = -1;
+int             place_shiftx = 0;
+int             place_shifty = 0;
 int             color_alloc_failed = 0;
 int             num_formats;
-int             configrc;
+int             parse_cmdline;
 int             verbose = 0;
 int             num_lines;
 int             num_table_entries;
 
-int             horiz_shift = 0;
-int             vert_shift = 12;
 int             label_shift = 0;
 int             selector_shift = 0;
 int             zoom_shift = 0;
@@ -296,7 +315,6 @@ int             do_hint = 0;
 int             do_dock = 0;
 int             do_sync = 0;
 int             do_zoomsync = 0;
-int             do_title = 1;
 
 int             time_jump = 0;
 
@@ -317,17 +335,23 @@ usage()
 {
      fprintf(stderr, "%s: version %s, %s\nUsage:\n"
      "%s [-help] [-listmenu] [-version]\n"
-     SP"[-verbose] [-silent] [-title] [-notitle]\n"
      SP"[-display name] [-rcfile file] [-sharedir directory]\n"
-     SP"[-clock] [-clockgeom <geom>] [-clockimage file]\n"
-     SP"[-map] [-mapgeom <geom>] [-mapimage file] [-mapmode * <L,C,S,D,E>]\n"
-     SP"[-menu] [-nomenu] [-horizshift h (map<->menu)] [-vertshift v]\n"
-     SP"[-selector] [-noselector] [-selgeom <geom>] [-synchro] [-nosynchro]\n" 
-     SP"[-zoom] [-nozoom] [-zoomgeom <geom>] [-zoomsync] [-nozoomsync]\n"
-"**       [-language name] [-menufont name] [-clockfont name]\n"
-     SP"[-dateformat string1|string2|...] [-command string]\n"
+     SP"[-clock] [-clockimage file] [-dock]\n"
+     SP"[-map] [-mapimage file] [-mapmode * <L,C,S,D,E>]\n"
+     SP"[-menu] [-nomenu] [-selector] [-noselector]\n"
+     SP"[-zoom] [-nozoom] [-option] [-nooption]\n"
+"**       [-language name] [-dateformat string1|string2|...] [-command string]\n"
+     SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
+     SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
+     SP"[-auxilgeom <geom>] [-menugeom <geom>]\n"
+     SP"[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>]\n"
+     SP"[-title name] [-mapclassname name] [-clockclassname name]\n"
+     SP"[-auxilclassname name] [-classname name]\n"
+     SP"[-menufont fontname] [-mapfont fontname]\n"
+     SP"[-mapstripfont fontname] [-clockstripfont fontname]\n"
      SP"[-fullcolors] [-colorinvert] [-monochrome] [-aspect mode]\n"
-     SP"[-placement (random, fixed, center, NW, NE, SW, SE)] [-dock]\n"
+     SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
+     SP"[-placementshift x, y]\n"
      SP"[-decimal] [-dms] [-city name] [-position latitude longitude]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
      SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
@@ -338,12 +362,15 @@ usage()
      SP"[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians]\n"
      SP"[-parallels] [-noparallels] [-tropics] [-notropics]\n"
      SP"[-spotsize size(0,1,2,3,4)] [-dottedlines] [-plainlines]\n"
-     SP"[-textbgcolor color] [-textfgcolor color]\n"
-     SP"[-mapbgcolor color] [-mapfgcolor color]\n"
+     SP"[-menubgcolor color] [-menufgcolor color]\n"
+     SP"[-mapstripbgcolor color] [-mapstripfgcolor color]\n"
+     SP"[-clockstripbgcolor color] [-clockstripfgcolor color]\n"
      SP"[-zoombgcolor color] [-zoomfgcolor color]\n"
      SP"[-optionbgcolor color] [-optionfgcolor color] [-caretcolor]\n"
      SP"[-changecolor color] [-choicecolor color]\n"
      SP"[-dircolor color] [-imagecolor color]\n"
+     SP"[-mapbgcolor color] [-mapfgcolor color]\n"
+     SP"[-clockbgcolor color] [-clockfgcolor color]\n"
      SP"[-linecolor color] [-suncolor color] [-mooncolor color]\n"
      SP"[-meridiancolor color] [-parallelcolor] [-tropiccolor color]\n"
      SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
@@ -407,10 +434,16 @@ initValues()
         gzoom.fdx = 0.5;
         gzoom.fdy = 0.5;
 
-        strcpy(TextBgColor, "Grey92");
-        strcpy(TextFgColor, "Black");
+        strcpy(ClockBgColor, "White");
+        strcpy(ClockFgColor, "Black");
         strcpy(MapBgColor, "White");
         strcpy(MapFgColor, "Black");
+        strcpy(ClockStripBgColor, "Grey92");
+        strcpy(ClockStripFgColor, "Black");
+        strcpy(MapStripBgColor, "Grey92");
+        strcpy(MapStripFgColor, "Black");
+        strcpy(MenuBgColor, "Grey92");
+        strcpy(MenuFgColor, "Black");
         strcpy(ZoomBgColor, "White");
         strcpy(ZoomFgColor, "Black");
         strcpy(OptionBgColor, "White");
@@ -436,8 +469,9 @@ initValues()
         position.tz = NULL;
 
         StringReAlloc(&share_maps_dir, SHAREDIR"/earthmaps/");
+        StringReAlloc(&MapStripFont_name, MAPSTRIPFONT);
+        StringReAlloc(&ClockStripFont_name, CLOCKSTRIPFONT);
         StringReAlloc(&MenuFont_name, MENUFONT);
-        StringReAlloc(&ClockFont_name, CLOCKFONT);
         StringReAlloc(&ListFormats, StdFormats);
 
         StringReAlloc(&image_dir, share_maps_dir);
@@ -473,10 +507,14 @@ register char **                argv;
         if (argc == 1) {
                 fprintf(stderr, "%s: option `%s' requires an argument\n\n",
                         ProgName, *argv);
-                usage();
-                if (configrc) 
+                if (parse_cmdline) {
+                        usage();
                         exit(1);
-                else
+		} else
+                if (runtime)
+                   fprintf(stderr, 
+                        "Invalid option specification\n");		  
+		else
                    fprintf(stderr, 
                         "Error in config file %s. "RECOVER, *argv);
         }
@@ -633,26 +671,6 @@ register char **                argv;
                         StringReAlloc(&Clock_img_file, *++argv);
                         --argc;
                 }
-                else if (strcasecmp(*argv, "-clockgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &ClockGeom);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-selgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &SelGeom);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-zoomgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &ZoomGeom);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &MapGeom);
-                        --argc;
-                }
                 else if (strcasecmp(*argv, "-mag") == 0) {
                         needMore(argc, argv);
                         gzoom.fx = atof(*++argv);
@@ -692,14 +710,91 @@ register char **                argv;
                         strncpy(language, *++argv, 2);
                         --argc;
                 } 
-                else if (strcasecmp(*argv, "-menufont") == 0) {
+	        else if (strcasecmp(*argv, "-title") == 0) {
                         needMore(argc, argv);
-                        StringReAlloc(&MenuFont_name, *++argv); 
+                        StringReAlloc(&Title, *++argv);
+                        --argc;
+		}
+	        else if (strcasecmp(*argv, "-clockclassname") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&ClockClassName, *++argv);
+                        --argc;
+		}
+	        else if (strcasecmp(*argv, "-mapclassname") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&MapClassName, *++argv);
+                        --argc;
+		}
+	        else if (strcasecmp(*argv, "-auxilclassname") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&AuxilClassName, *++argv);
+                        --argc;
+		}
+	        else if (strcasecmp(*argv, "-classname") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&ClassName, *++argv);
+                        --argc;
+		}
+                else if (strcasecmp(*argv, "-clockgeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &ClockGeom);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-mapgeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &MapGeom);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-auxilgeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &MenuGeom);
+			option_changes |= 2;
+			ZoomGeom.x = SelGeom.x = OptionGeom.x = MenuGeom.x;
+			ZoomGeom.y = SelGeom.y = OptionGeom.y = MenuGeom.y;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-menugeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &MenuGeom);
+			option_changes |= 2;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-selgeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &SelGeom);
+			option_changes |= 2;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-zoomgeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &ZoomGeom);
+			option_changes |= 2;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-optiongeom") == 0) {
+                        needMore(argc, argv);
+                        getGeom(*++argv, &OptionGeom);
+			option_changes |= 2;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-clockstripfont") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&ClockStripFont_name, *++argv); 
                         --argc;
                 } 
-                else if (strcasecmp(*argv, "-clockfont") == 0) {
+                else if (strcasecmp(*argv, "-mapstripfont") == 0) {
                         needMore(argc, argv);
-                        StringReAlloc(&ClockFont_name, *++argv); 
+                        StringReAlloc(&MapStripFont_name, *++argv); 
+                        --argc;
+                } 
+                else if (strcasecmp(*argv, "-menufont") == 0) {
+                        needMore(argc, argv);
+			if (!MenuFont_name)
+			   option_changes |= 1;
+			else
+			  if (strcmp(MenuFont_name, argv[1]))
+			     option_changes |= 1;
+                        StringReAlloc(&MenuFont_name, *++argv); 
                         --argc;
                 } 
                 else if (strcasecmp(*argv, "-mapmode") == 0) {
@@ -759,14 +854,14 @@ register char **                argv;
                         gflags.colorscale = opt;
                         --argc;
                 }
-                else if (strcasecmp(*argv, "-textbgcolor") == 0) {
+                else if (strcasecmp(*argv, "-clockbgcolor") == 0) {
                         needMore(argc, argv);
-                        strncpy(TextBgColor, *++argv, COLORLENGTH);
+                        strncpy(ClockBgColor, *++argv, COLORLENGTH);
                         --argc;
                 }
-                else if (strcasecmp(*argv, "-textfgcolor") == 0) {
+                else if (strcasecmp(*argv, "-clockfgcolor") == 0) {
                         needMore(argc, argv);
-                        strncpy(TextFgColor, *++argv, COLORLENGTH);
+                        strncpy(ClockFgColor, *++argv, COLORLENGTH);
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-mapbgcolor") == 0) {
@@ -777,6 +872,36 @@ register char **                argv;
                 else if (strcasecmp(*argv, "-mapfgcolor") == 0) {
                         needMore(argc, argv);
                         strncpy(MapFgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-clockstripbgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(ClockStripBgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-clockstripfgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(ClockStripFgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-mapstripbgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(MapStripBgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-mapstripfgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(MapStripFgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-menubgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(MenuBgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-menufgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(MenuFgColor, *++argv, COLORLENGTH);
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-zoombgcolor") == 0) {
@@ -898,6 +1023,7 @@ register char **                argv;
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-placement") == 0) {
+		        option_changes |= 2;
                         needMore(argc, argv);
                         if (strcasecmp(*++argv, "random")==0)
                            placement = RANDOM;
@@ -918,17 +1044,15 @@ register char **                argv;
                            placement = SE;
                         --argc;
                 }
-                else if (strcasecmp(*argv, "-horizshift") == 0) {
+                else if (strcasecmp(*argv, "-placementshift") == 0) {
+		        option_changes |= 2;
                         needMore(argc, argv);
-                        horiz_shift = atoi(*++argv);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-vertshift") == 0) {
+			place_shiftx = atol(*++argv);
+			--argc;
                         needMore(argc, argv);
-                        vert_shift = atoi(*++argv);
-                        if (vert_shift<6) vert_shift = 6;
-                        --argc;
-                }
+			place_shifty = atol(*++argv);
+			--argc;
+		}
                 else if (strcasecmp(*argv, "-command") == 0) {
                         needMore(argc, argv);
                         StringReAlloc(&ExternAction, *++argv);
@@ -948,11 +1072,15 @@ register char **                argv;
                 }
                 else if ((opt = (strcasecmp(*argv, "-progress") == 0)) ||
                          (strcasecmp(*argv, "-jump") == 0)) {
-                        char *str, c;
+                        char *str, *invalid, c;
                         long value;
                         needMore(argc, argv);
-                        value = atol(str=*++argv);
-                        c = str[strlen(str)-1];
+                        str=*++argv;
+                        value = strtol(str, &invalid, 10);
+                        if (invalid) 
+                           c = *invalid;
+			else
+			   c = 's';
                         if (c>='0' && c<='9') c='s';
                         switch(c) {
                           case 's': break;
@@ -1001,6 +1129,14 @@ register char **                argv;
                         verbose = 1;
                 else if (strcasecmp(*argv, "-silent") == 0)
                         verbose = 0;
+                else if (strcasecmp(*argv, "-synchro") == 0)
+                        do_sync = 1;
+                else if (strcasecmp(*argv, "-nosynchro") == 0)
+                        do_sync = 0;
+                else if (strcasecmp(*argv, "-zoomsync") == 0)
+                        do_zoomsync = 1;
+                else if (strcasecmp(*argv, "-nozoomsync") == 0)
+                        do_zoomsync = 0;
                 else if (strcasecmp(*argv, "-coastlines") == 0)
                         gflags.fillmode = 0;
                 else if (strcasecmp(*argv, "-contour") == 0)
@@ -1053,16 +1189,9 @@ register char **                argv;
                       *argv);
                    runtime = -1;
                    return(0);
-                } else if (strcasecmp(*argv, "-dock") == 0)
+                } 
+                else if (strcasecmp(*argv, "-dock") == 0)
                         do_dock = 1;
-                else if (strcasecmp(*argv, "-zoomsync") == 0)
-                        do_zoomsync = 1;
-                else if (strcasecmp(*argv, "-nozoomsync") == 0)
-                        do_zoomsync = 0;
-                else if (strcasecmp(*argv, "-title") == 0)
-                        do_title = 1;
-                else if (strcasecmp(*argv, "-notitle") == 0)
-                        do_title = 0;
                 else if (strcasecmp(*argv, "-clock") == 0)
                         win_type = 0;
                 else if (strcasecmp(*argv, "-map") == 0)
@@ -1079,9 +1208,13 @@ register char **                argv;
                         do_zoom = 1;
                 else if (strcasecmp(*argv, "-nozoom") == 0)
                         do_zoom = 0;
+                else if (strcasecmp(*argv, "-option") == 0)
+                        do_option = 1;
+                else if (strcasecmp(*argv, "-nooption") == 0)
+                        do_option = 0;
                 else if (strcasecmp(*argv, "-listmenu") == 0) {
                         ListMenu();
-                        if (configrc) 
+                        if (parse_cmdline) 
                           exit(0);
                         else
                           return(0);
@@ -1089,13 +1222,13 @@ register char **                argv;
                 else if (strcasecmp(*argv, "-version") == 0) {
                         fprintf(stderr, "%s: version %s, %s\n",
                                 ProgName, VERSION, COPYRIGHT);
-                        if (configrc) 
+                        if (parse_cmdline) 
                           exit(0);
                         else
                           return(0);
                 } else {
                   fprintf(stderr, "%s: unknown option !!\n\n", *argv);
-                  if (configrc) {
+                  if (parse_cmdline) {
                     usage();
                     exit(1);
                   }
@@ -1167,6 +1300,71 @@ readLanguage()
              "Unable to open language in %s\n", share_i18n);
 }
 
+int
+parseCmdLine(buf)
+char * buf;
+{
+    int i, j, l;
+    char *dup, *str;
+    char ** argv;
+    int argc;
+
+    l = strlen(buf);
+    dup = (char *) salloc((l+2)*sizeof(char));
+    if (dup) {
+       if (*buf == '-')
+          strcpy(dup, buf);
+       else {
+	  strcpy(dup+1, buf);
+	  *dup = '-';
+       }
+    } else return 1;
+
+    j = 0;
+    for (i=0 ; dup[i] ; ++i)
+       if (isspace(dup[i])) ++j;
+
+    argv = (char **) salloc((j+2)*sizeof(char *));
+
+    i = argc = 0;
+
+ rescan:
+    while(dup[i] && isspace(dup[i])) {
+      dup[i] = '\0';
+      ++i;
+    }
+
+    if (dup[i]) {
+       str = argv[argc] = dup+i;
+       while(dup[i] && !isspace(dup[i])) ++i;
+       if (str[0]==':' && (!str[1] || isspace(str[1]))) {
+	  str[0] = '\0';
+	  goto rescan;
+       }
+       ++argc;
+       goto rescan;
+    } else
+       argv[argc] = NULL;
+
+    for (i=0; i<l+1; i++)
+       if (dup[i] && dup[i]<' ') dup[i] = ' ';
+
+    for (i=0; i<argc; i++) {
+       str = argv[i];
+       l = strlen(str)-1;
+       if (*str == '-' && str[l] == ':') str[l] = '\0';
+    }
+
+    l = parseArgs(argc+1, argv-1);
+
+    if (l>0)
+       fprintf(stderr, 
+          "Parse error at line %s in [options] !!\n", buf);
+
+    free(dup);
+    free(argv);
+    return l;
+}
 
 /*
  * readRC() - Read the user's ~/.sunclockrc file and app-defaults
@@ -1181,13 +1379,11 @@ readRC()
 
     char *fname;        /* Path to .sunclockrc file */
     FILE *rc;           /* File pointer for rc file */
-    char buf[128];      /* Buffer to hold input lines */
-    char option[3][128]; /* Pointers to options */
-    char *args[3];      /* Pointers to options */
+    char buf[1028];     /* Buffer to hold input lines */
     char *city, *lat, *lon, *tz; /* Information about a place */
     City *crec;         /* Pointer to new city record */
-    int  first_step=1;  /* Are we parsing options in rc file ? */
-    int  i, j, shift;   /* indices */
+    int  first_step;    /* Are we parsing options in rc file ? */
+    int  j;
 
     /*
      * Get the path to the rc file
@@ -1200,7 +1396,6 @@ readRC()
              "Unable to get path to ~/.sunclockrc\n");
         return(1);
     }
-
     
     /* Open the RC file */
 
@@ -1221,15 +1416,13 @@ readRC()
 
     /* Read and parse lines from the file */
 
-    option[0][0] = '-';
-    for (i=0; i<=2; i++) args[i] = option[i];
-
-    while (fgets(buf, 128, rc)) {
+    first_step = 1;
+    while (fgets(buf, 1024, rc)) {
 
         /* Look for blank lines or comments */
 
         j=0;
-        while (j<128 && isspace(buf[j]) && buf[j] != '0') ++j; 
+        while (j<1024 && isspace(buf[j]) && buf[j] != '0') ++j; 
         if ((buf[j] == '#') || (buf[j] == '\0')) continue;
 
         if (strstr(buf, "[Cities]")) {
@@ -1243,21 +1436,8 @@ readRC()
         }
 
         if (first_step) {
-           if (*buf=='-') shift = 1; else shift = 0;
-           i = sscanf(buf+shift, "%s %s %s\n", 
-                 option[0]+1, option[1], option[2]);
-           j = strlen(option[0])-1;
-           if (i==1 || option[0][j]==':') {
-           fflush(stdout);
-             if (option[0][j]==':') option[0][j]='\0';
-             i = parseArgs(i+1, args-1);
-           }
-           if (i>0) {
-             fprintf(stderr, 
-                     "Error in %s at line %s in [options] !!\n\n", 
-                     fname, option[0]+1);
-             usage();
-           }
+	   if (parseCmdLine(buf))
+	      fprintf(stderr,"Recheck syntax of config file %s !!\n\n", fname);
            continue;
         }
 
@@ -1330,6 +1510,31 @@ void
 getFonts(Context)
 Sundata * Context;
 {
+        Context->gdata->clockstripfont = 
+           XLoadQueryFont(dpy, ClockStripFont_name);
+        if (Context->gdata->clockstripfont == (XFontStruct *)NULL) {
+                fprintf(stderr, "%s: can't open font `%s', using `%s'\n",
+                        ProgName, ClockStripFont_name, FAILFONT);
+                Context->gdata->clockstripfont = XLoadQueryFont(dpy, FAILFONT);
+                if (Context->gdata->clockstripfont == (XFontStruct *)NULL) {
+                   fprintf(stderr, "%s: can't open font `%s', giving up\n",
+                                ProgName, FAILFONT);
+                   exit(1);
+                }
+        }
+
+        Context->gdata->mapstripfont = XLoadQueryFont(dpy, MapStripFont_name);
+        if (Context->gdata->mapstripfont == (XFontStruct *)NULL) {
+                fprintf(stderr, "%s: can't open font `%s', using `%s'\n",
+                        ProgName, MapStripFont_name, FAILFONT);
+                Context->gdata->mapstripfont = XLoadQueryFont(dpy, FAILFONT);
+                if (Context->gdata->mapstripfont == (XFontStruct *)NULL) {
+                   fprintf(stderr, "%s: can't open font `%s', giving up\n",
+                                ProgName, FAILFONT);
+                   exit(1);
+                }
+        }
+
         Context->gdata->menufont = XLoadQueryFont(dpy, MenuFont_name);
         if (Context->gdata->menufont == (XFontStruct *)NULL) {
                 fprintf(stderr, "%s: can't open font `%s', using `%s'\n",
@@ -1341,27 +1546,25 @@ Sundata * Context;
                    exit(1);
                 }
         }
-        Context->gdata->clockfont = XLoadQueryFont(dpy, ClockFont_name);
-        if (Context->gdata->clockfont == (XFontStruct *)NULL) {
-                fprintf(stderr, "%s: can't open font `%s', using `%s'\n",
-                        ProgName, ClockFont_name, FAILFONT);
-                Context->gdata->clockfont = XLoadQueryFont(dpy, FAILFONT);
-                if (Context->gdata->clockfont == (XFontStruct *)NULL) {
-                        fprintf(stderr, "%s: can't open font `%s', giving up\n",
-                                ProgName, FAILFONT);
-                        exit(1);
-                }
-        }
+
+        Context->gdata->clockstrip = 
+                           Context->gdata->clockstripfont->max_bounds.ascent +
+                           Context->gdata->clockstripfont->max_bounds.descent + 4;
 
         Context->gdata->mapstrip = 
+                           Context->gdata->mapstripfont->max_bounds.ascent + 
+                           Context->gdata->mapstripfont->max_bounds.descent + 8;
+
+        Context->gdata->menustrip = 
                            Context->gdata->menufont->max_bounds.ascent + 
                            Context->gdata->menufont->max_bounds.descent + 8;
 
-        Context->gdata->clockstrip = 
-                           Context->gdata->clockfont->max_bounds.ascent +
-                           Context->gdata->clockfont->max_bounds.descent + 4;
+	Context->gdata->charspace = Context->gdata->menustrip+5;
 
-	Context->gdata->charspace = Context->gdata->mapstrip+5;
+	if (option_changes & 1) {
+	       SelGeom.width = SEL_WIDTH * Context->gdata->menustrip;
+               SelGeom.height = (11+4*SEL_HEIGHT)*Context->gdata->menustrip/5;
+	}
 }
 
 unsigned long 
@@ -1440,46 +1643,65 @@ int private;
 
         color_alloc_failed = 0;
 
-        if (Context->flags.mono==2) {
+        if (Context->flags.mono == 2) {
            Context->gdata->pixlist.white = white;
            Context->gdata->pixlist.black = black;
-           Context->gdata->pixlist.textbgcolor = white;
-           Context->gdata->pixlist.textfgcolor = black;
            Context->gdata->pixlist.mapbgcolor = white;
            Context->gdata->pixlist.mapfgcolor = black;
+           Context->gdata->pixlist.clockbgcolor = white;
+           Context->gdata->pixlist.clockfgcolor = black;
+           Context->gdata->pixlist.mapstripbgcolor = white;
+           Context->gdata->pixlist.mapstripfgcolor = black;
+           Context->gdata->pixlist.clockstripbgcolor = white;
+           Context->gdata->pixlist.clockstripfgcolor = black;
+           Context->gdata->pixlist.menubgcolor = white;
+           Context->gdata->pixlist.menufgcolor = black;
+           Context->gdata->pixlist.dircolor = black;
+           Context->gdata->pixlist.imagecolor = black;
+           Context->gdata->pixlist.choicecolor = black;
+           Context->gdata->pixlist.changecolor = black;
            Context->gdata->pixlist.zoombgcolor = white;
            Context->gdata->pixlist.zoomfgcolor = black;
            Context->gdata->pixlist.optionbgcolor = white;
            Context->gdata->pixlist.optionfgcolor = black;
            Context->gdata->pixlist.caretcolor = black;
-           Context->gdata->pixlist.dircolor = black;
-           Context->gdata->pixlist.imagecolor = black;
-           Context->gdata->pixlist.choicecolor = black;
-           Context->gdata->pixlist.changecolor = black;
         } else {
            total_colors = 0;
+
            Context->gdata->pixlist.black = 
               getColor("Black", black, Context->gdata->cmap);
            Context->gdata->pixlist.white = 
               getColor("White", white, Context->gdata->cmap);
-           Context->gdata->pixlist.textbgcolor = getColor(TextBgColor, 
+
+           Context->gdata->pixlist.clockbgcolor = getColor(ClockBgColor, 
               Context->gdata->pixlist.white, Context->gdata->cmap);
-           Context->gdata->pixlist.textfgcolor = getColor(TextFgColor, 
+           Context->gdata->pixlist.clockfgcolor = getColor(ClockFgColor,
               Context->gdata->pixlist.black, Context->gdata->cmap);
+
            Context->gdata->pixlist.mapbgcolor = getColor(MapBgColor, 
               Context->gdata->pixlist.white, Context->gdata->cmap);
            Context->gdata->pixlist.mapfgcolor = getColor(MapFgColor,
               Context->gdata->pixlist.black, Context->gdata->cmap);
-           Context->gdata->pixlist.zoombgcolor = getColor(ZoomBgColor,
+
+           Context->gdata->pixlist.clockstripbgcolor = 
+              getColor(ClockStripBgColor, 
               Context->gdata->pixlist.white, Context->gdata->cmap);
-           Context->gdata->pixlist.zoomfgcolor = getColor(ZoomFgColor, 
+           Context->gdata->pixlist.clockstripfgcolor = 
+              getColor(ClockStripFgColor,
               Context->gdata->pixlist.black, Context->gdata->cmap);
-           Context->gdata->pixlist.optionbgcolor = getColor(OptionBgColor,
+
+           Context->gdata->pixlist.mapstripbgcolor = 
+              getColor(MapStripBgColor, 
               Context->gdata->pixlist.white, Context->gdata->cmap);
-           Context->gdata->pixlist.optionfgcolor = getColor(OptionFgColor, 
+           Context->gdata->pixlist.mapstripfgcolor = 
+              getColor(MapStripFgColor,
               Context->gdata->pixlist.black, Context->gdata->cmap);
-           Context->gdata->pixlist.caretcolor = getColor(CaretColor,
+
+           Context->gdata->pixlist.menubgcolor = getColor(MenuBgColor, 
+              Context->gdata->pixlist.white, Context->gdata->cmap);
+           Context->gdata->pixlist.menufgcolor = getColor(MenuFgColor, 
               Context->gdata->pixlist.black, Context->gdata->cmap);
+
            Context->gdata->pixlist.dircolor = getColor(DirColor, 
               Context->gdata->pixlist.black, Context->gdata->cmap);
            Context->gdata->pixlist.imagecolor = getColor(ImageColor, 
@@ -1488,6 +1710,19 @@ int private;
               Context->gdata->pixlist.black, Context->gdata->cmap);
            Context->gdata->pixlist.changecolor = getColor(ChangeColor,
               Context->gdata->pixlist.black, Context->gdata->cmap);
+
+           Context->gdata->pixlist.zoombgcolor = getColor(ZoomBgColor,
+              Context->gdata->pixlist.white, Context->gdata->cmap);
+           Context->gdata->pixlist.zoomfgcolor = getColor(ZoomFgColor, 
+              Context->gdata->pixlist.black, Context->gdata->cmap);
+
+           Context->gdata->pixlist.optionbgcolor = getColor(OptionBgColor,
+              Context->gdata->pixlist.white, Context->gdata->cmap);
+           Context->gdata->pixlist.optionfgcolor = getColor(OptionFgColor, 
+              Context->gdata->pixlist.black, Context->gdata->cmap);
+           Context->gdata->pixlist.caretcolor = getColor(CaretColor,
+              Context->gdata->pixlist.black, Context->gdata->cmap);
+
            Context->gdata->pixlist.citycolor0 = getColor(CityColor0,
               Context->gdata->pixlist.black, Context->gdata->cmap);
            Context->gdata->pixlist.citycolor1 = getColor(CityColor1,
@@ -1541,7 +1776,7 @@ int private;
                   (Context->gdata->cmap==cmap0)? "default":"private");
         }
 
-        Context->gdata->gclist.mapinvert = 0;
+        Context->gdata->gclist.invert = 0;
 }
 void
 createGCs(Context)
@@ -1552,10 +1787,10 @@ struct Sundata * Context;
 
         if (Context->gdata->links==0) {
            if (verbose)
-              fprintf(stderr, "Creating new GCs, mode = %d\n", gflags.mono);
+              fprintf(stderr, "Creating new GCs, mode = %d\n", Context->flags.mono);
         } else {
            if (verbose)
-              fprintf(stderr, "Using previous GC settings (%d link)\n", 
+              fprintf(stderr, "Using previous GC settings (%d links)\n", 
                      Context->gdata->links);
            return;
         }
@@ -1564,61 +1799,59 @@ struct Sundata * Context;
 
         getFonts(Context);
 
-        if (Context->flags.mono==2) {
-           gcv.background = black;
-           gcv.foreground = white;
-        } else {
-           gcv.background = Context->gdata->pixlist.choicecolor;
-           gcv.foreground = Context->gdata->pixlist.zoomfgcolor;
-        }
-        Context->gdata->gclist.zoomfg = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-        if (Context->flags.mono==2) {
-           gcv.background = white;
-           gcv.foreground = black;
-        } else {
-           gcv.background = Context->gdata->pixlist.zoombgcolor;
-           gcv.foreground = Context->gdata->pixlist.zoomfgcolor;
-        }
-        Context->gdata->gclist.zoombg = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
         if (Context->flags.mono) {
            gcv.background = Context->gdata->pixlist.mapbgcolor;
            gcv.foreground = Context->gdata->pixlist.mapfgcolor;
            Context->gdata->gclist.mapstore = XCreateGC(dpy, root, 
                              GCForeground | GCBackground, &gcv);
+           gcv.background = Context->gdata->pixlist.clockbgcolor;
+           gcv.foreground = Context->gdata->pixlist.clockfgcolor;
+           Context->gdata->gclist.clockstore = XCreateGC(dpy, root, 
+                             GCForeground | GCBackground, &gcv);
         }
 
-        if (Context->flags.mono<2) {
-           gcv.background = Context->gdata->pixlist.textbgcolor;
-           gcv.foreground = Context->gdata->pixlist.textfgcolor;
-        }
-
-        gcv.font = Context->gdata->clockfont->fid;
-        Context->gdata->gclist.clockfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        gcv.background = Context->gdata->pixlist.menubgcolor;
+        gcv.foreground = Context->gdata->pixlist.menufgcolor;
         gcv.font = Context->gdata->menufont->fid;
         Context->gdata->gclist.menufont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
 
-        if (gflags.mono==2)
-           Context->gdata->gclist.optionfont = Context->gdata->gclist.menufont;
-        else {
-           gcv.background = Context->gdata->pixlist.optionbgcolor;
-           gcv.foreground = Context->gdata->pixlist.optionfgcolor;         
-           Context->gdata->gclist.optionfont = 
-             XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
-        }
-        
+        gcv.background = Context->gdata->pixlist.clockstripbgcolor;
+        gcv.foreground = Context->gdata->pixlist.clockstripfgcolor;
+        gcv.font = Context->gdata->clockstripfont->fid;
+        Context->gdata->gclist.clockstripfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+
+        gcv.background = Context->gdata->pixlist.mapstripbgcolor;
+        gcv.foreground = Context->gdata->pixlist.mapstripfgcolor;
+        gcv.font = Context->gdata->mapstripfont->fid;
+        Context->gdata->gclist.mapstripfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+
+	if (Context->flags.mono == 2) {
+           gcv.background = black;
+           gcv.foreground = white;
+	} else {
+           gcv.background = Context->gdata->pixlist.choicecolor;
+           gcv.foreground = Context->gdata->pixlist.zoomfgcolor;
+	}
+        Context->gdata->gclist.zoomfg = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
+
         if (Context->flags.mono==2) {
            Context->gdata->gclist.dirfont = Context->gdata->gclist.menufont;
            Context->gdata->gclist.imagefont = Context->gdata->gclist.menufont;
            Context->gdata->gclist.choice = Context->gdata->gclist.menufont;
            Context->gdata->gclist.change = Context->gdata->gclist.menufont;
+	   Context->gdata->gclist.zoombg = Context->gdata->gclist.menufont;
+           Context->gdata->gclist.optionfont = Context->gdata->gclist.menufont;
            return;
         }
 
-        gcv.background = Context->gdata->pixlist.textbgcolor;           
-        gcv.foreground = Context->gdata->pixlist.dircolor;
+        gcv.background = Context->gdata->pixlist.optionbgcolor;
+        gcv.foreground = Context->gdata->pixlist.optionfgcolor;
         gcv.font = Context->gdata->menufont->fid;
+        Context->gdata->gclist.optionfont = 
+             XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        
+        gcv.background = Context->gdata->pixlist.menubgcolor;           
+        gcv.foreground = Context->gdata->pixlist.dircolor;
         Context->gdata->gclist.dirfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
 
         gcv.foreground = Context->gdata->pixlist.imagecolor;
@@ -1630,6 +1863,10 @@ struct Sundata * Context;
 
         gcv.foreground = Context->gdata->pixlist.changecolor;
         Context->gdata->gclist.change = XCreateGC(dpy, root, GCForeground, &gcv);
+
+        gcv.background = Context->gdata->pixlist.zoombgcolor;
+        gcv.foreground = Context->gdata->pixlist.zoomfgcolor;
+        Context->gdata->gclist.zoombg = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
 
         gcv.foreground = Context->gdata->pixlist.citycolor0;
         Context->gdata->gclist.citycolor0 = XCreateGC(dpy, root, GCForeground, &gcv);
@@ -1672,7 +1909,9 @@ clearStrip(Context)
 struct Sundata * Context;
 {
         XSetWindowBackground(dpy, Context->win, 
-                 Context->gdata->pixlist.textbgcolor);
+		 (Context->wintype)?
+		    Context->gdata->pixlist.mapstripbgcolor :
+                    Context->gdata->pixlist.clockstripbgcolor);
         XClearArea(dpy, Context->win, 0, Context->geom.height+1, 
                  Context->geom.width, (Context->wintype)? 
                  Context->gdata->mapstrip-1 : Context->gdata->clockstrip-1, 
@@ -2146,10 +2385,11 @@ struct Sundata * Context;
       drawtext:
         XDrawImageString(dpy, Context->win, 
            (Context->wintype)? 
-           Context->gdata->gclist.menufont:Context->gdata->gclist.clockfont, 
+               Context->gdata->gclist.mapstripfont:
+               Context->gdata->gclist.clockstripfont, 
            4, Context->geom.height + ((Context->wintype)?
-             Context->gdata->menufont->max_bounds.ascent + 4 :
-             Context->gdata->clockfont->max_bounds.ascent + 3), 
+             Context->gdata->mapstripfont->max_bounds.ascent + 4 :
+             Context->gdata->clockstripfont->max_bounds.ascent + 3), 
            s+label_shift, l-label_shift);
 }
 
@@ -2284,7 +2524,7 @@ double lon, lat;                /* Latitude and longtitude of the city */
 
     if (Context->flags.mono==2) {
        w = Context->pix;
-       gc = Context->gdata->gclist.mapinvert;
+       gc = Context->gdata->gclist.invert;
     } else {
        w = Context->win;
        gc = Context->gdata->gclist.citycolor0;
@@ -2379,7 +2619,7 @@ int thickness;
 
         if (Context->flags.mono==2) {
            w = Context->pix;
-           gc = Context->gdata->gclist.mapinvert;
+           gc = Context->gdata->gclist.invert;
         } else
            w = Context->win;   
 
@@ -2441,7 +2681,7 @@ int thickness;
 
         if (Context->flags.mono==2) {
            w = Context->pix;
-           gc = Context->gdata->gclist.mapinvert;
+           gc = Context->gdata->gclist.invert;
         } else {
            w = Context->win;   
            gc = Context->gdata->gclist.meridiancolor;
@@ -2533,7 +2773,9 @@ struct Sundata * Context;
         if (Context->flags.update>=2) {
            if (Context->flags.mono)
                XCopyPlane(dpy, Context->pix, Context->win, 
-                    Context->gdata->gclist.mapstore, 
+                    (Context->wintype)?
+		       Context->gdata->gclist.mapstore :
+                       Context->gdata->gclist.clockstore, 
                     0, 0, Context->geom.width, Context->geom.height, 0, 0, 1);
            else
                XPutImage(dpy, Context->win, Context->gdata->gclist.menufont, 
@@ -2629,7 +2871,7 @@ int t;
         unsigned char u, v, w, r, g, b;
 
         if (Context->flags.mono) {
-           XDrawPoint(dpy, Context->pix, Context->gdata->gclist.mapinvert, x, y);
+           XDrawPoint(dpy, Context->pix, Context->gdata->gclist.invert, x, y);
            return;
         }
         i = bytes_per_pixel * x + Context->xim->bytes_per_line * y;
@@ -3455,10 +3697,10 @@ struct Sundata * Context;
           Context->geom.height, 0, 1, 1);
      run_direct1:
        createGData(Context, 0);
-       if (!Context->gdata->gclist.mapinvert) {
+       if (!Context->gdata->gclist.invert) {
           XGCValues gcv;
           gcv.function = GXinvert;
-          Context->gdata->gclist.mapinvert = 
+          Context->gdata->gclist.invert = 
              XCreateGC(dpy, Context->pix, GCFunction, &gcv);
        }
        if (color_alloc_failed) report_failure(path, 6);
@@ -3608,6 +3850,7 @@ int wintype, build;
           Context->geom.width!=old_w || Context->geom.height!=old_h) {
          XResizeWindow(dpy, Context->win, 
             Context->geom.width, Context->geom.height + Context->hstrip);
+	 XMapRaised(dpy, Context->win);
          XFlush(dpy);
          usleep(2*TIMESTEP);
          remapAuxilWins(Context);
@@ -3634,6 +3877,7 @@ int wintype, build;
    if (Context->gdata->cmap!=cmap0)
       XSetWindowColormap(dpy, Context->win, Context->gdata->cmap);
    runtime = 0;
+   option_changes = 0;
 }
 
 /*
@@ -3777,7 +4021,7 @@ KeySym  keysym;
            specialspace:
                if (keysym<31) break;
                if (keysym>255) break;
-               if (i<90) {
+               if (i<option_maxlength) {
                   for (j=i; j>option_caret; j--)
                      option_string[j] = option_string[j-1];
                   option_string[option_caret] = (char) keysym;
@@ -3826,8 +4070,8 @@ KeySym  keysym;
              return;
            case XK_equal:
              do_sync = 1 - do_sync;
-	     menu_lasthint = ' ';
-	     option_lasthint = ' ';
+	     menu_lasthint = '\0';
+	     option_lasthint = '\0';
 	     option_newhint = keysym;
 	     showOptionHint();
              break;
@@ -3925,8 +4169,11 @@ KeySym  keysym;
              else
                 Context->geom = ClockGeom;
              adjustGeom(Context, 1);
-             XResizeWindow(dpy, Context->win, 1, 1);
-             XMoveWindow(dpy, Context->win,Context->geom.x,Context->geom.y);
+	     XSelectInput(dpy, Context->win, 0);
+	     XSync(dpy, True);
+	     XResizeWindow(dpy, Context->win, 1, 1);
+             XMoveWindow(dpy, Context->win, Context->geom.x, Context->geom.y);
+	     XUnmapWindow(dpy, Context->win);
              XFlush(dpy);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
@@ -4044,11 +4291,13 @@ KeySym  keysym;
                 PopMenu(Context);
 		return;
              } else {
-                XMapRaised(dpy, Menu);
                 if (MenuCaller != Context) {
                    PopMenu(Context);
                    PopMenu(Context);
-                }
+                } else {
+                   XMapRaised(dpy, Menu);
+                   system("sunclock_help &");
+		}
              }
              break;
            case XK_i: 
@@ -4226,8 +4475,8 @@ struct Sundata * Context = (struct Sundata *) NULL;
         if (evtype==ButtonPress && win!=Zoom) return;
 
         if (win == Menu) {
-           if (y>Context->gdata->mapstrip) return;
-           click_pos = x/(Context->gdata->mapstrip+5);
+           if (y>Context->gdata->menustrip) return;
+           click_pos = x/Context->gdata->charspace;
            if (evtype == MotionNotify) {
 	     menu_newhint = (click_pos >= N_MENU)? '\033':MenuKey[2*click_pos];
              showMenuHint();
@@ -4260,7 +4509,8 @@ struct Sundata * Context = (struct Sundata *) NULL;
         /* Click on bottom strip of window */
         if (y >= Context->geom.height) {
            if (button==1) {
-              processKey(win, XK_h);
+              if (!do_menu)
+                 processKey(win, XK_h);
               return;
            }
            if (button==2) {
@@ -4372,6 +4622,7 @@ Window win;
                  setupZoom(-1);
               }
               if (num==5) {
+		 resetOptionLength();
                  setupOption(-1);
               }
               return;
@@ -4528,7 +4779,7 @@ eventLoop()
                                            PopZoom(ZoomCaller);
                                         else
                                         if (ev.xexpose.window == Option)
-                                           PopZoom(OptionCaller);
+                                           PopOption(OptionCaller);
                                         else
                                            shutDown(
                                          getContext(ev.xexpose.window), 1);
@@ -4593,14 +4844,14 @@ char **         argv;
 
         /* Read the configuration file */
 
-        configrc = 0;
+        parse_cmdline = 0;
         checkRCfile(argc, argv);
         if (readRC()) exit(1);
 
-        configrc = 1;
+        parse_cmdline = 1;
         (void) parseArgs(argc, argv);
         readLanguage();
-        configrc = 0;
+        parse_cmdline = 0;
 
         /* Open Display */
 

@@ -35,6 +35,7 @@ Cliquer 2 fois ou taper Tab pour ° ' "
 Option
 Activation de l'option sélectionnée...
 Option incorrecte ou non disponible en exécution !!
+Options: taper <Ctrl><Espace> pour un blanc situé dans une chaîne
 Touche
 Contrôles Clavier/Souris
 Echap

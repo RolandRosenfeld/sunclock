@@ -35,6 +35,7 @@ Repetir clic o presionar Tab para ° ' "
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
 Tecla
 Control Teclado/Ratón
 Escape

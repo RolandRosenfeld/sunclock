@@ -8,7 +8,8 @@
 enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_DAYLENGTH, L_SUNRISE, L_SUNSET, 
       L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, L_DEGREE,
-      L_OPTION, L_ACTIVATE, L_INCORRECT, L_KEY, L_CONTROLS, 
+      L_OPTION, L_ACTIVATE, L_INCORRECT, L_OPTIONINTRO,
+      L_KEY, L_CONTROLS, 
       L_ESCAPE, L_ESCMENU, L_UNKNOWN, L_SYNCHRO,
       L_PROGRESS, L_TIMEJUMP, L_SEC, L_MIN, L_HOUR, L_DAY, L_DAYS, L_END};
 
@@ -23,6 +24,7 @@ char	* Label[L_END] = {
 	"Option",
         "Activating selected option...",
         "Option incorrect or not available at runtime !!",
+	"Options: strike <Ctrl><Space> for blank space within an item",
 	"Key",
         "Key/Mouse controls",
 	"Escape",

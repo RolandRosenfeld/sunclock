@@ -35,6 +35,7 @@ Dubbelklik of gebruik Tab voor ° ' "
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
 Toets
 Toets/muis controls
 Escape

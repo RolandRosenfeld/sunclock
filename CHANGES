@@ -12,6 +12,15 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
+Version 3.38, April 17, 2001
+
+- Added new color and font options 
+- The man page is installed automatically and is accessible from the GUI
+  (type key 'h' twice)
+- The option handling mechanism has been improved:
+  the ~/.sunclockrc config file as well as the option widget now accept
+  several options simultaneously on the same line.
+
 Version 3.37, April 13, 2001
 
 - Added new option -lightgradient

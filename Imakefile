@@ -16,7 +16,6 @@ XCOMM
 XCOMM Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
 XCOMM   your struct tm contains a tm_zone field), i.e. SunOS 4.1.x. Don't
 XCOMM   define for system V or Solaris
-XCOMM Set -DMENUFONT= and -DCLOCKFONT= whatever fonts you like
 XCOMM Pick -O or -g
 XCOMM
 
@@ -26,7 +25,7 @@ XPMINC=-I/opt/xpm/include
 JLIB=-L/opt/jpeg-6/lib
 JINC=-I/opt/jpeg-6/include
 
-CCOPTIONS = -Ae $(XPMINC) $(JINC) -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS = -Ae $(XPMINC) $(JINC) -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #else
 # SunOS
 
@@ -34,7 +33,7 @@ CCOPTIONS = -Ae $(XPMINC) $(JINC) -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -DSHA
 #XPMINC=-I/usr/X11R6/include/X11
 #JLIB=-L/usr/lib
 #JINC=-I/usr/include
-#CCOPTIONS=-DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CCOPTIONS=-O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # Solaris, Linux
 #XPMLIB=-L/usr/X11R6/lib
@@ -42,7 +41,7 @@ CCOPTIONS = -Ae $(XPMINC) $(JINC) -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -DSHA
 #JLIB=-L/usr/lib
 #JINC=-I/usr/include
 
-CCOPTIONS=-DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS=-O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
 SRCS=sunclock.c astro.c widgets.c tildepath.c dirlist.c \
@@ -54,14 +53,14 @@ DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
 
-install::
+install:: install.man
+	cp -f sunclock_help $(DESTDIR)$(BINDIR)	
 	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
 	cd i18n ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	mkdirhier $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
-	./check_obsolete $(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
 
 realclean:: clean
 	rm -f Makefile *.xpm *.xbm

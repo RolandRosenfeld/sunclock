@@ -17,7 +17,7 @@ extern void             free_dirlist();
 extern void             processKey();
 extern int              readVMF();
 extern void             buildMap();
-extern int              parseArgs();
+extern int              parseCmdLine();
 extern void             correctValues();
 extern void             readLanguage();
 extern void             getFonts();
@@ -47,8 +47,16 @@ extern struct Geometry	ClockGeom, MapGeom;
 extern struct Geometry  MenuGeom, SelGeom, ZoomGeom, OptionGeom;
 
 extern char *	        ProgName;
+extern char *	        Title;
+
+extern char *	        ClassName;
+extern char *           ClockClassName;
+extern char *           MapClassName;
+extern char *           AuxilClassName;
+
 extern char *           ExternAction;
 extern char *           CityInit;
+
 extern char *           share_maps_dir;
 extern char **          dirtable;
 extern char *           SmallFont_name;
@@ -61,20 +69,24 @@ extern char             language[4];
 extern char             Default_vmf[];
 
 extern int		do_menu, do_selector, do_zoom, do_option;
-extern int              do_dock, do_title, do_sync, do_zoomsync;
+extern int              do_dock, do_sync, do_zoomsync;
 
 extern int              placement;
+extern int              place_shiftx;
+extern int              place_shifty;
+
 extern int              verbose;
 extern int		button_pressed;
+extern int              option_changes;
 
-extern int              horiz_shift, vert_shift;
 extern int              horiz_drift, vert_drift;
 extern int              label_shift, selector_shift, zoom_shift;
 
 extern int              num_lines, num_table_entries;
 
 extern int              zoom_mode, zoom_active;
-extern int              option_caret, old_option_length, old_option_caret;
+extern int              option_caret, option_maxlength;
+extern int              old_option_length, old_option_caret;
 
 extern char	        menu_lasthint;
 extern char	        option_lasthint;
@@ -122,6 +134,12 @@ unsigned int *w, *h;
 
    horiz_drift = *x - xp;
    vert_drift = *y - yp;
+ 
+  /*
+   if (verbose)
+      fprintf(stderr, "Window drift (%d,%d)\n", horiz_drift, vert_drift);
+   */
+
    return 0;
 }
 
@@ -172,6 +190,8 @@ int which;
 	}
 
         if (placement) {
+	    dx = dx - place_shiftx;
+	    dy = dy - place_shifty;
 	    if (Context->wintype) {
 	       dx = -dx;
 	       dy = -dy;
@@ -262,19 +282,51 @@ setClassHints(win, num)
 Window win;
 int    num;
 {
-        char 			name[80];
+        char *titlename, *iconname;
 	char *instance[6] =     
            { "clock", "map", "menu", "selector", "zoom", "option" };
         XClassHint xch;
 
+	titlename = NULL;
+	if (!Title) StringReAlloc(&Title, ProgName);
+
+	if (!ClassName) {
+	   StringReAlloc(&ClassName, ProgName);
+	   *ClassName = toupper(*ClassName);
+	}
+
+	if (ClassName && !ClockClassName) 
+           StringReAlloc(&ClockClassName, ClassName);
+
+	if (ClassName && !MapClassName) 
+           StringReAlloc(&MapClassName, ClassName);
+
+	if (ClassName && !AuxilClassName) 
+           StringReAlloc(&AuxilClassName, ClassName);
+
+	if (num == 0)
+	  xch.res_class = ClockClassName;
+        else
+	if (num == 1)
+	  xch.res_class = MapClassName;
+	else
+	  xch.res_class = AuxilClassName;
+
         xch.res_name = ProgName;
-        xch.res_class = "Sunclock";
+
         XSetClassHint(dpy, win, &xch);
 
-        sprintf(name, "%s %s", ProgName, VERSION);
-        XSetIconName(dpy, win, name);
-        sprintf(name, "%s / %s", ProgName, instance[num]);
-        XStoreName(dpy, win, name);
+	iconname = (char *)
+           salloc((strlen(Title)+strlen(VERSION)+10)*sizeof(char));
+        sprintf(iconname, "%s %s", Title, VERSION);
+        XSetIconName(dpy, win, iconname);
+	free(iconname);
+
+	titlename = (char *)
+           salloc((strlen(Title)+20)*sizeof(char));
+        sprintf(titlename, "%s / %s", Title, instance[num]);
+        XStoreName(dpy, win, titlename);
+	free(titlename);
 }
 
 void
@@ -329,19 +381,12 @@ createWindow(Context, num)
 struct Sundata * Context;
 int num;
 {
-	XSetWindowAttributes	xswa;
 	Window			root = RootWindow(dpy, scr);
 	struct Geometry *	Geom = NULL;
         Window *		win = NULL;
-	int		        mask;
 	int                     strip;
 
-	xswa.background_pixel = white;
-	xswa.border_pixel = black;
-	xswa.backing_store = WhenMapped;
 	strip = 0;
-
-	mask = CWBackPixel | CWBorderPixel | CWBackingStore;
 
         switch (num) {
 
@@ -377,20 +422,16 @@ int num;
 
 	if (num<=1) {
 	   if (Geom->mask & XNegative)
-	      Geom->x = DisplayWidth(dpy, scr) - 
-                   Geom->width + Geom->x;
+	      Geom->x = DisplayWidth(dpy, scr) - Geom->width + Geom->x;
 	   if (Geom->mask & YNegative)
-	      Geom->y = DisplayHeight(dpy, scr) - 
-                   Geom->height - strip + Geom->y;
+	      Geom->y = DisplayHeight(dpy, scr) - Geom->height + Geom->y-strip;
 	}
 
         if (win) {
-	   *win = XCreateWindow(dpy, root,
-		      Geom->x, Geom->y,
-		      Geom->width, 
-                      Geom->height + strip, 0,
-		      CopyFromParent, CopyFromParent, 
-		      CopyFromParent, mask, &xswa);
+	   *win = XCreateSimpleWindow(dpy, root,
+                      Geom->x, Geom->y, 
+                      Geom->width, Geom->height + strip, 0,
+		      black, white);
            setClassHints(*win, num);
 	}
 }
@@ -470,7 +511,7 @@ showMenuHint()
 
 	XDrawImageString(dpy, Menu, MenuCaller->gdata->gclist.menufont, 4, 
               MenuCaller->gdata->menufont->max_bounds.ascent + 
-                 MenuCaller->gdata->mapstrip + 4, 
+                 MenuCaller->gdata->menustrip + 4, 
               hint, strlen(hint));
 }
 
@@ -485,7 +526,7 @@ setupMenu()
 	if (!do_menu) return;
 
         XSetWindowColormap(dpy, Menu, MenuCaller->gdata->cmap);
-        XSetWindowBackground(dpy, Menu, MenuCaller->gdata->pixlist.textbgcolor);
+        XSetWindowBackground(dpy, Menu, MenuCaller->gdata->pixlist.menubgcolor);
         XClearArea(dpy, Menu,  0, 0, MenuGeom.width, MenuGeom.height, False);
 
         s[1]='\0';
@@ -495,7 +536,7 @@ setupMenu()
 	      j0 = (i+1)*MenuCaller->gdata->charspace;
 	      for (j=j0-b; j<=j0+b; j++)
 	          XDrawLine(dpy, Menu, MenuCaller->gdata->gclist.menufont, 
-                      j, 0, j, MenuCaller->gdata->mapstrip);
+                      j, 0, j, MenuCaller->gdata->menustrip);
 	      s[0]=MenuKey[2*i];
 	      if (!MenuCaller->wintype && index(which,s[0])) 
                  gc = MenuCaller->gdata->gclist.imagefont;
@@ -512,9 +553,9 @@ setupMenu()
                      MenuCaller->gdata->menufont->max_bounds.ascent + 4, 
 		     Label[L_ESCAPE], strlen(Label[L_ESCAPE]));
         XDrawLine(dpy, Menu, MenuCaller->gdata->gclist.menufont, 0, 
-                     MenuCaller->gdata->mapstrip, 
-                     MENU_WIDTH * MenuCaller->gdata->mapstrip, 
-                     MenuCaller->gdata->mapstrip);
+                     MenuCaller->gdata->menustrip, 
+                     MENU_WIDTH * MenuCaller->gdata->menustrip, 
+                     MenuCaller->gdata->menustrip);
         menu_lasthint = '\0';
 	showMenuHint();
 }
@@ -524,7 +565,7 @@ void
 PopMenu(Context)
 struct Sundata * Context;
 {
-	int    w, h, a, b;
+	int    w, h, a, b, x=0, y=0;
 	
 	do_menu = 1 - do_menu;
 
@@ -538,28 +579,26 @@ struct Sundata * Context;
 	XSelectInput(dpy, Menu, 0);
         MenuCaller = Context;
 
-        MenuGeom.width = MENU_WIDTH * Context->gdata->mapstrip - 6;
-        MenuGeom.height = 2 * Context->gdata->mapstrip;
+        MenuGeom.width = MENU_WIDTH * Context->gdata->menustrip - 6;
+        MenuGeom.height = 2 * Context->gdata->menustrip;
 
 	if (!getPlacement(Context->win, &Context->geom.x, 
                                         &Context->geom.y, &w, &h)) {
-	   MenuGeom.x = Context->geom.x + horiz_shift - horiz_drift;
-	   /* To center: + (Context->geom.width - MenuGeom.width)/2; */
-	   a = Context->geom.y + Context->geom.height + 
-               Context->hstrip + vert_shift;
-           b = Context->geom.y - MenuGeom.height - vert_shift - 2*vert_drift;
-	   if (do_title) b = b-18;
-           if (b < (int) MenuGeom.height ) b = MenuGeom.height;
+	   x = Context->geom.x + MenuGeom.x - horiz_drift;
+	   a = Context->geom.y + h + MenuGeom.y; 
+
+           b = Context->geom.y - MenuGeom.height - MenuGeom.y - 2*vert_drift;
+           if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - 2*MenuGeom.height -vert_drift -20)
               a = b;
-	   MenuGeom.y = (placement<=NE)? a : b;              
+	   y = (placement<=NE)? a : b;              
 	}
         setSizeHints(NULL, 2);
-        XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
+        XMoveWindow(dpy, Menu, x, y);
         XResizeWindow(dpy, Menu, MenuGeom.width, MenuGeom.height);
         XMapWindow(dpy, Menu);
-        XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
+        XMoveWindow(dpy, Menu, x, y);
         XSync(dpy, True);
 	usleep(2*TIMESTEP);
 	menu_lasthint = '\0';
@@ -570,9 +609,9 @@ struct Sundata * Context;
 void
 clearSelectorPartially()
 {
-    XSetWindowBackground(dpy, Selector, SelCaller->gdata->pixlist.textbgcolor);
-    XClearArea(dpy, Selector, 0, SelCaller->gdata->mapstrip+1, 
-        SelGeom.width-2, SelGeom.height-SelCaller->gdata->mapstrip-2, False);
+    XSetWindowBackground(dpy, Selector, SelCaller->gdata->pixlist.menubgcolor);
+    XClearArea(dpy, Selector, 0, SelCaller->gdata->menustrip+1, 
+        SelGeom.width-2, SelGeom.height-SelCaller->gdata->menustrip-2, False);
 }
 
 void
@@ -587,30 +626,31 @@ int mode;
         if (!do_selector) return;
 
         XSetWindowColormap(dpy, Selector, SelCaller->gdata->cmap);
-        XSetWindowBackground(dpy, Selector, SelCaller->gdata->pixlist.textbgcolor);
+        XSetWindowBackground(dpy, Selector, 
+            SelCaller->gdata->pixlist.menubgcolor);
 
 	d = SelCaller->gdata->charspace/3;
 
 	if (mode <= 0) {
 
           XClearArea(dpy, Selector,  0, 0, 
-             SelGeom.width, SelCaller->gdata->mapstrip, False);
+             SelGeom.width, SelCaller->gdata->menustrip, False);
 
 	  for (i=0; i<=9; i++)
-             XDrawImageString(dpy, Selector, SelCaller->gdata->gclist.menufont, 
+             XDrawImageString(dpy, Selector, SelCaller->gdata->gclist.menufont,
                 d+2*i*SelCaller->gdata->charspace, 
                 SelCaller->gdata->menufont->max_bounds.ascent + 4, 
                 banner[i], strlen(banner[i]));
  
           for (i=1; i<=9; i++) {
 	     h = 2*i*SelCaller->gdata->charspace;
-             XDrawLine(dpy, Selector, SelCaller->gdata->gclist.menufont, h, 0, h, 
-             SelCaller->gdata->mapstrip);
+             XDrawLine(dpy, Selector, SelCaller->gdata->gclist.menufont, h,0,h,
+             SelCaller->gdata->menustrip);
 	  }
 
 	  /* Drawing small triangular icons */
-	  p = SelCaller->gdata->mapstrip/4;
-	  q = 3*SelCaller->gdata->mapstrip/4;
+	  p = SelCaller->gdata->menustrip/4;
+	  q = 3*SelCaller->gdata->menustrip/4;
 	  h = 9*SelCaller->gdata->charspace;
 	  for (i=0; i<=q-p; i++)
 	      XDrawLine(dpy,Selector, SelCaller->gdata->gclist.menufont,
@@ -620,21 +660,21 @@ int mode;
 	      XDrawLine(dpy,Selector,
                  SelCaller->gdata->gclist.menufont, h-i, q-i, h+i, q-i);
 
-	  h = SelCaller->gdata->mapstrip;
+	  h = SelCaller->gdata->menustrip;
           XDrawLine(dpy, Selector, SelCaller->gdata->gclist.menufont, 
               0, h, SelGeom.width, h);
 	}
 	
         if (mode <= 1) {
-            XClearArea(dpy, Selector,  0, SelCaller->gdata->mapstrip+1, 
+            XClearArea(dpy, Selector,  0, SelCaller->gdata->menustrip+1, 
                 SelGeom.width, SelGeom.height, False);
 
             XDrawImageString(dpy, Selector, SelCaller->gdata->gclist.dirfont,
                 d, SelCaller->gdata->menufont->max_bounds.ascent + 
-                   SelCaller->gdata->mapstrip+4, 
+                   SelCaller->gdata->menustrip+4, 
                 image_dir, strlen(image_dir));
 
-            h = 2*SelCaller->gdata->mapstrip;
+            h = 2*SelCaller->gdata->menustrip;
             XDrawLine(dpy, Selector, SelCaller->gdata->gclist.menufont, 
                 0, h, SelGeom.width, h);
 	}
@@ -647,13 +687,13 @@ int mode;
 	   char error[] = "Directory inexistent or inaccessible !!!";
            XDrawImageString(dpy, Selector, 
                      SelCaller->gdata->gclist.dirfont, d, 
-                     3*SelCaller->gdata->mapstrip,
+                     3*SelCaller->gdata->menustrip,
 		     error, strlen(error));
 	   return;
 	}
 
-	skip = (3*SelCaller->gdata->mapstrip)/4;
-	num_lines = (SelGeom.height-2*SelCaller->gdata->mapstrip)/skip;
+	skip = (3*SelCaller->gdata->menustrip)/4;
+	num_lines = (SelGeom.height-2*SelCaller->gdata->menustrip)/skip;
         for (i=0; i<num_table_entries-selector_shift; i++) 
 	  if (i<num_lines) {
 	  s = dirtable[i+selector_shift];
@@ -663,21 +703,21 @@ int mode;
 	       b=2;
 	  }
 	  j = SelCaller->gdata->menufont->max_bounds.ascent + 
-              2 * SelCaller->gdata->mapstrip + i*skip + 3;
+              2 * SelCaller->gdata->menustrip + i*skip + 3;
 	  sp = (SelCaller->wintype)? 
 	    SelCaller->map_img_file : SelCaller->clock_img_file;
 	  if (strstr(sp,s)) {
 	     if (mode<=3)
                 XClearArea(dpy, Selector, 2, 
                    SelCaller->gdata->menufont->max_bounds.ascent+
-                      2 * SelCaller->gdata->mapstrip, 3, 
+                      2 * SelCaller->gdata->menustrip, 3, 
                    SelGeom.height, False);
 	     if (mode==3)
                 XDrawRectangle(dpy, Selector, SelCaller->gdata->gclist.change,
-                  d/4, j-SelCaller->gdata->menufont->max_bounds.ascent/2, 3, 4);
+		  d/4, j-SelCaller->gdata->menufont->max_bounds.ascent/2, 3,4);
 	     else
                 XFillRectangle(dpy, Selector, SelCaller->gdata->gclist.choice,
-                  d/4, j-SelCaller->gdata->menufont->max_bounds.ascent/2,3, 4);
+                  d/4, j-SelCaller->gdata->menufont->max_bounds.ascent/2, 3,4);
 	  }
 	  if (mode<=1)
           XDrawImageString(dpy, Selector, 
@@ -686,14 +726,13 @@ int mode;
                        SelCaller->gdata->gclist.menufont),
               d, j, s, strlen(s));
 	}
-
 }
 
 void
 PopSelector(Context)
 struct Sundata * Context;
 {
-        int a, b, w, h;
+        int a, b, w, h, x=0, y=0;
 
 	if (do_selector)
             do_selector = 0;
@@ -713,31 +752,25 @@ struct Sundata * Context;
 	SelCaller = Context;
 	selector_shift = 0;
 
-        SelGeom.width = SEL_WIDTH * Context->gdata->mapstrip;
-        SelGeom.height = (11 + 4*SEL_HEIGHT) * Context->gdata->mapstrip/5;
-
 	if (!getPlacement(Context->win, &Context->geom.x, 
                                         &Context->geom.y, &w, &h)) {
-	   SelGeom.x = Context->geom.x + horiz_shift - horiz_drift;
-	   /* + (Context->geom.width - SelGeom.width)/2; */
-	   a = Context->geom.y + Context->geom.height + 
-               Context->hstrip + vert_shift;
+	   x = Context->geom.x + SelGeom.x - horiz_drift;
+	   a = Context->geom.y + h + SelGeom.y;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + vert_drift + vert_shift;
-           b = Context->geom.y - SelGeom.height - vert_shift - 2*vert_drift;
-	   if (do_title) b = b-18;
-           if (b < SelCaller->gdata->mapstrip ) b = MenuGeom.height;
+               a += MenuGeom.height + MenuGeom.y + vert_drift;
+           b = Context->geom.y - SelGeom.height - SelGeom.y - 2*vert_drift;
+           if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - SelGeom.height - vert_drift -20)
               a = b;
-	   SelGeom.y = (placement<=NE)? a : b;              
+	   y = (placement<=NE)? a : b;              
 	}
 
         setSizeHints(NULL, 3);
-        XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
+        XMoveWindow(dpy, Selector, x, y);
         XResizeWindow(dpy, Selector, SelGeom.width, SelGeom.height);
         XMapRaised(dpy, Selector);
-        XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
+        XMoveWindow(dpy, Selector, x, y);
 	XSync(dpy, True);
 	usleep(2*TIMESTEP);
 	setupSelector(0);
@@ -753,7 +786,7 @@ int b;
         char newdir[1030];
 	char *s, *f, *path;
 
-        if (b <= Context->gdata->mapstrip) {
+        if (b <= Context->gdata->menustrip) {
 	  a = a/(2*Context->gdata->charspace);
 	  if (a==0 && getenv("HOME"))
 	     sprintf(image_dir, "%s/", getenv("HOME")); 
@@ -802,12 +835,12 @@ int b;
 	  setupSelector(1);
 	  return;
 	}
-        if (b <= 2*Context->gdata->mapstrip) {
+        if (b <= 2*Context->gdata->menustrip) {
 	  selector_shift = 0;
 	  setupSelector(1);
 	  return;
 	}
-	b = (b-2*Context->gdata->mapstrip-4)/(3*Context->gdata->mapstrip/4)
+	b = (b-2*Context->gdata->menustrip-4)/(3*Context->gdata->menustrip/4)
             +selector_shift;
 	if (b<num_table_entries) {
 	   s = dirtable[b];
@@ -997,7 +1030,7 @@ showZoomHint()
 	if (!do_zoom || zoom_lasthint==zoom_newhint) return;
 
 	zoom_lasthint = zoom_newhint;
-	v = ZoomGeom.height - ZoomCaller->gdata->mapstrip;
+	v = ZoomGeom.height - ZoomCaller->gdata->menustrip;
 
 	if (zoom_newhint=='\033')
            strcpy(hint, Label[L_ESCMENU]);
@@ -1012,7 +1045,7 @@ showZoomHint()
 	   strcpy(hint, Help[getNumCmd(zoom_newhint)]);
 
 	XClearArea(dpy, Zoom, 0, v+1, ZoomGeom.width, 
-             ZoomCaller->gdata->mapstrip-1, False);
+             ZoomCaller->gdata->menustrip-1, False);
 	XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 4, 
               v + ZoomCaller->gdata->menufont->max_bounds.ascent + 3,
               hint, strlen(hint));
@@ -1031,10 +1064,10 @@ int mode;
     if (!do_zoom) return;
 
     XSetWindowColormap(dpy, Zoom, ZoomCaller->gdata->cmap);
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.textbgcolor);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.menubgcolor);
 
     areaw = ZoomGeom.width - 74;
-    areah = ZoomGeom.height - 2*ZoomCaller->gdata->mapstrip - 65;
+    areah = ZoomGeom.height - 2*ZoomCaller->gdata->menustrip - 65;
 
     if (mode == -1) {
 
@@ -1053,7 +1086,7 @@ int mode;
 	     j0 = (i+1)*ZoomCaller->gdata->charspace;
 	     for (j=j0-b; j<=j0+b; j++)
                  XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
-                    j, areah+64, j, areah+64+ZoomCaller->gdata->mapstrip);
+                    j, areah+64, j, areah+64+ZoomCaller->gdata->menustrip);
 	  } else
 	     strcpy(s, Label[L_ESCAPE]);
           XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
@@ -1079,8 +1112,8 @@ int mode;
 
        for (i=0; i<=1; i++)
           XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
-             0, areah+64+i*ZoomCaller->gdata->mapstrip, 
-             ZoomGeom.width, areah+64+i*ZoomCaller->gdata->mapstrip);
+             0, areah+64+i*ZoomCaller->gdata->menustrip, 
+             ZoomGeom.width, areah+64+i*ZoomCaller->gdata->menustrip);
        XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 60, 22, areah+60, 22);
        XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 32, 50, 32, areah+50);
     }
@@ -1195,7 +1228,7 @@ int mode;
           areaw+1,areah+1);
     }
 
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.textbgcolor);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.menubgcolor);
 
     if (mode & 1) {
        XClearArea(dpy, Zoom,  33, 23, 17, 17, False);
@@ -1218,7 +1251,7 @@ int mode;
     XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, areah+170, 22,18,18);
     }
 
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.textbgcolor);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.menubgcolor);
 
     zoom_lasthint = '\0';
     showZoomHint();
@@ -1228,7 +1261,7 @@ void
 PopZoom(Context)
 struct Sundata * Context;
 {
-        int a, b, w, h;
+        int a, b, w, h, x=0, y=0;
 
 	if (do_zoom)
             do_zoom = 0;
@@ -1253,26 +1286,23 @@ struct Sundata * Context;
 	zoom_newhint = ' ';
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
-	   ZoomGeom.x = Context->geom.x + horiz_shift - horiz_drift;
-	   /* + (Context->geom.width - ZoomGeom.width)/2; */
-	   a = Context->geom.y + Context->geom.height + 
-               Context->hstrip + vert_shift;
+	   x = Context->geom.x + ZoomGeom.x - horiz_drift;
+	   a = Context->geom.y + h + ZoomGeom.y;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + vert_drift + vert_shift;
-           b = Context->geom.y - ZoomGeom.height - vert_shift - 2*vert_drift;
-	   if (do_title) b = b-18;
-           if (b < ZoomCaller->gdata->mapstrip ) b = MenuGeom.height;
+               a += MenuGeom.height + MenuGeom.y + vert_drift;
+           b = Context->geom.y - ZoomGeom.height - ZoomGeom.y - 2*vert_drift;
+           if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - ZoomGeom.height - vert_drift -20)
               a = b;
-	   ZoomGeom.y = (placement<=NE)? a : b;              
+	   y = (placement<=NE)? a : b;              
 	}
 
         setSizeHints(NULL, 4);
-        XMoveWindow(dpy, Zoom, ZoomGeom.x, ZoomGeom.y);
+        XMoveWindow(dpy, Zoom, x, y);
         XResizeWindow(dpy, Zoom, ZoomGeom.width, ZoomGeom.height);
         XMapRaised(dpy, Zoom);
-        XMoveWindow(dpy, Zoom, ZoomGeom.x, ZoomGeom.y);
+        XMoveWindow(dpy, Zoom, x, y);
         XSync(dpy, True);
 	usleep(2*TIMESTEP);
 	option_lasthint = '\0';
@@ -1312,7 +1342,7 @@ int x, y, button, evtype;
            double v1, v2;
 	   int click_pos;
 
-	   if (y>=areah+64 && y<=areah+64+Context->gdata->mapstrip) {
+	   if (y>=areah+64 && y<=areah+64+Context->gdata->menustrip) {
 	      click_pos = x/Context->gdata->charspace;
 	      if (click_pos>=N_ZOOM) 
 		 zoom_newhint = '\033';
@@ -1396,10 +1426,13 @@ showOptionHint()
 	*hint = '\0';
 
 	option_lasthint = option_newhint;
-	v = OptionGeom.height - OptionCaller->gdata->mapstrip;
+	v = OptionGeom.height - OptionCaller->gdata->menustrip;
 
 	if (option_newhint=='\033')
            strcpy(hint, Label[L_ESCMENU]);
+	else
+	if (option_newhint==' ')
+	   strcpy(hint, Label[L_OPTIONINTRO]);
 	else
 	if (option_newhint=='\n')
            strcpy(hint, Label[L_ACTIVATE]);
@@ -1420,10 +1453,9 @@ showOptionHint()
 	}
 	   
 	XClearArea(dpy, Option, 0, v+1, OptionGeom.width, 
-             OptionCaller->gdata->mapstrip-1, False);
+             OptionCaller->gdata->menustrip-1, False);
 
-	if (option_newhint != ' ')
- 	   XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
+        XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
               4, v + OptionCaller->gdata->menufont->max_bounds.ascent + 3,
               hint, l);
 }
@@ -1436,14 +1468,15 @@ int mode;
     char s[80];
 
     XSetWindowColormap(dpy, Option, OptionCaller->gdata->cmap);
-    XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixlist.textbgcolor);
+    XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixlist.menubgcolor);
 
-    opth = OptionGeom.height-2*OptionCaller->gdata->mapstrip;
-    vskip = 3*OptionCaller->gdata->mapstrip/8;
+    opth = OptionGeom.height-2*OptionCaller->gdata->menustrip;
+    vskip = 3*OptionCaller->gdata->menustrip/8;
     option_lasthint = '\0';
 
     if (mode == -1) {
-       XClearArea(dpy, Option, 0,0, OptionGeom.width,OptionGeom.height, False);
+       XClearArea(dpy, Option, 0,0, OptionGeom.width,
+                                    OptionGeom.height, False);
        for (i=0; i<=N_OPTION; i++) {
           if (i<N_OPTION) {
 	     s[0] = OptionKey[2*i];
@@ -1452,7 +1485,7 @@ int mode;
 	     j0 = (i+1)*OptionCaller->gdata->charspace;
 	     for (j=j0-b; j<=j0+b; j++)
                  XDrawLine(dpy, Option, OptionCaller->gdata->gclist.menufont, 
-                   j, opth, j, opth+OptionCaller->gdata->mapstrip);
+                   j, opth, j, opth+OptionCaller->gdata->menustrip);
 	  } else
 	     strcpy(s, Label[L_ESCAPE]);
           XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
@@ -1463,8 +1496,9 @@ int mode;
        }
        for (i=0; i<=1; i++)
           XDrawLine(dpy, Option, OptionCaller->gdata->gclist.menufont, 
-               0, opth+i*OptionCaller->gdata->mapstrip, 
-               OptionGeom.width, opth+i*OptionCaller->gdata->mapstrip);
+               0, opth+i*OptionCaller->gdata->menustrip, 
+               OptionGeom.width, 
+               opth+i*OptionCaller->gdata->menustrip);
 
        strcpy(s, Label[L_OPTION]);
        XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
@@ -1472,15 +1506,15 @@ int mode;
                s, strlen(s));
        XDrawRectangle(dpy, Option, OptionCaller->gdata->gclist.menufont,
                            70, vskip, OptionGeom.width-85, 
-                           OptionCaller->gdata->mapstrip);
+                           OptionCaller->gdata->menustrip);
     }  
 
     XSetWindowBackground(dpy, Option,
        OptionCaller->gdata->pixlist.optionbgcolor);
     XClearArea(dpy, Option, 71,vskip+1, OptionGeom.width-86,
-           OptionCaller->gdata->mapstrip-1, False);
+           OptionCaller->gdata->menustrip-1, False);
     XSetWindowBackground(dpy, Option,
-       OptionCaller->gdata->pixlist.textbgcolor);
+       OptionCaller->gdata->pixlist.menubgcolor);
     XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.optionfont, 76,
        OptionCaller->gdata->menufont->max_bounds.ascent + vskip + 3,
        option_string,strlen(option_string));
@@ -1491,17 +1525,37 @@ int mode;
        OptionCaller->gdata->pixlist.caretcolor);
     XClearArea(dpy, Option, 
        76+i, OptionCaller->gdata->menufont->max_bounds.ascent + vskip + 
-       OptionCaller->gdata->mapstrip/3 - 1, j, 2, False);
+       OptionCaller->gdata->menustrip/3 - 1, j, 2, False);
     XSetWindowBackground(dpy, Option,
-       OptionCaller->gdata->pixlist.textbgcolor);
+       OptionCaller->gdata->pixlist.menubgcolor);
     showOptionHint();
+}
+
+void
+resetOptionLength()
+{
+        int a, b;
+	a = ((OptionGeom.width-86) / 
+              XTextWidth(OptionCaller->gdata->menufont, "_", 1)) - 2;
+	b = (option_string == NULL);
+       	option_string = (char *)
+           realloc(option_string, (a+2)*sizeof(char));
+        if (b) {
+	   *option_string = '\0';
+	   option_caret = 0;
+	}
+	option_maxlength = a;
+	if (option_caret > a) {
+	   option_string[a] = '\0';
+	   option_caret = a;
+	}
 }
 
 void
 PopOption(Context)
 struct Sundata * Context;
 {
-	int    w, h, a, b;
+	int    w, h, a, b, x=0, y=0;
 	
 	do_option = 1 - do_option;
 
@@ -1514,41 +1568,37 @@ struct Sundata * Context;
 
         XSelectInput(dpy, Option, 0);
         OptionCaller = Context;
-	if (!option_string) {
-	  option_string = (char *) salloc(100*sizeof(char));
-	  *option_string = '\0';
-	  option_caret = 0;
-	}
+
+	resetOptionLength();
+
 	if (runtime) 
            option_newhint = '\n';
 	else
 	   option_newhint = ' ';
 
-	OptionGeom.height = OptionGeom.h_mini = 
-                            (15 * Context->gdata->mapstrip)/4;
+	OptionGeom.height = OptionGeom.h_mini
+                          = (15 * Context->gdata->menustrip)/4;
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
-	   OptionGeom.x = Context->geom.x + horiz_shift - horiz_drift;
-	   /* To center: + (Context->geom.width - OptionGeom.width)/2; */
-	   a = Context->geom.y + Context->geom.height + 
-               Context->hstrip + vert_shift;
+	   x = Context->geom.x + OptionGeom.x - horiz_drift;
+	   a = Context->geom.y + h + OptionGeom.y;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + vert_drift + vert_shift;
-           b = Context->geom.y - OptionGeom.height - vert_shift - 2*vert_drift;
-	   if (do_title) b = b - 18;
-           if (b < (int) OptionGeom.height ) b = OptionGeom.height;
+               a += MenuGeom.height + MenuGeom.y + vert_drift;
+           b = Context->geom.y - OptionGeom.height - OptionGeom.y - 2*vert_drift;
+           if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - 2*OptionGeom.height -vert_drift -20)
               a = b;
-	   OptionGeom.y = (placement<=NE)? a : b;              
+	   y = (placement<=NE)? a : b;              
 	}
         setSizeHints(NULL, 5);
-        XMoveWindow(dpy, Option, OptionGeom.x, OptionGeom.y);
+        XMoveWindow(dpy, Option, x, y);
         XMapWindow(dpy, Option);
-        XMoveWindow(dpy, Option, OptionGeom.x, OptionGeom.y);
+        XMoveWindow(dpy, Option, x, y);
         XSync(dpy, True);
 	usleep(2*TIMESTEP);
 	option_lasthint = '\0';
+	option_newhint = ' ';
 	setupOption(-1);
         setProtocols(NULL, 5);
 }
@@ -1558,30 +1608,21 @@ activateOption()
 {
         Sundata *Context;
 	Flags oldflags;
-        char option[3][128]; /* Pointers to options */
-        char *args[3];      /* Pointers to options */
 	char oldlang[4];
 	char *oldbf, *oldsf;
-        int i, j, shift, size;
+        int i, size;
 	short *ptr, *oldptr, *newptr;
 
 	Context = OptionCaller;
 
 	if (!do_option || !Context) return;
 
-        option[0][0] = '-';
-        for (i=0; i<=2; i++) args[i] = option[i];
- 	if (*option_string=='-') shift = 1; else shift = 0;
-	i = sscanf(option_string+shift, "%s %s %s\n", 
-                  option[0]+1, option[1], option[2]);
-        j = strlen(option[0])-1;
-	if (option[0][j]==':') option[0][j]='\0';
 	oldflags = gflags;
 	oldbf = BigFont_name;
 	oldsf = SmallFont_name;
 	strncpy(oldlang, language, 2);
 	runtime = 1;
-	i = parseArgs(i+1, args-1);
+	i = parseCmdLine(option_string);
 	correctValues();
         if (i>0 || runtime<0) {
 	   option_newhint = '?';
@@ -1626,11 +1667,12 @@ int x, y, button, evtype;
         int i, opth, vskip, click_pos;
 	KeySym key;
 
-        opth = OptionGeom.height - 2 * Context->gdata->mapstrip;
-	vskip = 3*Context->gdata->mapstrip/8;
+        opth = OptionGeom.height - 2 * Context->gdata->menustrip;
+	vskip = 3*Context->gdata->menustrip/8;
 
-	if (evtype==ButtonRelease && x>=70 && x<=OptionGeom.width-15 &&
-            y>=vskip && y<=Context->gdata->mapstrip+vskip) {
+	if (evtype==ButtonRelease && x>=70 && 
+            x<=OptionGeom.width-15 &&
+            y>=vskip && y<=Context->gdata->menustrip+vskip) {
 	   click_pos = (x-76)/XTextWidth(OptionCaller->gdata->menufont, "_", 1);
 	   i = strlen(option_string);
 	   if (click_pos<0) click_pos = 0;
@@ -1640,7 +1682,7 @@ int x, y, button, evtype;
 	   return;
 	}
 
-	if (y>=opth && y<=opth+Context->gdata->mapstrip) {
+	if (y>=opth && y<=opth+Context->gdata->menustrip) {
            click_pos = x/Context->gdata->charspace;
 	   if (click_pos>=N_OPTION)
 	      option_newhint = '\033';
@@ -1681,28 +1723,6 @@ struct Sundata * Context;
 }
 
 void
-resetAuxilWins(Context)
-Sundata * Context;
-{
-      if (do_menu && Context == MenuCaller) {
-	 menu_lasthint = '\0';
-	 setupMenu();
-      }
-      if (do_selector && Context == SelCaller) { 
-	 do_selector = 1;
-	 setupSelector(0);
-      }
-      if (do_zoom && Context == ZoomCaller) { 
-         do_zoom = 1; 
-	 setupZoom(-1);
-      }
-      if (do_option && Context == OptionCaller) { 
-         do_option = 1; 
-	 setupOption(-1);
-      }
-}
-
-void
 remapAuxilWins(Context)
 struct Sundata * Context;
 {
@@ -1711,6 +1731,8 @@ struct Sundata * Context;
       if (do_menu || do_selector || do_zoom || do_option) {
 	 XFlush(dpy);
 	 usleep(2*TIMESTEP);
+         if (verbose)
+	    fprintf(stderr, "Remapping auxiliary widgets...\n");
       }
 
       if (do_menu) { 
@@ -1731,6 +1753,36 @@ struct Sundata * Context;
 	 do_option = 1;
 	 option_lasthint = ' ';
          for (i=0; i<=1; i++) PopOption(Context);
+      }
+}
+
+void
+resetAuxilWins(Context)
+Sundata * Context;
+{
+      if (option_changes) {
+	 remapAuxilWins(Context);
+	 return;
+      }
+
+      if (verbose && (do_menu || do_selector || do_zoom || do_option))
+	 fprintf(stderr, "Resetting auxiliary widgets...\n");
+      
+      if (do_menu && Context == MenuCaller) {
+	 menu_lasthint = '\0';
+	 setupMenu();
+      }
+      if (do_selector && Context == SelCaller) { 
+	 do_selector = 1;
+	 setupSelector(0);
+      }
+      if (do_zoom && Context == ZoomCaller) { 
+         do_zoom = 1; 
+	 setupZoom(-1);
+      }
+      if (do_option && Context == OptionCaller) { 
+         do_option = 1; 
+	 setupOption(-1);
       }
 }
 
@@ -1763,17 +1815,35 @@ Sundata * Context;
 	 gclist = &Context->gdata->gclist;
 
  	 XFreeGC(dpy, gclist->menufont);
- 	 XFreeGC(dpy, gclist->clockfont);
+ 	 XFreeGC(dpy, gclist->mapstripfont);
+ 	 XFreeGC(dpy, gclist->clockstripfont);
 
-         if (Context->flags.mono)
+         if (Context->flags.mono) {
+ 	    XFreeGC(dpy, gclist->clockstore);
  	    XFreeGC(dpy, gclist->mapstore);
-
-         if (Context->gdata->gclist.mapinvert) {
-	    XFreeGC(dpy, Context->gdata->gclist.mapinvert);
-	    Context->gdata->gclist.mapinvert = 0;
 	 }
 
+         if (Context->gdata->gclist.invert) {
+	    XFreeGC(dpy, Context->gdata->gclist.invert);
+	    Context->gdata->gclist.invert = 0;
+	 }
+
+         XFreeFont(dpy, Context->gdata->menufont);
+         XFreeFont(dpy, Context->gdata->clockstripfont);
+         XFreeFont(dpy, Context->gdata->mapstripfont);
+	
+         XFreeGC(dpy, gclist->zoomfg);
+
  	 if (Context->flags.mono<2) {
+            XFreeGC(dpy, gclist->dirfont);
+            XFreeGC(dpy, gclist->imagefont);
+	    XFreeGC(dpy, gclist->choice);
+	    XFreeGC(dpy, gclist->change);
+
+	    XFreeGC(dpy, gclist->zoombg);
+
+	    XFreeGC(dpy, gclist->optionfont);
+
  	    XFreeGC(dpy, gclist->citycolor0);
  	    XFreeGC(dpy, gclist->citycolor1);
  	    XFreeGC(dpy, gclist->citycolor2);
@@ -1782,14 +1852,8 @@ Sundata * Context;
  	    XFreeGC(dpy, gclist->linecolor);
  	    XFreeGC(dpy, gclist->tropiccolor);
  	    XFreeGC(dpy, gclist->suncolor);
-            XFreeGC(dpy, gclist->dirfont);
-            XFreeGC(dpy, gclist->imagefont);
-	    XFreeGC(dpy, gclist->choice);
-	    XFreeGC(dpy, gclist->change);
+ 	    XFreeGC(dpy, gclist->mooncolor);
  	 }
-
-         XFreeFont(dpy, Context->gdata->menufont);
-         XFreeFont(dpy, Context->gdata->clockfont);
 
 	 free(Context->gdata);
 }

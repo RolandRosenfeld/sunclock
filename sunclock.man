@@ -1,12 +1,61 @@
-.TH SUNCLOCK 1 "April 13, 2001"
+.TH SUNCLOCK 1 "April 17, 2001"
 .SH NAME
-sunclock \- a fancy clock for the X Window system, providing time and
-geographical data through point and click actions.
+sunclock \- a fancy clock for the X Window system, providing local time
+(legal time and solar time), sunrise, sunset and various geographical 
+data through a point and click interface.
 .SH SYNOPSIS
 .B sunclock
 [
 .I options
 ]
+.PP
+where the list of licit options is the following long list 
+(starting from (**) the options are configurable at runtime):
+.PP
+[-help] [-listmenu] [-version] \
+[-display name] [-rcfile file] [-sharedir directory] \
+[-title name] [-classname name] [-auxilclassname name] \
+[-clockclassname name] [-mapclassname name] \
+[-clock] [-clockimage file] [-dock] \
+[-map] [-mapimage file] [-mapmode * <L,C,S,D,E>] \
+[-menu] [-nomenu] [-selector] [-noselector] \
+[-zoom] [-nozoom] [-option] [-nooption]
+.PP
+(**)  [-language name] [-dateformat string1|string2|...] [-command string] \
+[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
+[-mapgeom <geom>] [-clockgeom <geom>] [-menugeom <geom>] \
+[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>] [-auxilgeom <geom>] \
+[-title name] [-mapclassname name] [-clockclassname name] \
+[-auxilclassname name] [-classname name] \
+[-menufont fontname] [-mapfont fontname] \
+[-mapstripfont fontname] [-clockstripfont fontname] \
+[-fullcolors] [-colorinvert] [-monochrome] [-aspect mode] \
+[-placement (random, fixed, center, NW, NE, SW, SE)] [-placementshift x y] \
+[-decimal] [-dms] [-city name] [-position latitude longitude] \
+[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]] \
+[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
+[-night] [-terminator] [-twilight] [-luminosity] [-lightgradient] \
+[-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
+[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2] \
+[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
+[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians] \
+[-parallels] [-noparallels] [-tropics] [-notropics] \
+[-spotsize size(0,1,2,3,4)] [-dottedlines] [-plainlines] \
+[-menubgcolor color] [-menufgcolor color] \
+[-mapstripbgcolor color] [-mapstripfgcolor color] \
+[-clockstripbgcolor color] [-clockstripfgcolor color] \
+[-zoombgcolor color] [-zoomfgcolor color] \
+[-optionbgcolor color] [-optionfgcolor color] [-caretcolor] \
+[-changecolor color] [-choicecolor color] \
+[-dircolor color] [-imagecolor color] \
+[-dircolor color] [-imagecolor color] \
+[-mapbgcolor color] [-mapfgcolor color] \
+[-clockbgcolor color] [-clockfgcolor color] \
+[-linecolor color] [-suncolor color] [-mooncolor color] \
+[-meridiancolor color] [-parallelcolor] [-tropiccolor color] \
+[-citycolor0 color] [-citycolor1 color] [-citycolor2 color] \
+[-markcolor1 color] [-markcolor2 color]
+
 .SH DESCRIPTION
 .I sunclock
 is an X11 application that displays a map of the Earth and indicates
@@ -84,13 +133,42 @@ Give the name of the X server to contact.
 .B "\-language " name
 Select language to be used in the sunclock menu and help.
 .TP
+.B "\-title name"
+Change the specification of the string which should appear in the title bar
+of the main and auxiliary windows. Default is the application name, 
+i.e., sunclock.
+.TP
+.B "\-classname name"
+Change the specification of class application name. Default is
+Sunclock. Other specifications can be passed so that aware window
+managers might use it for configuration purposes. You might e.g.
+pass -classname NoTitle-Sticky, and configure properly your WM so
+that it removes the title bar, and make the window sticky with respect 
+to the Desktop Pager. With fvwm, you could use for instance
+.PP
+Style "*NoTitle*"    NoTitle, WindowListHit, Sticky
+.PP
+Style "*ShowTitle*"  Title, WindowListHit, Slippery
+.PP
+Style "*Sticky*"     Sticky
+.PP
+to get specify such a behaviour.
+.TP
 .B "\-menufont " name
 Select the menu font, used in the bottom line of the map window, in the 
 menu, file selection, zoom and option windows. Default is 6x13
 .TP
-.B "\-clockfont " name 
-Select the (normally smaller) clock font, used in the bottom line of the 
-clock window. Default is 6x10.
+.B "\-mapfont " name 
+Select the map font, used when writing text (city names, coordinates...)
+on map window. Default is 6x13. [not yet implemented in 3.38]
+.TP
+.B "\-mapstripfont " name 
+Select the map strip font, used in the bottom line of the map window. 
+Default is 6x13.
+.TP
+.B "\-clockstripfont " name 
+Select the (normally smaller) clock strip font, used in the bottom line of 
+the clock window. Default is 6x10.
 .TP
 .B "\-rcfile " filename
 Select a configuration file that is possibly different than the system 
@@ -158,16 +236,6 @@ active window.
 .B "\-nosynchro "
 With this option, sunclock only updates the active window. This is the
 default.
-.TP
-.B "\-title "
-With this option, sunclock provides hints to the window manager
-so that the title bars can appear. 
-.TP
-.B "\-notitle "
-With this option, sunclock does not provide hints to the window manager
-so that the title bars might not appear. Many window managers do it anyway
-(supplying the missing hints when necessary), so this option may not be
-effective for some window managers.
 .TP
 .B \-clock
 Start in the clock state. This is the default and thus need not be
@@ -254,35 +322,59 @@ Start the map functions in mode (C)oordinates, (D)istances, hour (E)xtension,
 (L)egal time or (S)olar time respectively. Any other specification is 
 ignored. Default is legal time mode.
 .TP
-.BI "\-clockgeom " (width)x(height)+(x coord)+(y coord)
-Specify the geometry of the clock window, i.e. its size and position.
-.TP
-.BI "\-mapgeom " (width)x(height)+(x coord)+(y coord)
-Specify the geometry of the map window, i.e. its size and position.
-.TP
-.BI "\-selgeom " (width)x(height)
-Specify the geometry of the selector window. Any specification of 
-position is ignored, as it is optimized by the program.
-.TP
-.BI "\-zoomgeom " (width)x(height)
-Specify the geometry of the zoom window. Any specification of 
-position is ignored, as it is optimized by the program.
-.TP
 .BI "\-placement " <choice>\ (random, fixed, center, NW, NE, SW, SE)
 Specify whether commuting between clock and map windows should proceed
 with letting the the window centers, respectively, the NW, NE, SW, SE 
 corners fixed, or rather whether it should operate randomly, or through 
 user defined placement. Default is NW placement.
 .TP
-.BI "\-horizshift " w
-Specify number of pixels which should separate the central bottom points
-of map and menu windows. The default is 0 and may need to be adjusted 
-according to the window manager used.
+.BI "\-placementshift " x y
+Relative displacement <clock window> --> <map window>, to apply with
+respect to the -placement specification. If placement is NW, then
+the NW window corner will move by (x,y) pixels. Defaut is (0,0), i.e.
+no modification to apply to the -placement specification.
 .TP
-.BI "\-vertshift " h
-Specify number of pixels which should separate the map and menu windows.
-The default is 12 and may need to be adjusted according to the window
-manager used.
+.BI "\-clockgeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the clock window, i.e. its size and position
+(absolute position with respect to the left upper corner of the screen).
+.TP
+.BI "\-mapgeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the map window, i.e. its size and position
+(absolute position with respect to the left upper corner of the screen).
+.TP
+.BI "\-menugeom " +(x coord)+(y coord)
+Specify the relative position (x = horizontal shift, y = vertical shift)
+of the menu window with respect to the main window, starting from the 
+bottom edge of the main window (from its top edge in case of SW or 
+SE placements, see above). The y value may need an adjustment, according 
+to the height of the title bar allocated by the window manager, if any. 
+In the case of the menu window, width and height solely depend on the 
+menufont, and therefore any given specification of width and height is 
+ignored. The default relative position is x = 0, y = 30. 
+.TP
+.BI "\-selgeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the selector window. The position specification 
+is relative to the main window (or to the menu, when the menu is raised).
+See above option -menugeom for further explanations. The default geometry
+of the selector window is 600x180+0+30.
+.TP
+.BI "\-zoomgeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the zoom window. The position specification 
+is relative to the main window (or to the menu, when the menu is raised).
+See above option -menugeom for further explanations. The default geometry
+of the zoom window is 500x320+0+30.
+.TP
+.BI "\-optiongeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the option window. The position specification 
+is relative to the main window (or to the menu, when the menu is raised).
+See above option -menugeom for further explanations. The height
+specification depends solely on the selected menufont and is therefore
+ignored. The default geometry of the option window is 630x80+0+30. 
+.TP
+.BI "\-auxilgeom " +(x coord)+(y coord)
+Specify the relative position (x = horizontal shift, y = vertical shift)
+of the auxiliary windows (menu, zoom, selector, option). All relative 
+displacements are set to (x,y).
 .TP
 .BI "\-spotsize " size
 Define size=0 [=no spots] or 1,2,3 to use either thin circles, medium
@@ -432,19 +524,43 @@ they aren't).
 .BI "\-nonight \-nocities \-nosun \-nomeridians \-noparallels \-notropics"
 These options just negate the above ones.
 .TP
-.BI "\-textbgcolor " color
-Specifies the bottom text background color. Default is Grey92.
+.BI "\-menubgcolor " color
+Specifies the various menus text background color. Default is Grey92.
 .TP
-.BI "\-textfgcolor " color
-Specifies the bottom text foreground color. Default is Black.
+.BI "\-menufgcolor " color
+Specifies the various menus text foreground color. Default is Black.
+.TP
+.BI "\-clockbgcolor " color
+Specifies the clock background color to be used with inverted color maps
+(option -invertcolors). Default is White.
+.TP
+.BI "\-clockfgcolor " color
+Specifies the clock foreground color to be used with inverted color maps
+(option -invertcolors). Default is Black.
 .TP
 .BI "\-mapbgcolor " color
-Specifies the map background color to be used with monochrome maps
-(options -mono and -invert). Default is White.
+Specifies the map background color to be used with inverted color maps
+(option -invertcolors). Default is White.
 .TP
 .BI "\-mapfgcolor " color
-Specifies the map foreground color to be used with monochrome maps
-(options -mono and -invert). Default is Black.
+Specifies the map foreground color to be used with inverted color maps
+(option -invertcolors). Default is Black.
+.TP
+.BI "\-mapstripbgcolor " color
+Specifies the background color to be used for the strip of the map window
+(options -invertcolors and -fullcolors). Default is White.
+.TP
+.BI "\-mapstripfgcolor " color
+Specifies the foreground color to be used for the strip of the map window
+(options -invertcolors and -fullcolors). Default is White.
+.TP
+.BI "\-clockstripbgcolor " color
+Specifies the background color to be used for the strip of the clock window
+(options -invertcolors and -fullcolors). Default is White.
+.TP
+.BI "\-clockstripfgcolor " color
+Specifies the foreground color to be used for the strip of the clock window
+(options -invertcolors and -fullcolors). Default is White.
 .TP
 .BI "\-zoombgcolor " color
 Specifies the zoom area background color to be used with the small
@@ -562,9 +678,11 @@ and Mercator projects the illuminated area onto map image.  The
 Sun's position is calculated to better than one arc-second
 in accuracy.
 .SH BUGS
-The program is still to be somewhat debugged and may crash unexpectedly 
-under some circumstances. As new features are introduced, older ones
-may become broken during the phase of development :-(
+Sunclock makes intensive use of pointers and memory allocation/deallocation,
+so memory leaks might still be possible under some circumstances. 
+However, the program has been thoroughly debugged, and crashes seem 
+to be rather rare. As new features are introduced, older ones may become 
+broken during the phase of development :-(
 .PP
 The illuminated area shown is the area which would be sunlit
 if the Earth atmosphere would be absolutely uniform.  The actual 
@@ -581,6 +699,7 @@ Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca,
 added support for interactive map.
 .PP
 Jean-Pierre Demailly, Université de Grenoble I, 
-demailly@fourier.ujf-grenoble.fr added many new major features (loading maps,
-shading, zoom functionalities), as well as support for numerous new options 
-and functions in the GUI interface.
+demailly@fourier.ujf-grenoble.fr worked out versions 3.xx, which add many 
+new major features (loading maps, shading, zoom functionalities, 
+configuration of options on the fly at runtime, through a point and click
+GUI interface).

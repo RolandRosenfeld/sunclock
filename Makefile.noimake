@@ -12,26 +12,25 @@ XBINDIR=/bin/X11
 # Set -DSYSV if on System V
 # Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
 #   your struct tm contains a tm_zone field)
-# Set -DMENUFONT= and -DCLOCKFONT= whatever fonts you like
 # Pick -O or -g
 #
 
 # For HP
-#CFLAGS=-Ae -DFONT=\"6x13\" -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CFLAGS=-Ae -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # For SunOS
-#CFLAGS=-I/usr/openwin/include -DFONT=\"6x13\" -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CFLAGS=-I/usr/openwin/include -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # For Solaris
-#CFLAGS=-I/usr/openwin/include -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CFLAGS=-I/usr/openwin/include -O -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #LFLAGS=-L/usr/openwin/lib
 
 # For OpenServer
-CFLAGS=-I/usr/include/X11 -DMAXPATHLEN=1024 -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)"
+CFLAGS=-I/usr/include/X11 -DMAXPATHLEN=1024 -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)"
 LFLAGS=-L/usr/lib/X11 -lXpm -ljpeg -lsocket
 
 # For Linux
-CFLAGS=-I/usr/include/X11 -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CFLAGS=-I/usr/include/X11 -O -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 LFLAGS=-L/usr/X11/lib -lXpm -ljpeg
 
 OFILES=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
@@ -48,16 +47,16 @@ readxpm.o: $(HFILES)
 sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 
-install: sunclock
+install: install.man sunclock
 	mkdirhier $(DESTDIR)/$(XBINDIR)
 	install -s -c sunclock $(DESTDIR)/$(XBINDIR)
+	cp -f sunclock_help $(DESTDIR)/$(XBINDIR)
 	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
 	cd i18n ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	mkdirhier $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
-	./check_obsolete $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
 
 install.man:
 	cp -f sunclock.man $(DESTDIR)$(MANDIR)/sunclock.1x

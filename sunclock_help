@@ -1,0 +1,3 @@
+#!/bin/sh
+
+xterm -fn 9x15 -cr green -ms red -e man sunclock

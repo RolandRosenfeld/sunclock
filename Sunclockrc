@@ -1,12 +1,18 @@
 # The format of this file is:
 #
 # [Options]
-# <one option per line>
+# <one or several options per line> 
 #
 # where each option is of the form
-# <option>: <parameters>
+# option: parameters
 # or
-# <option> if that option has no parameters
+# -option1 parameters -option2 parameters ...
+#
+# If one of the parameters requires a blank space, but is considered
+# to be a single parameter, use the  character as a replacement of
+# the blank space (combination of keys <Ctrl>Q <Ctrl>_ under emacs)
+#
+# (The same apply in the option widget, with <Ctrl><Space> instead)
 #
 # [Cities]
 # city: latitude longitude timezone
@@ -20,11 +26,12 @@
 [Options]
 #mapmode: L
 #language: en
-#city: Washington
-#map
-#mapimage: /usr/share/sunclock/earthmaps/large/caida.xpm.gz
+city: Washington
+map
+mapimage: /usr/share/sunclock/earthmaps/jpeg/caida.jpg
 #tropics
 #twilight
+-tropics -tropiccolor lavender
 
 [Cities]
 Paris: 48.850 2.333 Europe/Paris
