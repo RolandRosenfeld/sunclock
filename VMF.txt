@@ -1,0 +1,71 @@
+The VMF format is just a convenient ASCII vector map format which has 
+been especially designed to work with sunclock. It is inspired by 
+xearth's original format, by Kirk Lauritz Johnson.
+
+We now come to the more precise VMF specifications
+
+==============================================================================
+
+
+#!VMF is the initial signature for the format
+
+Any character # indicates a comment until a newline character is found
+
+The first two data specified should be 2 numbers:
+ num_colors  (number of distinct colors used in the map)
+ max_palette (maximum of numbers used to code colors)
+
+Then, a list of <num_colors> explicit RGB values or conventional names
+of colors should follow, in the format understood by the XAllocNamedColor()
+Xlib routine.
+ 
+The next value is the default color. Colors are indicated by their index in
+the range  0 .. N  where N = num_colors-1
+
+The next data are the palette values, given in the form  
+(color --> list of codes):
+c0  j1 j2 j3 ...
+c1  k1 k2 ...
+c2  l1 l2 l3 l4
+c4  ...
+(etc)
+cN  u1 u2 ...
+.
+
+Do not forget the final point to indicate that the palette values are complete.
+The meaning of this is that codes j1 j2 j3 will be attributed color 0
+(first listed color), codes k1 k2 will be attributed color 1 (second listed
+color), etc. All codes should be in the range 0 .. max_palette
+
+The next value is the "background value", that is the color code which will
+be affected to all pixels, before the codes are modified by drawing objects 
+on the map.
+
+The next data are arrays of short (16-bit) ints, defining closed
+curves drawn on the map. The vector map algorithm fills the interior of 
+each curve with a prescribed color, and leaves the outside of the curve 
+unmodified; however, if some pixels in the interior already carry colors, 
+the effect of the coloring scheme is to combine colors together -- 
+precisely by adding their codes.
+
+ - the first value in an array is the number of points of the curve
+ - the second value in a curve indicates the color code value with a 
+   plus or minus sign, depending e.g. on whether the curve should add a new
+   domain with the given color code, or should dig a hole in a previously
+   drawn domain with the given color code.
+ - the next values are the point coordinate values [theta, phi] 
+   where theta is the longitude (between -180 and 180 degrees)
+   and phi the latitude (between -90 and 90)
+   rescaled as short integers in the range -32760 ... 32760
+ - normally, the curves should be non-self-intersecting and traced in a
+   counter-clockwise orientation (An incorrect orientation can be
+   coped with by negating the corresponding color code).
+ - if there are several curves bounding overlapping domains, the color code
+   obtained in the intersection is just the sum of color codes produced
+   by each curve (that is, the color code in the interior of the curve and
+   0 outside). In that case, it might be preferable to use color codes which
+   are e.g. powers of 2 (or more), so that colors don't mix without things
+   being controllable. The practical limit on the code values is 2^15-1.
+
+
+

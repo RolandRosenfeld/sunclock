@@ -32,7 +32,7 @@ Klikk på en by
 Klikk på et sted
 Klikk på to steder i kartet
 Klikk to ganger eller trykk Tab for ° ' "
-Internt vektorkart
+Nytt kartvindu
 Tastatur
 Tastatur/Muskontroll
 Lukk vindu
@@ -44,10 +44,9 @@ time
 dag
 dager
 # Help
+Vis hjelp og alternativ (H eller musklikk knapp 1)
 Henter kart (F eller musklikk knapp 2)
-Zoom (kun med vektorkart)
-Synchronize windows - or not
-Tilbake til forrige kartvindu
+Zoom (Z eller musklikk knapp 3)
 Bruk koordinatmodus
 Bruk soloppgangmodus
 Bruk distansemodus
@@ -63,12 +62,14 @@ Tegn/Fjern steder
 Tegn/Fjern meridianer
 Tegn/Fjern breddegrader
 Tegn/Fjern tropisk/ekvator/arktisk sirkel
-Veksle tidssone og kartvindu
-Åpner nytt kartvindu (W eller musklikk knapp 3)
+Åpner nytt kartvindu
 Lukker vindu
 Ikonifiserer vindu
 Forny kartvindu
-Vis hjelp og alternativ
+Adjust height/width ratio to 1/2
+Tilbake til forrige kartvindu
+Synchronize windows - or not
+Veksle tidssone og kartvindu
 Aktivér kommando (-command option)
 Avslutt program
 Lukk meny

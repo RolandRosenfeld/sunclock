@@ -2,20 +2,20 @@
 
 echo "Checking formerly installed obsolete app_defaults files..."
 
-DATA1=`/bin/ls $1/Sunclock_* 2>&1 | grep -c "ls:" `
+DATA1=`/bin/ls $1/Sunclock $1/Sunclock_* 2>&1 | grep -c "ls:" `
 
 if test $DATA1 = 0 ; then 
    echo ""
-   echo "Removing obsolete $1/Sunclock_*  ..." 
+   echo "Removing obsolete $1/Sunclock*  ..." 
    echo ""
-   rm -iv $1/Sunclock_*
+   rm -iv $1/Sunclock*
 fi
 
-DATA2=`/bin/ls $2/Sunclock.* 2>&1 | grep -c "ls:" `
+DATA2=`/bin/ls $2/Sunclock $2/Sunclock.* 2>&1 | grep -c "ls:" `
 
 if test $DATA2 = 0 ; then 
    echo ""
-   echo "Removing obsolete $2/Sunclock.*  ..." 
+   echo "Removing obsolete $2/Sunclock*  ..." 
    echo ""
    rm -iv $2/Sunclock.*
 fi

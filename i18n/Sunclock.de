@@ -32,7 +32,7 @@ Klicke auf eine Stadt
 Klicke auf eine Position
 Klicke nacheinander auf zwei Positionen
 Doppel Klicke oder Betätige Tab für ° ' "
-Interne vektorielle Karte
+Neue Karte/Fenster
 Taste
 Tastatur/Maus Steuerung
 Abbruch
@@ -44,10 +44,9 @@ Stunde
 Tag
 Tage
 # Help
+Zeige die Hilfe und Optionen an (H oder Mausknopf 1)
 Eingabe Erde kartendatei (F oder Mausknopf 2)
-Zoom
-Synchronisieren die Fenster - oder nicht
-Vorhergehende Fenster Grösse zurück
+Zoom (Z oder Mausknopf 3)
 Verwende Koordinaten-Modus
 Verwende Sonnenzeit-Modus
 Verwende Abstands-Modus
@@ -63,12 +62,14 @@ Zeichne/Lösche Markierungen der Städte
 Zeichne/Lösche Meridiane
 Zeichne/Lösche Parallelen
 Zeichne/Lösche Tropische/Äquator/Polarkreise
-Wechsle zwischen Uhr- und Kartenfenster 
-Öffnen ein neues Karte Fenster (W oder Mausknopf 3)
+Öffnen ein neues Karte Fenster
 Schließen das Fenster
 Iconifiziere das Fenster
 Kartenfenster auffrischen
-Zeige die Hilfe und Optionen an
+Adjust height/width ratio to 1/2
+Vorhergehende Fenster Grösse zurück
+Synchronisieren die Fenster oder nicht
+Wechsle zwischen Uhr und Kartenfenster 
 Aktiviere Kommando (-command Option)
 Beende Programm
 Abbruch Menü
@@ -76,3 +77,4 @@ Abbruch Menü
 Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick
 oder Tastatur zugegriffen werden kann:
 # End
+

@@ -1,3 +1,12 @@
+XCOMM Should install to /usr or /usr/local ??
+DESTDIR=/usr
+
+XCOMM Name of bin subdirectory of DESTDIR: /X11R6/bin or maybe just  /bin
+BINDIR=/X11R6/bin
+
+XCOMM Name of share subdirectory of DESTDIR:
+SHAREDIR=/share/sunclock
+
 XCOMM
 XCOMM Compile options:
 XCOMM
@@ -8,45 +17,33 @@ XCOMM Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
 XCOMM Pick -O or -g
 XCOMM
 
-SHAREDIR=/usr/share/sunclock
-
 #ifdef HPArchitecture
-CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #else
 # SunOS
-#CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 # Solaris, Linux
-CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
-SRCS=sunclock.c astro.c tildepath.c mapdata.c dirlist.c
-OBJS=sunclock.o astro.o tildepath.o mapdata.o dirlist.o
-LOCAL_LIBRARIES=$(XLIB) -lXpm -lm
+SRCS=sunclock.c astro.c tildepath.c dirlist.c readvmf.c readxpm.c readjpeg.c
+OBJS=sunclock.o astro.o tildepath.o dirlist.o readvmf.o readxpm.o readjpeg.o
+LOCAL_LIBRARIES=$(XLIB) -lXpm -ljpeg -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
-
-genmap:: mapdata.o
-	gcc -c mapgen.c -o mapgen.o 
-	gcc -o mapgen -O mapgen.o mapdata.o -lm
-
-maps:: genmap
-	./mapgen -width 960 -height 540 -xpm | xv - &
-	./mapgen -width 640 -height 320 -xbm | xv - &
-
-pixfiles:: genmap
-	./mapgen -width 960 -height 540 -xpm > earthmap.xpm
-	./mapgen -width 640 -height 320 -xbm > earthmap.xbm
-
-clean::
-	rm -f mapgen
 
 realclean:: clean
 	rm -f Makefile *.xpm *.xbm
 
 ComplexProgramTarget(sunclock)
-InstallAppDefaults(Sunclock)
-	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
-	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
-	cat WARNING
-	./check_i18n $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
 
-all:: sunclock genmap
+install::
+	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
+	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
+	cd i18n ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
+	mkdirhier $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
+	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
+	cat WARNING
+	./check_obsolete $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
+
+
+

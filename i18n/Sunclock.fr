@@ -32,7 +32,7 @@ Cliquer sur une ville
 Cliquer sur un point
 Cliquer sur deux points
 Cliquer 2 fois ou taper Tab pour ° ' "
-Carte vectorielle interne
+Nouvelle carte/fenêtre
 Touche
 Contrôles Clavier/Souris
 Echap
@@ -44,10 +44,9 @@ heure
 jour
 jours
 # Help
+Afficher l'aide et les options (H ou clic sur la bande du bas)
 Charger une carte de la Terre (F ou souris, bouton 2)
-Zoom
-Synchroniser les fenêtres - ou non
-Retour à la taille de fenêtre précédente
+Zoom (Z ou souris, bouton 3)
 Utiliser le mode Coordonnées
 Utiliser le mode heure Solaire
 Utiliser le mode Distances
@@ -56,19 +55,21 @@ Utiliser le mode heure Légale
 Avancer dans le temps
 Reculer dans le temps
 Ajuster la progression temporelle
-Remettre à Zéro le décalage temporel
+Remettre à zéro le décalage temporel
 Montrer/ne pas montrer la zone Nocturne
 Montrer/ne pas montrer le Soleil
 Montrer/ne pas montrer les villes
 Montrer/ne pas montrer les Méridiens
 Montrer/ne pas montrer les Parallèles
 Montrer/ne pas montrer les Tropiques/Equateur/Cercles arctiques
-Commuter les fenêtres carte/horloge 
-Ouvrir une nouvelle fenêtre-carte (W ou souris, bouton 3)
+Ouvrir une nouvelle carte/fenêtre
 Fermer la fenêtre
 Iconifier la fenêtre
 Rafraîchir la fenêtre
-Afficher l'aide et les options
+Ajuster le rapport hauteur/largeur à 1/2
+Retour à la taille de fenêtre précédente
+Synchroniser les fenêtres - ou non
+Commuter les fenêtres carte/horloge 
 Activer la commande spécifiée par l'option -command
 Quitter le programme
 Sortir du menu

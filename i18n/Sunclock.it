@@ -32,7 +32,7 @@ Cliccare su una città
 Cliccare su un punto
 Cliccare su due punti
 Cliccare ancora o premere Tab per ° ' "
-Internal vector map
+Nuova Carta/Finestra
 Tasto
 Tasto/Mouse
 Escape
@@ -44,10 +44,9 @@ ora
 giorno
 giorni
 # Help
+Mostrare aiuto ed opzioni (H o mouse, bottone 1)
 Caricare carta della Terra (F o mouse, bottone 2)
-Zoom (impianti soltanto con carta vettoriale)
-Finestri sincronizzati - o non
-Ritornare a dimensione anteriore della carta
+Zoom (Z o mouse, bottone 3)
 Utilizza la modalità coordinate
 Utilizza la modalità ora solare
 Utilizza la modalità distanze
@@ -63,12 +62,14 @@ Mostrare/non mostrare le città
 Mostrare/non mostrare i meridiani
 Mostrare/non mostrare i paralleli
 Mostrare/non mostrare i tropici/circoli polari/l'equatore
-Invertire le finestre mappa/orologio 
-Aprire una nuova finestra (W o mouse, bottone 3)
+Aprire una nuova finestra
 Chiudere la finestra
 Ridurre la finestra
 Rinfrescare la finestra
-Mostrare aiuto ed opzioni
+Adjust height/width ratio to 1/2
+Ritornare a dimensione anteriore della carta
+Finestri sincronizzati - o non
+Invertire le finestre mappa/orologio 
 Attivare il comando specifico per l'opzione -command
 Abbandonare il programma
 Uscire dal menu

@@ -22,7 +22,7 @@ char	Label[L_END][60] = {
         "Click on a location",
         "Click consecutively on two locations",
         "Double click or strike * for ° ' \"",
-	"Internal vector map",
+	"New map/window",
 	"Key",
         "Key/Mouse controls",
 	"Escape",
@@ -35,16 +35,15 @@ char	Label[L_END][60] = {
         "days"
 };
 
-#define N_OPTIONS 27
+#define N_OPTIONS 28
 char    Option[2*N_OPTIONS] = 
-"F,+,!,<;C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T; ,W,K,I,R;H,X,Q;";
+"H,F,Z;C,S,D,E,L;A,B,G,-;N,O,U;M,P,T;W,K,I,R;*,<,=,!;X,Q;";
 char	ListOptions[4*N_OPTIONS+2];
 
 char	Help[N_OPTIONS+1][80] = {
-"Load Earth map file",
-"Zoom menu",
-"Synchronize windows - or not",
-"Back to previous window size",
+"Show help and options (H or click on strip)",
+"Load Earth map file (F or mouse button 2)",
+"Zoom (Z or mouse button 3)",
 "Use coordinate mode",
 "Use solar time mode",
 "Use distance mode",
@@ -60,13 +59,15 @@ char	Help[N_OPTIONS+1][80] = {
 "Draw/Erase meridians",
 "Draw/Erase parallels",
 "Draw/Erase Tropics/Equator/Arctic circles",
-"Switch clock and map windows",
 "Open new map window (W or Mousebutton 3)",
 "Close window",
 "Iconify window",
 "Refresh map window",
-"Show help and options",
-"Activate command (-cmd option)",
+"Adjust height/width ratio to 1/2",
+"Back to previous window size",
+"Synchronize windows or not",
+"Switch clock and map windows",
+"Activate command (-command option)",
 "Quit program",
 "Escape menu"
 };

@@ -32,7 +32,7 @@ Click on a city
 Click on a location
 Click consecutively on two locations
 Double click or strike Tab for ° ' "
-Internal vector map
+New map/window
 Key
 Key/Mouse controls
 Escape
@@ -44,10 +44,9 @@ hour
 day
 days
 # Help
+Show help and options (H or click on strip)
 Load Earth map file (F or mouse button 2)
-Zoom
-Synchronize windows - or not
-Back to previous window size
+Zoom (Z or mouse button 3)
 Use coordinate mode
 Use solar time mode
 Use distance mode
@@ -56,7 +55,7 @@ Use legal time mode
 Modify time forward
 Modify time backward
 Adjust time progress
-Reset global time shift to Zero
+Reset global time shift to zero
 Draw/Erase Night area
 Draw/Erase Sun
 Draw/Erase cities
@@ -64,11 +63,13 @@ Draw/Erase meridians
 Draw/Erase parallels
 Draw/Erase Tropics/Equator/Arctic circles
 Switch clock and map windows 
-Open new map window (W or mouse button 3)
+Open new map window
 Close window
 Iconify window
 Refresh map window
-Show help and options
+Adjust height/width ratio to 1/2
+Back to previous window size
+Synchronize windows or not
 Activate command (-command option)
 Quit program
 Escape menu

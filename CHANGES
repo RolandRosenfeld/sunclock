@@ -3,14 +3,29 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
-Planned versions 3.30, 3.40... (features to appear in some order)
+Planned versions 3.3x, 3.40... (features to appear in some order)
 
-- Possibility of zooming the maps
+- Possibility of zooming the maps (almost done)
 - Larger data base of cities/coordinates, with level of size
 - Searching cities
+- Adding new images formats: png, other vector map formats (the rmap 
+  database would be great...)
 - Moon phases
-- Possibility of loading external vector maps (?)
 - Spherical representation of Earth (?)
+
+Version 3.30, February 26, 2001
+
+- Extensive support for PseudoColor displays, with private colormaps
+  being allocated automatically and quantization of colors being performed
+  when needed
+- .jpg and .xpm formats are fully supported, and all images are resizable
+
+Version 3.29, February 12, 2001 (not widely announced)
+
+- Sunclock now reads .jpg image formats in true-color modes
+- .jpg images are resizeable
+- The internal vector map has been turned into an externally loadable
+  map (a ".vmf" format)
 
 Version 3.28, January 15, 2001
 
@@ -27,11 +42,11 @@ Version 3.27, December 29, 2000
 - New options -dock (initial clock window cannot be resized or closed), 
   and -updateall (all windows are updated, which, of course, requires 
   more CPU)
-- Fixes multiple window bug found by François Massonneau <fmas@celtes.com>
+- Fixes multiple window bug found by François Massonneau <frmas@free.fr>
 
 Version 3.26, December 22, 2000
 
-- Fixes segfault bug mentioned by François Massonneau <fmas@celtes.com>
+- Fixes segfault bug mentioned by François Massonneau <frmas@free.fr>
 
 Version 3.25, December 21, 2000
 
@@ -97,12 +112,12 @@ Version 3.11, October 8, 2000.
   arbitrarily.
 - The command line options can now also be set through the configuration 
   file, and the version number appears in the tips of 'H' option
-  Suggestions by François Massonneau <fmas@celtes.com>
+  Suggestions by François Massonneau <frmas@free.fr>
 
 Version 3.10, October 3, 2000.
 
 - Interface has been improved and should be substantially easier to use,
-  following some suggestions by François Massonneau <fmas@celtes.com>
+  following some suggestions by François Massonneau <frmas@free.fr>
 - Added Sun position functionality
 - Added "hour extension" mode
 - Swedish localization by <janoh@telia.com>

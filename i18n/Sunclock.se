@@ -32,7 +32,7 @@ Klicka på en stad
 Klicka på en plats
 Klicka på två platser
 Klick två gånger eller slå Tab för ° ' "
-Internal vector map
+Ny kartfönster
 Tastatur
 Tastatur/Mus kontroll
 Escape
@@ -44,10 +44,9 @@ timme
 dag
 dagar
 # Help
+Visa hjälp och alternativ (H eller mus-klick knapp 1)
 Laddar karta Jord (F eller mus-klick knapp 2)
-Zoom (bara med vektor karta)
-Synchronize windows - or not
-Back till föregående kartfönster mått
+Zoom (Z eller mus-klick knapp 3)
 Använd koordinat mode
 Använd solstånd mode
 Använd distans mode
@@ -63,12 +62,14 @@ Rita/Radera städer
 Rita/Radera meridianer
 Rita/Radera breddgrader
 Rita/Radera Tropik/Ekvator/Arktik cirklar
-Växla tidszon och kartfönster 
-Öppnar ny kartfönster (W eller mus-klick knapp 3)
+Öppnar ny kartfönster
 Slutar fönster
 Ikonifiera fönster
 Förnya kartfönster
-Visa hjälp och alternativ
+Adjust height/width ratio to 1/2
+Back till föregående kartfönster mått
+Synchronize windows - or not
+Växla tidszon och kartfönster 
 Aktivera kommando (-command option)
 Avsluta program
 Escape meny

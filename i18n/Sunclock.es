@@ -32,7 +32,7 @@ Marca una ciudad
 Marca un lugar
 Marca dos lugares consecutivos
 Repetir clic o presionar Tab para ° ' "
-Interna tarjeta vectorial
+Nueva Carta/Ventana
 Tecla
 Control Teclado/Ratón
 Escape
@@ -44,10 +44,9 @@ hora
 día
 días
 # Help
+Mostrar ayuda y opciones (H o ratón, botone 1)
 Encargar carta de la Tierra (F o ratón, botone 2)
-Zoom (funcione solamente con la carta vectorial)
-Sincronizar las ventanas - o no
-Retornar a dimensiónes anteriores de la carta
+Zoom (Z o ratón, botone 3)
 Usar modo coordenadas
 Usar modo hora solar
 Usar modo distancia
@@ -63,12 +62,14 @@ Dibujar/Borrar ciudades
 Dibujar/Borrar meridianos
 Dibujar/Borrar paralelos
 Dibujar/Borrar círculos Trópicos/Polares/Ecuador
-Cambiar entre ventana mapa y ventana reloj 
-Abrir una nueva ventana de mapa (W o ratón, botone 3)
+Abrir una nueva ventana de mapa
 Cerrar la ventana
 Minimizar ventanas
 Refrescar ventana de mapa
-Mostrar ayuda y opciones
+Adjust height/width ratio to 1/2
+Retornar a dimensiónes anteriores de la carta
+Sincronizar las ventanas - o no
+Cambiar entre ventana mapa y ventana reloj 
 Activar comando (opción -command)
 Salir del programa
 Escapar del menú
@@ -76,3 +77,4 @@ Escapar del menú
 Sunclock tiene varios procedimientos internos a los que se puede
 acceder usando el ratón o el teclado.
 # End
+

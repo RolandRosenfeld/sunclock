@@ -32,7 +32,7 @@ Klik op een plaats
 Klik op een locatie
 Klik achtereenvolgens op 2 locaties
 Dubbelklik of gebruik Tab voor ° ' "
-Interne vectorkaart
+Nieuw Kaart/Scherm
 Toets
 Toets/muis controls
 Escape
@@ -44,10 +44,9 @@ uur
 dag
 dagen
 # Help
+Toon help en opties (H of muisknop 1)
 Laad aardkaart (F of muisknop 2)
-Zoom
-Synchroniseer schermen of niet
-Terug naar vorige schermgrootte
+Zoom (Z of muisknop 3)
 Gebruik coordinaat modus
 Gebruik zonnetijd modus
 Gebruik afstands modus
@@ -63,12 +62,14 @@ Teken/Wis steden
 Teken/Wis meridianen
 Teken/Wis parallelen
 Teken/Wis Tropische/Evenaar/Pool circels
-Schakel tussen klok en kaart scherm
-Open een nieuw kaart scherm (W of muis knop 3)
+Open een nieuw kaart scherm
 Sluit scherm
 Iconiseer scherm
 Ververs kaart scherm
-Toon help en opties
+Adjust height/width ratio to 1/2
+Terug naar vorige schermgrootte
+Synchroniseer schermen of niet
+Schakel tussen klok en kaart scherm
 Activeer commando (-command optie)
 Verlaat programma
 Beeindig menu

@@ -1,23 +1,14 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Starting from version 3.30 on, the recommended image format is JPEG,
+(although you can still use the .xpm or .xpm.gz format as before).
+We suggest you to download (actually very nice!) Earth maps from the
+xglobe/xplanet home sites. A bundled package of these is provided on
+   ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_jpg_maps.tgz
+
+The ZOOM functions are NOT YET COMPLETELY IMPLEMENTED and are currently
+disabled. They should soon appear in the 3.3x series development.
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-Optional **.xpm or  **.xpm.gz  Earth map files can be installed in 
-/usr/share/sunclock/earthmaps. A package of very nice Earth maps is
-available from  ftp://ftp.ac-grenoble.fr/ge/geosciences
-Go and get them if you wish...
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-If you are upgrading from a version of sunclock prior to 3.20, notice
-that the internationalization files were probably installed elsewhere,
-either in the app-defaults directory or at the root of the share
-directory 
-    /usr/share/sunclock/
-
-Starting with 3.20, this is no longer the case, the file Sunclock.**
-are by default installed in 
-    /usr/share/sunclock/i18n
-
-Starting removing the obsolete Sunclock.** files from their older place ??
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

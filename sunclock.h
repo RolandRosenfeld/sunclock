@@ -84,7 +84,6 @@ typedef struct Flags {
         short clock_mode;               /* clock mode */
         short progress;                 /* special progress time ?*/
         short shading;                  /* shading mode */
-        short alloc_level;              /* allocation level */
         short resized;                  /* has window been resized ? */
         short dms;                      /* degree, minute, second mode */
         short sunpos;                   /* is Sun to be shown ? */
@@ -93,6 +92,40 @@ typedef struct Flags {
         short parallel;                 /* are parallel to be shown ? */
         short tropics;                  /* are tropics to be shown ? */
 } Flags;
+
+typedef struct GClist {
+        GC store;
+        GC invert;
+        GC smallfont;
+        GC bigfont;
+        GC dirfont;
+        GC imagefont;
+        GC citycolor0;
+        GC citycolor1;
+        GC citycolor2;
+        GC markcolor1;
+        GC markcolor2;
+        GC linecolor;
+        GC tropiccolor;
+        GC suncolor;
+} GClist;
+
+typedef struct Pixlist {
+        Pixel black;
+        Pixel white;
+        Pixel textbgcolor;
+        Pixel textfgcolor;
+        Pixel dircolor;
+        Pixel imagecolor;
+        Pixel citycolor0;
+        Pixel citycolor1;
+        Pixel citycolor2;
+        Pixel markcolor1;
+        Pixel markcolor2;
+        Pixel linecolor;
+        Pixel tropiccolor;
+        Pixel suncolor;
+} Pixlist;
 
 /* Records to hold cities */
 
@@ -117,6 +150,8 @@ typedef struct Sundata {
         int             wintype;        /* is window map or clock ? */
         Window          win;            /* window id */
         Colormap        cmap;           /* window private colormap */  
+        GClist          gclist;         /* window GCs */  
+        Pixlist         pixlist;        /* special color pixels */  
 	Flags		flags;		/* window behavioral flags */
         Geometry        geom;           /* geometry */
 	Geometry        mapgeom;        /* map geometry */
@@ -124,11 +159,11 @@ typedef struct Sundata {
 	Geometry        prevgeom;       /* previous geometry */
         char *          clock_img_file; /* name of clock xpm file */
         char *          map_img_file;   /* name of map xpm file */
-	char **		xpmdata;        /* pointer to char ** pixmap data */
         XImage *        xim;            /* ximage of map */ 
         char *          ximdata;        /* ximage data copy*/ 
-        XpmAttributes * attrib;         /* attributes */
-        Pixel *         darkpixel;      /* pointer to dark pixels */
+        unsigned char * daypixel;       /* pointer to day pixels */
+        unsigned char * nightpixel;     /* pointer to night pixels */
+        int             ncolors;        /* number of colors in day pixels */
         Pixmap          pix;            /* pixmap */
 	char *		bits;           /* pointer to char * bitmap bits */
 	short *		cwtab;		/* current width table (?) */
@@ -142,7 +177,6 @@ typedef struct Sundata {
         int             solar_day;      /* previous solar day */
 	int		textx;		/* x where to draw the text */
 	int		texty;		/* y where to draw the text */
-	int		timeout;	/* time until next image update */
 	int		count;	        /* number of time iterations */
         double          sundec;         /* Sun declination */
         double          sunlon;         /* Sun longitude */
@@ -153,13 +187,6 @@ typedef struct Sundata {
         struct Sundata *next;           /* pointer to next structure */
 } Sundata;
 
-/* Color record */
-typedef struct Color {
-	char		name[COLORLENGTH+1];
-	unsigned long	pix;
-	GC		gc;
-} Color;
-
 /* Which OS are we using ? */
 
 #if defined(linux) || defined(__linux) || defined(__linux__)
@@ -168,4 +195,6 @@ typedef struct Color {
 #define _OS_HPUX_
 #endif
 
-
+#if defined(__powerpc__)
+#define BIGENDIAN
+#endif

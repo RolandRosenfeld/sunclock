@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "Dec 29, 2000"
+.TH SUNCLOCK 1 "Feb 26, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing time and
 geographical data through point and click actions.
@@ -24,10 +24,12 @@ for additional cities.
 Sunclock can commute between two states, the "clock window" and
 the "map window". The clock window displays a small map of the Earth
 and therefore occupies little space on the screen, while the "map window" 
-displays a large map and offers more advanced functions. Sunclock
-includes a builtin resizable and zoomable vector map. External
-Earth maps can also be loaded (however, only .xpm and .xpm.gz formats 
-are available at the moment).
+displays a large map and offers more advanced functions. The Sunclock
+package includes a resizable and zoomable vector map . External
+Earth maps can also be loaded (as to version 3.30, formats .jpg, 
+.xpm or .xpm.gz, .vmf can be read [.vmf is the specific vector map 
+format of  sunclock]). Some additional formats could be added in the 
+future.
 
 The map window can work in five different modes:
 .PP
@@ -53,11 +55,12 @@ Depending on the mode chosen, the bottom line shows a short text
 displaying the required information. The bottom line can be scrolled to
 the right or to the left by pressing the horizontal key arrows.
 .SH OPTIONS
-The program does not use the X Toolkit, and hence only those
-options explicitly enumerated below may be used.  The only
-needed resource is the list of coordinates and timezones of 
-cities to be displayed. Users will possibly have to customize
-the prepackaged app-default file Sunclock.ad.
+The program does not use the Xt nor any other more advanced toolkit,
+and hence only those options explicitly enumerated below may be used.
+The only needed resource is the list of coordinates and timezones of
+cities to be displayed. Users can possibly customize the system-wide 
+prepackaged configuration file Sunclockrc, or their individual 
+configuration file ~/.sunclockrc.
 .TP
 .BI "\-help "
 Show brief help and exit.
@@ -67,6 +70,10 @@ Explanations on the actions available from the builtin menu.
 .TP
 .BI "\-version "
 Show program version and exit.
+.TP
+.BI "\-verbose "
+Make Sunclock verbose. The program then sends to stderr some internal
+information on the operations performed. This is disabled by default.
 .TP
 .B "\-display " dispname
 Give the name of the X server to contact.
@@ -102,36 +109,50 @@ sunclock will still accept large ones in the clock window...
 .TP
 .B "\-mono "
 Use monochrome settings (recommended only for monochrome screens!).
+Day and night appear respectively as white and black, and no shading
+is available. Only .vmf vector maps can be used in that case.
 .TP
 .B "\-invert "
-Instead of using the builtin color vector map of Earth, show a black and 
-white frame and use inversion of colors to generate the night area. This
-considerably reduces both memory and CPU usage, and could be useful on
-more modest machines.
+This is essentially the same as the -mono option, except that menus
+and cities can be in colors. This mode only involves 12 colors in
+total, and can be used for Pseudocolor displays which have only a
+small number of available colors. Also, the -mono and -invert options
+considerably reduce both memory and CPU usage, and can be useful on
+slower machines.
 .TP
 .B "\-private "
-Allocate a private colormap. This has no effect on truecolor displays. 
-On pseudocolor displays (depth <= 8), this option allows sunclock to run
-even when the environment makes intensive use of colors. Thanks to the 
--private option, Pixmap earthmaps can also be loaded if they do not
-use more than about 100 colors. Otherwise, a color quantization will
-be necessary before the map can be loaded.
+Force the allocation of a private colormap. This option has no effect on 
+truecolor displays, and is also disabled in case -mono is set.
+On pseudocolor displays (depth <= 8), the -private option allows sunclock 
+to run even when the environment makes intensive use of colors. An automatic 
+quantization of colors is performed so that true-color Earth maps using 
+hundreds of colors can still be displayed (of course, one may observe in 
+some cases a loss of quality). 
 .TP
 .B "\-dock "
 With this option, sunclock locks the size of the first launched window,
 if this is a (small) clock. Also, this window cannot be closed unless
 all other windows are closed as well.
 .TP
-.B "\-synchronize "
+.B "\-synchro "
 With this option, sunclock updates all windows simultaneously. This, of 
 course, requires more CPU time and may slow down sunclock's operation 
 if too many windows have been opened. The default is to update only the 
 active window. 
 .TP
+.B "\-nosynchro "
+With this option, sunclock only updates the active window. This is the
+default.
+.TP
 .B "\-title "
 With this option, sunclock provides hints to the window manager
-so that the title bars can appear. Many window managers do it anyway
-(supplying the missing hints when necessary).
+so that the title bars can appear. 
+.TP
+.B "\-notitle "
+With this option, sunclock does not provide hints to the window manager
+so that the title bars might not appear. Many window managers do it anyway
+(supplying the missing hints when necessary), so this option may not be
+effective for some window managers.
 .TP
 .B \-clock
 Start in the clock state. This is the default and thus need not be
@@ -333,8 +354,12 @@ Specifies the bottom text background color. Default is Grey92.
 Specifies the bottom text foreground color. Default is Black.
 .TP
 .BI "\-dircolor " color
-Specifies the color used for representing dircetories in the file selection
-window. Default is Blue.
+Specifies the color used for representing directories in the file selection
+widget. Default is Blue.
+.TP
+.BI "\-imagecolor " color
+Specifies the color used in the file selection widget for representing the 
+image files whose formats are recognized and can be read. Default is Magenta.
 .TP
 .BI "\-citycolor0 " color
 Specifies the color of cities (as described in ~/.sunclockrc or in

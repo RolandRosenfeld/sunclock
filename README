@@ -31,43 +31,46 @@ drawn. All these actions are performed through mouse clicks
 on the map or on the bottom strip, and/or with keyboard shortcuts. 
 There is inline help available by typing 'h' or by clicking on the 
 bottom strip -- so that no further explanation should be needed. 
-Commuting between the clock and map states is obtained by typing 'w' 
+Commuting between the clock and map states is obtained by typing '!' 
 or simply <Space>.
 
 Starting from version 3.20, the sunclock package includes a vector map
 of the Earth (loosely derived from the xearth package by Kirk Lauritz
-Johnson). The Earth maps can be built interactively both by sunclock and 
-by the `mapgen` utility. Mapgen allows users to build an Earth map of 
-arbitrary size through commands
-  mapgen -width 960 -height 600 -xpm > map_icon.xpm
-  mapgen -width 640 -height 320 -xbm > map_icon.xbm
-  mapgen -width 1024 -height 512 -xpm | xv - &
-(type mapgen -help for help on options)
+Johnson), which is capable of building Earth maps of arbitrary sizes
+without losing the accuracy of details (within certain limits...)
 
-Alternatively, you can type `make maps` or `make pixfiles` to view maps or
-generate map image files.
-
-If you are using a monochrome display, there's an option -mono that
-will enable sunclock to run in spite of the low resources. Under 
-pseudocolor displays (depth <= 8), it might be necessary to use the
--private option. This option allows sunclock to allocate a private
-colormap. Even then, sunclock still needs to generously allocate
-colors and you won't be able to load xpm earthmaps with more than
-about 100 different colors. Since the sunclock_maps.tgz image package
-offers pixmaps that almost all contain about 256 colors, you will be 
-able to use them with pseudocolor displays only after reducing the
-number of different colors (for that purpose, you can use the
-'display' utility from the Imagemagick package, and edit the image
-with the 'quantize' option; gimp or xpaint can also do that). Use of
-truecolor displays (depth >= 16) will make things easier.  At the
-moment, sunclock can only load .xpm or .xpm.gz images, although it
-wouldn't be very hard to use arbitrary images (e.g. with the imlib
-library). However, we want to keep sunclock as quick and simple as
-possible, and linking with imlib would make it less portable...
+If you are using a monochrome display, there are options -mono and
+-invert that will enable sunclock to run in spite of the low resources. 
+Under pseudocolor displays (depth <= 8), it might be useful to use the
+-private option. However (starting from version 3.30), sunclock has a 
+builtin machanism which automatically quantizes true-color Earth maps
+which would have too many distinct colors for Pseudocolor displays; it
+also allocates a private color map when needed. At the moment, sunclock 
+can read .jpg, .xpm or .xpm.gz images, and also its own .vmf vector map 
+format. Other image formats have to be converted to xpm or jpg before
+being loaded - e.g. with the netpbm or with the Imagemagick package.
 
 Sunclock versions 3.xx are released under the GPL.
 
 demailly@fourier.ujf-grenoble.fr
+
+==============================================================================
+
+WARNING (obsolete?)
+-------
+
+If you are upgrading from a version of sunclock prior to 3.20, notice
+that the internationalization files were probably installed elsewhere,
+either in the app-defaults directory or at the root of the share
+directory 
+    /usr/share/sunclock/
+
+Starting with 3.20, this is no longer the case, the file Sunclock.**
+are by default installed in 
+    /usr/share/sunclock/i18n
+
+Thus you can probably remove the obsolete Sunclock.** files from their 
+older place /usr/X11R6/lib/X11/app-defaults -- or something like this.
 
 ==============================================================================
 

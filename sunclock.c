@@ -93,10 +93,12 @@
        3.10  10/03/00  Menu window and a lot of new improvements as well.
        3.13  10/26/00  Final bug fix release of 3.1x
        3.20  11/20/00  Drastic GUI and features improvements (color maps,
-                       loadable pixmaps,...), now hopefully sunclock looks 
+                       loadable xpm maps,...), now hopefully sunclock looks 
                        nice!
-       3.21  12/04/00  Final bug fix release of 3.2x
-       3.30  12/04/00  Dockable, multi-window version
+       3.21  12/04/00  Final bug fix release of 3.2x x<5
+       3.25  12/21/00  Dockable, multi-window version
+       3.28  01/15/01  Final bug fix release of 3.2x x>=5
+       3.30  02/20/01  Sunclock now loads JPG images, and images are resizable
 */
 
 #include <unistd.h>
@@ -107,7 +109,6 @@
 
 #include "sunclock.h"
 #include "langdef.h"
-#include <X11/xpm.h>
 
 /* 
  *  external routines
@@ -124,17 +125,22 @@ extern void	sunpos();
 extern long	jdate();
 
 extern char *   salloc();
-extern void     makePixmap();
+extern int	readVMF();
+extern int	readJPEG();
+extern int	readXPM();
 
 extern char **get_dir_list();
 extern int dup_strcmp();
 extern void free_dirlist();
 
-extern int      fill_mode;
 
 char share_i18n[] = SHAREDIR"/i18n/Sunclock.**";
-char app_default[] = APPDEF"/Sunclock";
+char app_default[] = SHAREDIR"/Sunclockrc";
+char Default_vmf[] = SHAREDIR"/earthmaps/vmf/standard.vmf";
 char *share_maps_dir = SHAREDIR"/earthmaps/";
+char *Clock_img_file;
+char *Map_img_file;
+
 char image_dir[1024];
 
 char *SmallFont_name = SMALLFONT;
@@ -155,21 +161,28 @@ char ** DateFormat;
 
 struct Sundata *Seed, *MenuCaller, *SelCaller;
 
-Color	TextBgColor, TextFgColor, DirColor,
-        LandColor, WaterColor, ArcticColor, 
-	CityColor0, CityColor1, CityColor2,
-	MarkColor1, MarkColor2, LineColor, TropicColor, SunColor;
+char	TextBgColor[COLORLENGTH], TextFgColor[COLORLENGTH], 
+        DirColor[COLORLENGTH], ImageColor[COLORLENGTH],
+	CityColor0[COLORLENGTH], CityColor1[COLORLENGTH], 
+        CityColor2[COLORLENGTH],
+	MarkColor1[COLORLENGTH], MarkColor2[COLORLENGTH], 
+        LineColor[COLORLENGTH], TropicColor[COLORLENGTH], 
+        SunColor[COLORLENGTH];
 
 char *		Display_name = "";
 
 char *          CityInit = NULL;
 
-char *          Map_img_file = NULL;
-char *          Clock_img_file = NULL;
-
 Display *	dpy;
+Visual		visual;
+Colormap        cmap0 = 0;
+GClist          gcl0;
+Pixlist         pxl0;
+
 int		scr;
-Colormap        cmap0;
+int             color_depth;
+int             color_pad;
+int		bytes_per_pixel;
 
 unsigned long	black;
 unsigned long	white;
@@ -180,37 +193,34 @@ Atom		wm_protocols;
 XFontStruct *	SmallFont;
 XFontStruct *	BigFont;
 
-GC		Store_gc;
-GC              Invert_gc;
-GC		SmallFont_gc;
-GC		BigFont_gc;
-GC		DirFont_gc;
-
 Window		Menu = 0;
 Window		Selector = 0;
 
-struct Geometry MapGeom =   { 0, 30,  30, 720, 360, 320, 160, 20 };
+struct Geometry MapGeom =   { 0, 30,  30, 768, 384, 320, 160, 20 };
 struct Geometry	ClockGeom = { 0, 30,  30, 128,  64,  48,  24, 20 };
 struct Geometry	MenuGeom =  { 0, 30, 430, 700,  40, 700,  40,  0 };
 struct Geometry	SelGeom =   { 0, 30,  40, 600, 180, 450,  80,  0 };
 
-int             radius[4] = {0, 2, 3, 5};
+int             radius[5] = {0, 2, 2, 3, 5};
 
 Flags           gflags;
 
 int             win_type = 0;
-int             spot_size = 2;
+int             spot_size = 3;
 int             dotted = 0;
 int		placement = -1;
 int             mono = 0;
 int             invert = 0;
-int             color_depth;
+int             private = 0;
+int             always_private = 0;
+int             color_alloc_failed = 0;
+int		fill_mode = 2;
 int             num_formats;
 int             leave;
+int             verbose = 0;
 int      	chwidth;
 int		num_lines;
 int             num_table_entries;
-int		color_scale = 16;
 
 int             horiz_shift = 0;
 int             vert_shift = 12;
@@ -223,13 +233,15 @@ int             vert_drift =  0;
 int             do_selector = 0;
 int             do_hint = 0;
 int		do_menu = 0;
-int             do_private = 0;
 int             do_dock = 0;
 int             do_sync = 0;
-int             do_title = 0;
+int             do_title = 1;
 
 int             time_jump = 0;
 int             progress_init = 0;
+
+unsigned int    adjust_dark;
+unsigned int	color_scale = 16;
 
 long            last_time = 0;
 
@@ -245,12 +257,12 @@ void
 usage()
 {
      fprintf(stderr, "%s: version %s, %s\nUsage:\n"
-     "%s [-help] [-listmenu] [-version] [-language name]\n"
-     SP"[-display name] [-bigfont name] [-smallfont name] \n"
-     SP"[-mono] [-invert] [-private] [-dock] [-updateall] [-title]\n"
+     "%s [-help] [-listmenu] [-version] [-verbose] [-title] [-notitle]\n"
+     SP"[-display name] [-bigfont name] [-smallfont name] [-language name]\n"
+     SP"[-mono] [-invert] [-private] [-dock] [-synchro] [-nosynchro]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
      SP"[-rcfile file] [-sharedir directory]\n"
-     SP"[-mapimage file.xpm(.gz)] [-clockimage file.xpm(.gz)]\n"
+     SP"[-mapimage file] [-clockimage file]\n"
      SP"[-clock] [-dateformat string1|string2|...] [-command string]\n"
      SP"[-map] [-mapgeom +x+y] [-mapmode * <L,C,S,D,E>] [-decimal] [-dms]\n"
      SP"[-city name] [-position latitude longitude]\n"
@@ -262,12 +274,12 @@ usage()
      SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
      SP"[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians]\n"
      SP"[-parallels] [-noparallels] [-tropics] [-notropics]\n"
-     SP"[-spotsize size(0,1,2,3)] [-dottedlines] [-plainlines]\n"
-     SP"[-landcolor color] [-watercolor color] [-arcticcolor color]\n"
+     SP"[-spotsize size(0,1,2,3,4)] [-dottedlines] [-plainlines]\n"
+     SP"[-textbgcolor color] [-textfgcolor color]\n"
+     SP"[-dircolor color] [-imagecolor color]\n"
+     SP"[-suncolor color] [-linecolor color] [-tropiccolor color]\n"
      SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
-     SP"[-markcolor1 color] [-markcolor2 color] [-suncolor color]\n"
-     SP"[-linecolor color] [-tropiccolor color] [-dircolor color]\n"
-     SP"[-textbgcolor color] [-textfgcolor color]\n\n", 
+     SP"[-markcolor1 color] [-markcolor2 color]\n\n", 
         ProgName, VERSION, COPYRIGHT, ProgName);
 }
 
@@ -304,20 +316,21 @@ initValues()
         gflags.resized = 0;
 
         strcpy(image_dir, share_maps_dir);
-	strcpy(TextBgColor.name, "Grey92");
-	strcpy(TextFgColor.name, "Black");
-	strcpy(DirColor.name, "Blue");
-	strcpy(LandColor.name, "Chartreuse2");
-	strcpy(WaterColor.name, "RoyalBlue");
-	strcpy(ArcticColor.name, "LemonChiffon");
-	strcpy(CityColor0.name, "Orange");
-	strcpy(CityColor1.name, "Red");
-	strcpy(CityColor2.name, "Red3");
-	strcpy(MarkColor1.name, "Pink1");
-	strcpy(MarkColor2.name, "Pink2");
-	strcpy(LineColor.name, "White");
-	strcpy(TropicColor.name, "White");
-	strcpy(SunColor.name, "Yellow");
+        Clock_img_file = Default_vmf;
+        Map_img_file = Default_vmf;
+
+	strcpy(TextBgColor, "Grey92");
+	strcpy(TextFgColor, "Black");
+	strcpy(DirColor, "Blue");
+	strcpy(ImageColor, "Magenta");
+	strcpy(CityColor0, "Orange");
+	strcpy(CityColor1, "Red");
+	strcpy(CityColor2, "Red3");
+	strcpy(MarkColor1, "Pink1");
+	strcpy(MarkColor2, "Pink2");
+	strcpy(LineColor, "White");
+	strcpy(TropicColor, "White");
+	strcpy(SunColor, "Yellow");
 
 	position.lat = 100;
 	position.tz = NULL;
@@ -495,7 +508,7 @@ register char **		argv;
 			needMore(argc, argv);
 			spot_size = atoi(*++argv);
                         if (spot_size<0) spot_size = 0;
-                        if (spot_size>3) spot_size = 3;
+                        if (spot_size>4) spot_size = 4;
                         --argc;
 		}
 		else if (strcasecmp(*argv, "-fillmode") == 0) {
@@ -507,7 +520,7 @@ register char **		argv;
 		}
 		else if (strcasecmp(*argv, "-darkness") == 0) {
 			needMore(argc, argv);
-			darkness = 1.0 - atof(*++argv);
+			darkness = atof(*++argv);
                         if (darkness<0.0) darkness = 0.0;
                         if (darkness>1.0) darkness = 1.0;
                         --argc;
@@ -531,74 +544,64 @@ register char **		argv;
                         if (color_scale>COLORSTEPS) color_scale = COLORSTEPS;
                         --argc;
 		}
-		else if (strcasecmp(*argv, "-landcolor") == 0) {
-			needMore(argc, argv);
-			strncpy(LandColor.name, *++argv, COLORLENGTH);
-			--argc;
-		}
-		else if (strcasecmp(*argv, "-watercolor") == 0) {
-			needMore(argc, argv);
-			strncpy(WaterColor.name, *++argv, COLORLENGTH);
-			--argc;
-		}
-		else if (strcasecmp(*argv, "-arcticcolor") == 0) {
-			needMore(argc, argv);
-			strncpy(ArcticColor.name, *++argv, COLORLENGTH);
-			--argc;
-		}
  		else if (strcasecmp(*argv, "-textbgcolor") == 0) {
 			needMore(argc, argv);
-			strncpy(TextBgColor.name, *++argv, COLORLENGTH);
+			strncpy(TextBgColor, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-textfgcolor") == 0) {
 			needMore(argc, argv);
-			strncpy(TextFgColor.name, *++argv, COLORLENGTH);
+			strncpy(TextFgColor, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-dircolor") == 0) {
 			needMore(argc, argv);
-			strncpy(DirColor.name, *++argv, COLORLENGTH);
+			strncpy(DirColor, *++argv, COLORLENGTH);
+			--argc;
+		}
+		else if (strcasecmp(*argv, "-imagecolor") == 0) {
+			needMore(argc, argv);
+			strncpy(ImageColor, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-citycolor0") == 0) {
 			needMore(argc, argv);
-			strncpy(CityColor0.name, *++argv, COLORLENGTH);
+			strncpy(CityColor0, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-citycolor1") == 0) {
 			needMore(argc, argv);
-			strncpy(CityColor1.name, *++argv, COLORLENGTH);
+			strncpy(CityColor1, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-citycolor2") == 0) {
 			needMore(argc, argv);
-			strncpy(CityColor2.name, *++argv, COLORLENGTH);
+			strncpy(CityColor2, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-markcolor1") == 0) {
 			needMore(argc, argv);
-			strncpy(MarkColor1.name, *++argv, COLORLENGTH);
+			strncpy(MarkColor1, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-markcolor2") == 0) {
 			needMore(argc, argv);
-			strncpy(MarkColor2.name, *++argv, COLORLENGTH);
+			strncpy(MarkColor2, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-linecolor") == 0) {
 			needMore(argc, argv);
-			strncpy(LineColor.name, *++argv, COLORLENGTH);
+			strncpy(LineColor, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-tropiccolor") == 0) {
 			needMore(argc, argv);
-			strncpy(TropicColor.name, *++argv, COLORLENGTH);
+			strncpy(TropicColor, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-suncolor") == 0) {
 			needMore(argc, argv);
-			strncpy(SunColor.name, *++argv, COLORLENGTH);
+			strncpy(SunColor, *++argv, COLORLENGTH);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-position") == 0) {
@@ -693,7 +696,7 @@ register char **		argv;
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-mono") == 0) {
-                        spot_size = 3;
+                        spot_size = 4;
                         mono = 1;
 			invert = 1;
 			fill_mode = 1;
@@ -703,13 +706,19 @@ register char **		argv;
 			fill_mode = 1;
 		}
 		else if (strcasecmp(*argv, "-private") == 0)
-		        do_private = 1;
+		        always_private = 1;
+		else if (strcasecmp(*argv, "-verbose") == 0)
+		        verbose = 1;
 		else if (strcasecmp(*argv, "-dock") == 0)
 		        do_dock = 1;
-		else if (strcasecmp(*argv, "-synchronize") == 0)
+		else if (strcasecmp(*argv, "-synchro") == 0)
 		        do_sync = 1;
+		else if (strcasecmp(*argv, "-nosynchro") == 0)
+		        do_sync = 0;
 		else if (strcasecmp(*argv, "-title") == 0)
 		        do_title = 1;
+		else if (strcasecmp(*argv, "-notitle") == 0)
+		        do_title = 0;
 		else if (strcasecmp(*argv, "-clock") == 0)
 			win_type = 0;
 		else if (strcasecmp(*argv, "-map") == 0)
@@ -1086,16 +1095,6 @@ int which;
 	}
 }
 
-Colormap
-newColormap()
-{
-        if (do_private && DefaultDepth(dpy,scr)<=8)
-	    return XCreateColormap(dpy, RootWindow(dpy, scr), 
-	                           DefaultVisual(dpy, scr), AllocNone);
-	else
-            return DefaultColormap(dpy, scr);
-}
-
 
 struct Sundata *
 getContext(win)
@@ -1129,6 +1128,29 @@ struct Sundata * Context;
  */
 
 void
+destroyGCs(gclist)
+GClist gclist;
+{
+ 	 XFreeGC(dpy, gclist.bigfont);
+ 	 XFreeGC(dpy, gclist.smallfont);
+
+         if (invert)
+ 	    XFreeGC(dpy, gclist.store);
+
+ 	 if (!mono) {
+ 	    XFreeGC(dpy, gclist.citycolor0);
+ 	    XFreeGC(dpy, gclist.citycolor1);
+ 	    XFreeGC(dpy, gclist.citycolor2);
+ 	    XFreeGC(dpy, gclist.markcolor1);
+ 	    XFreeGC(dpy, gclist.markcolor2);
+ 	    XFreeGC(dpy, gclist.linecolor);
+ 	    XFreeGC(dpy, gclist.tropiccolor);
+ 	    XFreeGC(dpy, gclist.suncolor);
+            XFreeGC(dpy, gclist.dirfont);
+ 	 }
+}
+
+void
 shutDown(Context, all)
 struct Sundata * Context;
 int all;
@@ -1141,6 +1163,10 @@ int all;
       repeat:
         ParentContext = Context->next;
 
+	if (Context->xim) {
+           XDestroyImage(Context->xim); 
+           Context->xim = NULL;
+	}
         if (Context->pwtab) {
            free(Context->pwtab);
 	   Context->pwtab = NULL;
@@ -1153,40 +1179,44 @@ int all;
 	   free(Context->ximdata);
 	   Context->ximdata = NULL;
 	}
-	if (Context->xim) {
-           XDestroyImage(Context->xim); 
-           Context->xim = NULL;
-	}
-	if (Context->attrib) {
-           XpmFreeAttributes(Context->attrib);
-	   Context->attrib = NULL;
-	}
-        if (Context->darkpixel) {
-	   free(Context->darkpixel);
-	   Context->darkpixel = 0;
-        }
 	if (Context->pix) {
            XFreePixmap(dpy, Context->pix);
 	   Context->pix = 0;
 	}
-
-	if (do_private && Context->cmap != cmap0) { 
-           XFreeColormap(dpy, Context->cmap);
-	   Context->cmap = cmap0;
+        if (Context->gclist.invert) {
+	   XFreeGC(dpy, Context->gclist.invert);
+	   Context->gclist.invert = 0;
 	}
+        if (Context->cmap!=cmap0) {
+	   XFreeColormap(dpy, Context->cmap);
+           destroyGCs(Context->gclist);
+	   Context->cmap = 0;
+	}  
 
-	XDestroyWindow(dpy, Context->win);
 	Context->flags.hours_shown = 0;
 	Context->flags.firsttime = 1;
 
         if (all) {
 	   last_time = 0;
 
+           if (Context->win) {
+	      if (MenuCaller == Context) MenuCaller = parentContext(Context);
+	      if (SelCaller == Context) SelCaller = parentContext(Context);
+	      XDestroyWindow(dpy, Context->win);
+  	      Context->win = 0;
+	   }
+           if (Context->daypixel) {
+	      free(Context->daypixel);
+	      Context->daypixel = NULL;
+           }
+           if (Context->nightpixel) {
+	      free(Context->nightpixel);
+	      Context->nightpixel = NULL;
+           }
            if (Context->clock_img_file)
               free(Context->clock_img_file);
            if (Context->map_img_file)
               free(Context->map_img_file);
-
 	   if (all<0) {
 	      free(Context);
 	      Context = ParentContext;
@@ -1194,27 +1224,10 @@ int all;
 	         goto repeat;
 	      else {
 	        endup:
-                 if (invert) {
-                    XFreeGC(dpy, Invert_gc);
-         	    XFreeGC(dpy, Store_gc);
-         	 } 
          	 if (dirtable) free(dirtable);
+                 if (cmap0) destroyGCs(gcl0);
          	 XFreeFont(dpy, BigFont);
          	 XFreeFont(dpy, SmallFont);
-         	 if (!mono) {
-         	    XFreeGC(dpy, CityColor0.gc);
-         	    XFreeGC(dpy, CityColor1.gc);
-         	    XFreeGC(dpy, CityColor2.gc);
-         	    XFreeGC(dpy, MarkColor1.gc);
-         	    XFreeGC(dpy, MarkColor2.gc);
-         	    XFreeGC(dpy, LineColor.gc);
-         	    XFreeGC(dpy, TropicColor.gc);
-         	    XFreeGC(dpy, SunColor.gc);
-                    XFreeGC(dpy, DirFont_gc);
-         	 }
-         	 XFreeGC(dpy, BigFont_gc);
-         	 XFreeGC(dpy, SmallFont_gc);
-		 if (do_private) XFreeColormap(dpy, cmap0);
                  XCloseDisplay(dpy);
          	 exit(0);
  	      }
@@ -1255,37 +1268,28 @@ int				num;
 	    }
 	    xsh.width = Geom->width;
 	    xsh.height = Geom->height + Geom->strip;
-	    if ( (do_dock && !num) ||
-                 ( Context->xim &&
-                 ( (Context->wintype==0 && Context->clock_img_file) ||
-                   (Context->wintype==1 && Context->map_img_file) ) ) ) {
-                xsh.max_width = xsh.min_width = xsh.width;
-                xsh.max_height = xsh.min_height = xsh.height;
-                xsh.flags |= PMaxSize;
-	    } else {
-                xsh.min_width = Geom->w_mini;
-                xsh.min_height = Geom->h_mini;
-	    }
+            xsh.min_width = Geom->w_mini;
+            xsh.min_height = Geom->h_mini;
 	} else 
 	if (num>=2) {
+	    xsh.flags = PSize | USPosition | PMinSize;
 	    if (num==2) {
 	      win = Menu;
 	      Geom = &MenuGeom;
+	      xsh.flags |= PMaxSize;
+	      xsh.min_width = xsh.max_width = Geom->width;
+              xsh.min_height = xsh.max_height = Geom->height;
 	    }
 	    if (num==3) {
 	      win = Selector;
 	      Geom = &SelGeom;
+	      xsh.min_width = Geom->w_mini;
+              xsh.min_height = Geom->h_mini;
 	    }
-	    xsh.flags = PSize | USPosition;
 	    xsh.x = Geom->x;
 	    xsh.y = Geom->y;
 	    xsh.width = Geom->width;
 	    xsh.height = Geom->height;
-	    if (num==3) {
-	      xsh.flags |= PMinSize;
-	      xsh.min_width = Geom->w_mini;
-              xsh.min_height = Geom->h_mini;
-	    }
 	}
 
 	if (!win) return;
@@ -1318,7 +1322,8 @@ int				num;
 	Window			win = 0;
 	int                     mask;
 
-	mask = ExposureMask | ButtonPressMask | KeyPressMask;
+	mask = VisibilityChangeMask | 
+               ExposureMask | ButtonPressMask | KeyPressMask;
 
         switch(num) {
 
@@ -1363,13 +1368,12 @@ int num;
 {
 	XSetWindowAttributes	xswa;
 	Window			root = RootWindow(dpy, scr);
-	Colormap                cmap = cmap0;
 	struct Geometry *	Geom = NULL;
         Window *		win = NULL;
 	register int		mask;
 
-	xswa.background_pixel = (mono)? white : TextBgColor.pix;
-	xswa.border_pixel = (mono)? black : TextFgColor.pix;
+	xswa.background_pixel = white;
+	xswa.border_pixel = black;
 	xswa.backing_store = WhenMapped;
 
 	mask = CWBackPixel | CWBorderPixel | CWBackingStore;
@@ -1379,13 +1383,11 @@ int num;
 	   case 0:
 	        win = &Context->win;
 		Geom = &Context->geom;
-		cmap = Context->cmap;
 		break;
 
 	   case 1:
 	        win = &Context->win;
 		Geom = &Context->geom;
-		cmap = Context->cmap;
 		break;
 
 	   case 2:
@@ -1407,126 +1409,7 @@ int num;
 		      Geom->width, Geom->height+Geom->strip, 0,
 		      CopyFromParent, InputOutput, 
 		      CopyFromParent, mask, &xswa);
-	     XSetWindowColormap(dpy, *win, cmap);
 	}
-}
-
-void
-createGCs(Context)
-struct Sundata * Context;
-{
-	XGCValues		gcv;
-	Window                  root = RootWindow(dpy, scr);
-
-	if (invert) {
-           gcv.background = white;
-           gcv.foreground = black;
-	   Store_gc = XCreateGC(dpy, Context->win, 
-                             GCForeground | GCBackground, &gcv);
-           gcv.function = GXinvert;
-           Invert_gc = XCreateGC(dpy, Context->pix, 
-                             GCForeground | GCBackground | GCFunction, &gcv);
-	}
-
-        if (!mono) {
-	   gcv.background = TextBgColor.pix;
-	   gcv.foreground = TextFgColor.pix;
-	}
-
-	gcv.font = SmallFont->fid;
-	SmallFont_gc = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
-	gcv.font = BigFont->fid;
-	BigFont_gc = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
-        
-        if (mono) {
-	   DirFont_gc = BigFont_gc;
-	   return;
-	}
-
-	gcv.foreground = DirColor.pix;
-	gcv.font = BigFont->fid;
-	DirFont_gc = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
-
-	gcv.foreground = CityColor0.pix;
-	gcv.background = CityColor0.pix;
-	CityColor0.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = CityColor1.pix;
-	gcv.background = CityColor1.pix;
-	CityColor1.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = CityColor2.pix;
-	gcv.background = CityColor2.pix;
-	CityColor2.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = MarkColor1.pix;
-	gcv.background = MarkColor1.pix;
-	MarkColor1.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = MarkColor2.pix;
-	gcv.background = MarkColor2.pix;
-	MarkColor2.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = LineColor.pix;
-	gcv.background = LineColor.pix;
-	LineColor.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = TropicColor.pix;
-	gcv.background = TropicColor.pix;
-	TropicColor.gc = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
-
-	gcv.foreground = SunColor.pix;
-	gcv.background = SunColor.pix;
-	gcv.font = BigFont->fid;
-	SunColor.gc = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
-
-}
-
-unsigned long 
-getColor(name, other, cmap)
-char *           name;
-unsigned long    other;
-Colormap         cmap;
-{
-
-	XColor			c;
-	XColor			e;
-	register Status		s;
-
-	s = XAllocNamedColor(dpy, cmap, name, &c, &e);
-	if (s != (Status)1) {
-		fprintf(stderr, "%s: warning: can't allocate color `%s'\n",
-			ProgName, name);
-		return(other);
-	}
-	else
-	        return(c.pixel);
-}
-
-void
-getColors(cmap)
-Colormap cmap;
-{
-	black = BlackPixel(dpy, scr);
-	white = WhitePixel(dpy, scr);
-
-        if (mono) return;
-
-        LandColor.pix   = getColor(LandColor.name, white, cmap);
-        WaterColor.pix  = getColor(WaterColor.name, black, cmap);
-        ArcticColor.pix = getColor(ArcticColor.name, black, cmap);
-
-        TextBgColor.pix = getColor(TextBgColor.name, white, cmap);
-        TextFgColor.pix = getColor(TextFgColor.name, black, cmap);
-        DirColor.pix    = getColor(DirColor.name, black, cmap);
-        CityColor0.pix  = getColor(CityColor0.name, black, cmap);
-        CityColor1.pix  = getColor(CityColor1.name, black, cmap);
-        CityColor2.pix  = getColor(CityColor2.name, black, cmap);
-	MarkColor1.pix  = getColor(MarkColor1.name, black, cmap);
-	MarkColor2.pix  = getColor(MarkColor2.name, black, cmap);
-	LineColor.pix   = getColor(LineColor.name, black, cmap);
-	TropicColor.pix = getColor(TropicColor.name, black, cmap);
-	SunColor.pix    = getColor(SunColor.name, white, cmap);
 }
 
 void
@@ -1570,22 +1453,131 @@ getFonts()
         SelGeom.height = (11 + 4*SEL_HEIGHT)*MapGeom.strip/5;
 }
 
+unsigned long 
+getColor(name, other, cmap)
+char *           name;
+unsigned long    other;
+Colormap         cmap;
+{
+
+	XColor			c;
+	XColor			e;
+	register Status		s;
+
+	s = XAllocNamedColor(dpy, cmap, name, &c, &e);
+	if (s != (Status)1) {
+		fprintf(stderr, "%s: warning: can't allocate color `%s'\n",
+			ProgName, name);
+		color_alloc_failed = 1;
+		return(other);
+	}
+	else
+	        return(c.pixel);
+}
+
+void
+createGCs(Context)
+struct Sundata * Context;
+{
+	XGCValues		gcv;
+	Window                  root = RootWindow(dpy, scr);
+	Colormap                cmap;
+
+	cmap = Context->cmap;
+        Context->gclist.invert = 0;
+
+        if (mono) {
+           Context->pixlist.white = white;
+           Context->pixlist.black = black;
+	} else {
+           Context->pixlist.black = getColor("Black", white, cmap);
+           Context->pixlist.white = getColor("White", white, cmap);
+           Context->pixlist.textfgcolor = getColor(TextFgColor, black, cmap);
+           Context->pixlist.textbgcolor = getColor(TextBgColor, white, cmap);
+           Context->pixlist.textfgcolor = getColor(TextFgColor, black, cmap);
+           Context->pixlist.dircolor    = getColor(DirColor, black, cmap);
+           Context->pixlist.imagecolor  = getColor(ImageColor, black, cmap);
+           Context->pixlist.citycolor0  = getColor(CityColor0, black, cmap);
+           Context->pixlist.citycolor1  = getColor(CityColor1, black, cmap);
+           Context->pixlist.citycolor2  = getColor(CityColor2, black, cmap);
+	   Context->pixlist.markcolor1  = getColor(MarkColor1, black, cmap);
+	   Context->pixlist.markcolor2  = getColor(MarkColor2, black, cmap);
+	   Context->pixlist.linecolor   = getColor(LineColor, black, cmap);
+	   Context->pixlist.tropiccolor = getColor(TropicColor, black, cmap);
+	   Context->pixlist.suncolor    = getColor(SunColor, white, cmap);
+	}
+
+	if (color_alloc_failed) return;
+
+	if (invert) {
+           gcv.background = white;
+           gcv.foreground = black;
+	   Context->gclist.store = XCreateGC(dpy, root, 
+                             GCForeground | GCBackground, &gcv);
+	}
+
+        if (!mono) {
+	   gcv.background = Context->pixlist.textbgcolor;
+	   gcv.foreground = Context->pixlist.textfgcolor;
+	}
+
+	gcv.font = SmallFont->fid;
+	Context->gclist.smallfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+	gcv.font = BigFont->fid;
+	Context->gclist.bigfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        
+        if (mono) {
+	   Context->gclist.dirfont = Context->gclist.bigfont;
+	   Context->gclist.imagefont = Context->gclist.bigfont;
+	   return;
+	}
+
+	gcv.foreground = Context->pixlist.dircolor;
+	gcv.font = BigFont->fid;
+	Context->gclist.dirfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+
+	gcv.foreground = Context->pixlist.imagecolor;
+	gcv.font = BigFont->fid;
+	Context->gclist.imagefont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+
+	gcv.foreground = Context->pixlist.citycolor0;
+	Context->gclist.citycolor0 = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.citycolor1;
+	Context->gclist.citycolor1 = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.citycolor2;
+	Context->gclist.citycolor2 = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.markcolor1;
+	Context->gclist.markcolor1 = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.markcolor2;
+	Context->gclist.markcolor2 = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.linecolor;
+	Context->gclist.linecolor = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.tropiccolor;
+	Context->gclist.tropiccolor = XCreateGC(dpy, root, GCForeground, &gcv);
+
+	gcv.foreground = Context->pixlist.suncolor;
+	gcv.font = BigFont->fid;
+	Context->gclist.suncolor = XCreateGC(dpy, root, GCForeground, &gcv);
+}
+
 void
 clearStrip(Context)
 struct Sundata * Context;
 {
+        XSetWindowBackground(dpy, Context->win, 
+           (mono)? Context->pixlist.white : Context->pixlist.textbgcolor);
         XClearArea(dpy, Context->win, 0, Context->geom.height, 
                  Context->geom.width, Context->geom.strip, True);
-
+        XSetWindowBackground(dpy, Context->win, 
+           (invert)? Context->pixlist.white : Context->pixlist.textbgcolor);
 	Context->count = PRECOUNT;
 	if (Context->flags.bottom) --Context->flags.bottom;
-}
-
-void
-clearSelector()
-{
-	XClearArea(dpy, Selector, 0, MapGeom.strip+1, 
-                SelGeom.width-2, SelGeom.height-MapGeom.strip-2, True);
 }
 
 void
@@ -1815,7 +1807,7 @@ struct Sundata * Context;
                  Context->geom.width, MapGeom.strip, True);
 	for (i=0; i<24; i++) {
 	    sprintf(s, "%d", i); 
-   	    XDrawImageString(dpy, Context->win, BigFont_gc, 
+   	    XDrawImageString(dpy, Context->win, Context->gclist.bigfont, 
               ((i*Context->geom.width)/24 + 2*Context->geom.width - chwidth*strlen(s)/8 +
                (int)(Context->sunlon*Context->geom.width/360.0))%Context->geom.width +1,
               BigFont->max_bounds.ascent + Context->geom.height + 3, s, strlen(s));
@@ -2062,7 +2054,7 @@ time_t gtime;
 
       draw:
 	XDrawImageString(dpy, Context->win, 
-             (Context->wintype)? BigFont_gc : SmallFont_gc, 
+             (Context->wintype)? Context->gclist.bigfont : Context->gclist.smallfont, 
              Context->textx, Context->texty, s, l-label_shift);
 }
 
@@ -2071,6 +2063,7 @@ fixTextPosition(Context)
 struct Sundata * Context;
 {
 	Context->textx = 4;
+
         if (Context->wintype)
            Context->texty = Context->geom.height +
                             BigFont->max_bounds.ascent + 3;
@@ -2085,13 +2078,14 @@ struct Sundata * Context;
 int build;
 {
         if (build) {
-	   Context->cmap = cmap0;
+	   Context->win = 0;
+	   Context->cmap = 0;
 	   Context->mapgeom = MapGeom;
 	   Context->clockgeom = ClockGeom;
            if (Context->wintype)
-              Context->geom = MapGeom;
+              Context->geom = Context->mapgeom;
            else
-              Context->geom = ClockGeom;
+ 	      Context->geom = Context->clockgeom;
            Context->flags = gflags;
            Context->jump = time_jump;
            Context->progress = (progress_init)? progress_init : 60;
@@ -2106,23 +2100,30 @@ int build;
            if (position.lat<=90.0) {
               Context->pos1 = position;
               Context->mark1.city = &Context->pos1;
-           }
+	   }
+	   if (color_depth>8) {
+              Context->gclist = gcl0;
+              Context->pixlist = pxl0;
+	   }
         }
-
         fixTextPosition(Context);
         Context->local_day = -1;
         Context->solar_day = -1;
         Context->xim = NULL;
         Context->ximdata = NULL;
-        Context->attrib = NULL;
-        Context->darkpixel = NULL;
+	if (color_depth<=8) {
+           Context->daypixel = (unsigned char *) salloc(256*sizeof(char));
+           Context->nightpixel = (unsigned char *) salloc(256*sizeof(char));
+	} else {
+           Context->daypixel = NULL;
+           Context->nightpixel = NULL;
+	}
         Context->pix = 0;
         Context->bits = 0;
 	Context->noon = -1;
 	Context->pwtab = (short *)salloc((int)(Context->geom.height * sizeof (short *)));
 	Context->cwtab = (short *)salloc((int)(Context->geom.height * sizeof (short *)));
 	Context->time = 0L;
-	Context->timeout = 0;
 	Context->projtime = -1L;
 
 }	
@@ -2139,7 +2140,7 @@ GC     *pgc;
 {
 	if (mono) { 
            *pw = Context->pix ; 
-           *pgc = Invert_gc; 
+           *pgc = Context->gclist.invert; 
         } else
 	   *pw = Context->win;
 }
@@ -2160,25 +2161,23 @@ double lat, lon;		/* Latitude and longtitude of the city */
 
     int ilat, ilon; 		/* Screen coordinates of the city */
     int rad;
-    GC gc = CityColor0.gc;
+    GC gc = Context->gclist.citycolor0;
     Window w;
 
     if (mode < 0) return;
     if (!mono && !Context->flags.cities && mode <= 2) return;
 
-    if (mode == 0) { gc = CityColor0.gc; --mode; }
-    if (mode == 1)   gc = CityColor1.gc;
-    if (mode == 2)   gc = CityColor2.gc;
-    if (mode == 3)   gc = MarkColor1.gc;
-    if (mode == 4)   gc = MarkColor2.gc;
-    if (mode == 5)   gc = SunColor.gc;
+    if (mode == 0) { gc = Context->gclist.citycolor0; --mode; }
+    if (mode == 1)   gc = Context->gclist.citycolor1;
+    if (mode == 2)   gc = Context->gclist.citycolor2;
+    if (mode == 3)   gc = Context->gclist.markcolor1;
+    if (mode == 4)   gc = Context->gclist.markcolor2;
+    if (mode == 5)   gc = Context->gclist.suncolor;
 
     checkMono(Context, &w, &gc);
 
     ilat = Context->geom.height - (lat + 90) * (Context->geom.height / 180.0);
     ilon = (180.0 + lon) * (Context->geom.width / 360.0);
-
-    rad = radius[spot_size];
 
     if (mode == 5)
        {
@@ -2191,15 +2190,19 @@ double lat, lon;		/* Latitude and longtitude of the city */
        return;
        }
 
-    if (spot_size == 1)
+    rad = radius[spot_size];
+
+    if (spot_size != 3)
        XDrawArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);
+
     if (spot_size == 2)
-       XFillArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);  
+       XDrawLine(dpy, w, gc, ilon, ilat, ilon, ilat);
+
     if (spot_size == 3)
-       {
-       XDrawArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);
+       XFillArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);  
+
+    if (spot_size == 4)
        XFillArc(dpy, w, gc, ilon-3, ilat-3, 6, 6, 0, 360 * 64);
-       }
 }
 
 void
@@ -2259,7 +2262,7 @@ struct Sundata * Context;
 	int     i;
 
         for (i=-8; i<=8; i++) if (i!=0 || !Context->flags.tropics)
-	  draw_parallel(Context, LineColor.gc, i*10.0, 3, dotted);
+	  draw_parallel(Context, Context->gclist.linecolor, i*10.0, 3, dotted);
 }
 
 void
@@ -2270,10 +2273,10 @@ struct Sundata * Context;
 	int     i;
 
         if (mono && Context->flags.parallel)
-	  draw_parallel(Context, LineColor.gc, 0.0, 3, dotted);
+	  draw_parallel(Context, Context->gclist.linecolor, 0.0, 3, dotted);
 
         for (i=0; i<5; i++)
-	  draw_parallel(Context, TropicColor.gc, val[i], 3, 1);
+	  draw_parallel(Context, Context->gclist.tropiccolor, val[i], 3, 1);
 }	
 
 
@@ -2289,7 +2292,7 @@ int step;
 int thickness;
 {
         Window w = Context->win;
-        GC gc = LineColor.gc;
+        GC gc = Context->gclist.linecolor;
 	int ilon, i0, i1, i;
 
         if (!Context->wintype) return; 
@@ -2338,7 +2341,7 @@ drawBottomline(Context)
 struct Sundata * Context;
 {
         Window w = Context->win;
-	GC gc = BigFont_gc;
+	GC gc = Context->gclist.bigfont;
 
         checkMono(Context, &w, &gc);
         XDrawLine(dpy, w, gc, 0, Context->geom.height-1, 
@@ -2524,28 +2527,97 @@ struct Sundata * Context;
 }
 
 void
-SwitchPixel(Context, x, y, t)
+DarkenPixel(Context, x, y, t)
 struct Sundata * Context;
-register int x;
-register int y;
-register int t;
+int x;
+int y;
+int t;
 {
-        int i;
- 	Pixel p;
-	char *data;
+        register int i;
+	unsigned int factor;
+	unsigned char u, v, w, r, g, b;
 
-	data = Context->xim->data;
-	Context->xim->data = Context->ximdata;
-	p = XGetPixel(Context->xim, x, y);
-        Context->xim->data = data;
-        if (t>=0) {
-	  for (i=0; i<Context->attrib->npixels; i++)
-	    if (Context->attrib->pixels[i] == p) {     
-	        XPutPixel(Context->xim, x, y, Context->darkpixel[i+t*Context->attrib->npixels]);
-		break;
-	    }
-        } else {
-	  XPutPixel(Context->xim, x, y, p);
+	i = bytes_per_pixel * x + Context->xim->bytes_per_line * y;
+
+	if (color_depth>16) {
+#ifdef BIGENDIAN
+	   i += bytes_per_pixel - 3;
+#endif
+           u = Context->ximdata[i];
+           v = Context->ximdata[i+1];
+           w = Context->ximdata[i+2];
+           if (t>=0) {
+	      factor = adjust_dark + (t * (255-adjust_dark))/color_scale;
+	      u = (u * factor)/255;
+	      v = (v * factor)/255;
+	      w = (w * factor)/255;
+	   }
+           Context->xim->data[i] = u;
+ 	   Context->xim->data[i+1] = v;
+           Context->xim->data[i+2] = w;
+	} else 
+	if (color_depth==16) {
+#ifdef BIGENDIAN
+           u = Context->ximdata[i+1];
+ 	   v = Context->ximdata[i];
+#else
+           u = Context->ximdata[i];
+           v = Context->ximdata[i+1];
+#endif
+           if (t>=0) {
+              factor = adjust_dark + (t * (255-adjust_dark))/color_scale;
+              r = v>>3;
+	      g = ((v&7)<<3) | (u>>5);
+	      b = u&31;
+	      r = (r * factor)/31;
+	      g = (g * factor)/63;
+	      b = (b * factor)/31;
+	      u = (b&248)>>3 | (g&28)<<3;
+	      v = (g&224)>>5 | (r&248);
+	   }
+#ifdef BIGENDIAN
+           Context->xim->data[i+1] = u;
+ 	   Context->xim->data[i] = v;
+#else
+	   Context->xim->data[i] = u;
+	   Context->xim->data[i+1] = v;
+#endif
+	} else
+	if (color_depth==15) {
+#ifdef BIGENDIAN
+           u = Context->ximdata[i+1];
+ 	   v = Context->ximdata[i];
+#else
+           u = Context->ximdata[i];
+ 	   v = Context->ximdata[i+1];
+#endif
+           if (t>=0) {
+              factor = adjust_dark + (t * (255-adjust_dark))/color_scale;
+              r = v>>2;
+	      g = (v&3)<<3 | (u>>5);
+	      b = u&31;
+	      r = (r * factor)/31;
+	      g = (g * factor)/31;
+	      b = (b * factor)/31;
+	      u = (b&248)>>3 | (g&56)<<2;
+	      v = (g&192)>>6 | (r&248)>>1;
+	   }
+#ifdef BIGENDIAN
+           Context->xim->data[i+1] = u;
+ 	   Context->xim->data[i] = v;
+#else
+	   Context->xim->data[i] = u;
+	   Context->xim->data[i+1] = v;
+#endif
+	} else {
+	   if (t>=0) {
+	     if ((7*x+11*y) % color_scale < color_scale-t)
+	       Context->xim->data[i] = 
+                 Context->nightpixel[(unsigned char)Context->ximdata[i]];
+	     else
+	       Context->xim->data[i] = Context->ximdata[i];
+	   } else
+	     Context->xim->data[i] = Context->ximdata[i];
 	}
 }
 
@@ -2577,24 +2649,24 @@ register int	color;
 
 	if (orig + npix > Context->geom.width) {
 	  if (invert) {
-	    XDrawLine(dpy, Context->pix, Invert_gc, 0, pline,
+	    XDrawLine(dpy, Context->pix, Context->gclist.invert, 0, pline,
 		               (orig + npix) - (Context->geom.width + 1), pline);
- 	    XDrawLine(dpy, Context->pix, Invert_gc, orig, pline, 
+ 	    XDrawLine(dpy, Context->pix, Context->gclist.invert, orig, pline, 
                                               Context->geom.width - 1, pline);
 	  } else {
             for (i=0; i<(orig + npix) - Context->geom.width; i++)
-	        SwitchPixel(Context, i, pline, -color);
+	        DarkenPixel(Context, i, pline, -color);
             for (i=orig; i<Context->geom.width; i++)
-	        SwitchPixel(Context, i, pline, -color);
+	        DarkenPixel(Context, i, pline, -color);
 	    }
 	}
 	else {
 	  if (invert)
-	     XDrawLine(dpy, Context->pix, Invert_gc, orig, pline,
+	     XDrawLine(dpy, Context->pix, Context->gclist.invert, orig, pline,
 			  orig + (npix - 1), pline);
 	  else {
              for (i=orig; i<orig + npix ; i++)
-	        SwitchPixel(Context, i, pline, -color);
+	        DarkenPixel(Context, i, pline, -color);
 	  }
 	}
 }
@@ -2629,10 +2701,10 @@ int cnoon;
             for (j=0; j<Context->geom.width; j++) {
   	       light = cos(f1*(double)(j-cnoon))*cp+sp;
 	       if (Context->flags.shading<4 || light<0) light *= f2;
-               k = (int) (0.5*(1.0+light)*color_scale);
+               k = (int) (0.5*(1.0+light)*(color_scale+0.4));
                if (k < 0) k = 0; 
                if (k >= color_scale) k = - 1;
-	       SwitchPixel(Context, j, i, k);
+	       DarkenPixel(Context, j, i, k);
 	    }
 	 }
 	 return;
@@ -2782,10 +2854,10 @@ struct Sundata * Context;
 
 	if (Context->flags.dirty) {
 	   if (invert)
-	       XCopyPlane(dpy, Context->pix, Context->win, Store_gc, 
+	       XCopyPlane(dpy, Context->pix, Context->win, Context->gclist.store, 
 		    0, 0, Context->geom.width, Context->geom.height, 0, 0, 1);
 	   else
-               XPutImage(dpy, Context->win, BigFont_gc, Context->xim, 
+               XPutImage(dpy, Context->win, Context->gclist.bigfont, Context->xim, 
                     0, 0, 0, 0,
                     Context->geom.width, Context->geom.height);
 
@@ -2900,6 +2972,15 @@ int x, y;      /* Screen co-ordinates of mouse */
 }
 
 void
+clearMenu()
+{
+    if (!mono)
+       XSetWindowBackground(dpy, Menu, MenuCaller->pixlist.textbgcolor);
+    XClearArea(dpy, Menu,  0, 0, MenuGeom.width, MenuGeom.height, True);
+    XSetWindowColormap(dpy, Menu, MenuCaller->cmap);
+}
+
+void
 initMenu()
 {
 	char s[2];
@@ -2911,16 +2992,16 @@ initMenu()
 	for (i=0; i<N_OPTIONS; i++) {
 	      b = (Option[2*i+1]==';');
 	      for (j=(i+1)*chwidth-b; j<=(i+1)*chwidth+b; j++)
-	          XDrawLine(dpy, Menu, BigFont_gc, j, 0, j, MapGeom.strip);
+	          XDrawLine(dpy, Menu, MenuCaller->gclist.bigfont, j, 0, j, MapGeom.strip);
 	      s[0]=Option[2*i];
-	      XDrawImageString(dpy, Menu, BigFont_gc, d+i*chwidth, 
+	      XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, d+i*chwidth, 
                   BigFont->max_bounds.ascent + 3, s, 1);
 	}
 	for (i=0; i<=1; i++)
-	   XDrawImageString(dpy, Menu, BigFont_gc, d +(1-i)*N_OPTIONS*chwidth,
+	   XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, d +(1-i)*N_OPTIONS*chwidth,
                      BigFont->max_bounds.ascent + i*MapGeom.strip + 3, 
 		     ptr[i], strlen(ptr[i]));
-        XDrawLine(dpy, Menu, BigFont_gc, 0, MapGeom.strip, 
+        XDrawLine(dpy, Menu, MenuCaller->gclist.bigfont, 0, MapGeom.strip, 
                         MENU_WIDTH * MapGeom.strip, MapGeom.strip);
 }
 
@@ -2959,20 +3040,36 @@ struct Sundata * Context;
 	   MenuGeom.y = (placement<=NE)? a : b;              
 	}
         setAllHints(NULL, 2);
-        if (do_private) XSetWindowColormap(dpy, Menu, MenuCaller->cmap);
+	clearMenu();
         XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
 	if (do_selector<=1)
            XMapRaised(dpy, Menu);
 	else
            XMapWindow(dpy, Menu);
         XMoveWindow(dpy, Menu, MenuGeom.x, MenuGeom.y);
-        XFlush(dpy);
+        XSync(dpy, True);
+}
+
+void
+clearSelector()
+{
+    if (!mono)
+       XSetWindowBackground(dpy, Selector, SelCaller->pixlist.textbgcolor);
+    XClearArea(dpy, Selector,  0,0, SelGeom.width, SelGeom.height, True);
+    XSetWindowColormap(dpy, Selector, SelCaller->cmap);
+}
+
+void
+clearSelectorPartially()
+{
+    XClearArea(dpy, Selector, 0, MapGeom.strip+1, 
+           SelGeom.width-2, SelGeom.height-MapGeom.strip-2, True);
 }
 
 void
 initSelector()
 {
-	int i, d, p, q, h, skip;
+	int i, b, d, p, q, h, skip;
 	char *s;
 	char *banner[9] = { "home", "share", "  /", "  .", "", "", 
 	                    Label[L_ESCAPE], "", Label[L_VECTMAP] };
@@ -2982,12 +3079,12 @@ initSelector()
 	if (do_selector==1) {
 
 	  for (i=0; i<9; i++)
-             XDrawImageString(dpy, Selector, BigFont_gc, d+2*i*chwidth,
+             XDrawImageString(dpy, Selector, SelCaller->gclist.bigfont, d+2*i*chwidth,
                 BigFont->max_bounds.ascent + 3, banner[i], strlen(banner[i]));
  
           for (i=1; i<=8; i++) if (i!=7) {
 	     h = 2*i*chwidth;
-             XDrawLine(dpy, Selector, BigFont_gc, h, 0, h, MapGeom.strip);
+             XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, h, 0, h, MapGeom.strip);
 	  }
 
 	  /* Drawing small triangular icons */
@@ -2995,31 +3092,32 @@ initSelector()
 	  q = 3*MapGeom.strip/4;
 	  h = 9*chwidth;
 	  for (i=0; i<=q-p; i++)
-	      XDrawLine(dpy,Selector, BigFont_gc,
+	      XDrawLine(dpy,Selector, SelCaller->gclist.bigfont,
                     h-i, p+i, h+i, p+i);
 	  h = 11*chwidth;
 	  for (i=0; i<= q-p; i++)
-	      XDrawLine(dpy,Selector, BigFont_gc, h-i, q-i, h+i, q-i);
+	      XDrawLine(dpy,Selector, SelCaller->gclist.bigfont, h-i, q-i, h+i, q-i);
 
 	  h = MapGeom.strip;
-          XDrawLine(dpy, Selector, BigFont_gc, 0, h, SelGeom.width, h);
+          XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, 0, h, SelGeom.width, h);
 	}
 	
         do_selector = 2;
 
-        XDrawImageString(dpy, Selector, DirFont_gc,
+        XDrawImageString(dpy, Selector, SelCaller->gclist.dirfont,
                 d, BigFont->max_bounds.ascent + MapGeom.strip + 3, 
                 image_dir, strlen(image_dir));
 
         h = 2*MapGeom.strip;
-        XDrawLine(dpy, Selector, BigFont_gc, 0, h, SelGeom.width, h);
+        XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, 0, h, SelGeom.width, h);
 
 	dirtable = get_dir_list(image_dir, &num_table_entries);
 	if (dirtable)
            qsort(dirtable, num_table_entries, sizeof(char *), dup_strcmp);
 	else {
 	   char error[] = "Directory inexistent or inaccessible !!!";
-           XDrawImageString(dpy, Selector, DirFont_gc, d, 3*MapGeom.strip,
+           XDrawImageString(dpy, Selector, 
+                     SelCaller->gclist.dirfont, d, 3*MapGeom.strip,
 		     error, strlen(error));
 	   return;
 	}
@@ -3029,8 +3127,15 @@ initSelector()
         for (i=0; i<num_table_entries-selector_shift; i++) 
 	  if (i<num_lines) {
 	  s = dirtable[i+selector_shift];
-	  h = (s[strlen(s)-1]=='/');
-          XDrawImageString(dpy, Selector, h? DirFont_gc : BigFont_gc,
+	  b = (s[strlen(s)-1]=='/');
+          if (b==0) {
+	    if (strstr(s,".xpm") || strstr(s,".jpg") || strstr(s,".vmf"))
+	       b=2;
+	  }
+          XDrawImageString(dpy, Selector, 
+              (b==1)? SelCaller->gclist.dirfont : 
+              ((b==2)? SelCaller->gclist.imagefont : 
+                       SelCaller->gclist.bigfont),
               d, BigFont->max_bounds.ascent + 
               2*MapGeom.strip + i*skip + 3, 
               s, strlen(s));
@@ -3079,11 +3184,11 @@ struct Sundata * Context;
 	}
 
         setAllHints(NULL, 3);
-        if (do_private) XSetWindowColormap(dpy, Selector, SelCaller->cmap);
+        clearSelector();
         XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
         XMapRaised(dpy, Selector);
         XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
-	XFlush(dpy);
+	XSync(dpy, True);
 }
 
 void
@@ -3098,9 +3203,9 @@ int num;
         Context->flags.last_hint = num;
         sprintf(hint, " %s", Help[num]); 
         *more = '\0';
-	if (num >=4 && num <=6)
+	if (num >=3 && num <=5)
 	    sprintf(more, " (%s)", Label[L_DEGREE]);
-	if (num >=9 && num <=12) {
+	if (num >=8 && num <=11) {
 	    char prog_str[30];
             if (Context->progress == 60) 
                 sprintf(prog_str, "1 %s", Label[L_MIN]);
@@ -3137,149 +3242,338 @@ int num;
 	    for (i=l; i<120; i++) hint[i] = ' ';
 	    hint[120] = '\0';
 	}
-	XDrawImageString(dpy, Menu, BigFont_gc, 4, 
+	XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, 4, 
               BigFont->max_bounds.ascent + MapGeom.strip + 3, 
               hint, strlen(hint));
 }
 
 void
-createPixmap(Context)
+report_failure(path, code)
+char *path;
+int code;
+{
+  switch(code) {
+    case -1: fprintf(stderr, "%s:\nUnknown image format !!\n", path);
+             break;
+
+    case 0:  break;
+
+    case 1:  fprintf(stderr, "Cannot read file %s !!\n", path); 
+             break;
+
+    case 2:  fprintf(stderr, "File %s has corrupted data!!\n", path);
+             break;
+
+    case 3:  fprintf(stderr, "Cannot decode format specification of %s !!\n", 
+             path);
+             break;
+
+    case 4:  fprintf(stderr, 
+                "Image creation failed (memory alloc. problem?) !!\n");
+             break;
+
+    case 5:  fprintf(stderr, "Header of file %s corrupted !!\n", path);
+             break;
+
+    case 6:  fprintf(stderr, "Color allocation failed !!\n");
+             break;
+
+    case 7:  fprintf(stderr, "Trying instead default  %s\n", path);
+             break;
+
+    default:
+             fprintf(stderr, "Unknown error in  %s !!\n", path);
+             break;
+  }
+}
+
+#define COMPARE 260
+#define QUANTUM 120
+
+void
+quantize(Context, image, quantum)
+Sundata * Context;
+XImage *image;
+int quantum;
+{
+     int i, j, k, l, compare, change;
+     unsigned short r[256], g[256], b[256];
+     int count[256], done[256];
+     char substit[256], value[256];
+     int d[COMPARE], v1[COMPARE], v2[COMPARE];
+     int size, dist;
+     XColor xc;
+
+     if (verbose)
+     fprintf(stderr, "Number of distinct colors %d\n"
+	             "Quantizing colors and reducing to %d colors.\n", 
+                     Context->ncolors, quantum);
+
+     xc.flags = DoRed | DoGreen | DoBlue;
+
+     for(i=0; i<Context->ncolors; i++) {
+         count[i] = 0;
+	 xc.pixel = Context->daypixel[i];
+         XQueryColor(dpy, Context->cmap, &xc);
+	 r[i] = xc.red; g[i] = xc.green; b[i] = xc.blue;
+     }
+     if (Context->cmap != cmap0) XFreeColormap(dpy, Context->cmap);
+     
+     size = image->bytes_per_line * image->height;
+     for (i=0; i<Context->ncolors; i++) {
+         substit[i] = (char)i;
+	 value[i] = (char)i;
+     }
+
+     if (Context->ncolors<=quantum) goto finish;
+
+     for (i=0; i<size; i++) ++count[(unsigned char)image->data[i]];
+     
+     compare = COMPARE;
+     for (i=0; i<compare; i++) d[i] = 2147483647;
+
+     for(i=0; i<Context->ncolors; i++)
+        for(j=i+1; j<Context->ncolors; j++) {
+            dist = abs((int)(r[i]-r[j]))+abs((int)(g[i]-g[j]))+
+                                        +abs((int)(b[i]-b[j]));
+	    k=compare-1;
+	    while (k>=0 && dist<d[k]) k--;
+	    ++k;
+	    if (k<compare) {
+	      for (l=compare-1; l>k; l--) {
+		  d[l] = d[l-1];
+                  v1[l] = v1[l-1];
+		  v2[l] = v2[l-1];
+	      }
+	      d[k] = dist;
+	      if (count[i]>count[j] || (count[i]==count[j] && i<j)) {
+	         v1[k] = i;
+	         v2[k] = j;
+	      } else {
+	         v1[k] = j;
+	         v2[k] = i;
+	      }
+	    }
+	}
+
+     l = 0;
+     for (i=0; i<compare; i++) {
+         j = v1[i];
+	 k = v2[i];
+         if (substit[k]==(char) k) {
+	   substit[k] = j;
+	   ++l;
+	 }
+	 if (l>=Context->ncolors-quantum) break;
+     }
+     if (verbose)
+        fprintf(stderr, 
+           "%d substitutions from %d pairs of similar colors\n", l, i);
+
+     change = 1;
+     while (change) {
+        change = 0;
+        l = 0;
+        for (i=0; i<Context->ncolors; i++) {
+           j = (unsigned char) substit[i];
+	   if (substit[i]==(char)i) l++;
+           if (substit[j] != (char)j) {
+	      substit[i] = substit[j];
+	      change = 1;
+	   }
+        }
+     }
+
+  finish:
+
+     private = always_private;
+
+  reattempt:
+
+     if (private) { 
+        Context->cmap = 
+          XCreateColormap(dpy, RootWindow(dpy, scr), &visual, AllocNone);
+	createGCs(Context);
+     } else {
+        Context->cmap = cmap0;
+	Context->gclist = gcl0;
+	Context->pixlist = pxl0;
+     }
+
+     for (i=0; i<Context->ncolors; i++) done[i] = 0;
+     for (i=0; i<256; i++) Context->nightpixel[i] = (unsigned char)i;
+
+     k=0;
+     for (i=0; i<Context->ncolors; i++) {
+        j = (unsigned char)substit[i];
+        if (!done[j]) {
+	   xc.red = r[j];
+	   xc.green = g[j];
+	   xc.blue = b[j];
+	   if (!XAllocColor(dpy, Context->cmap, &xc)) {
+              color_alloc_failed = 1;
+	      value[j] = 0;
+	   } else
+	      value[j] = (char)xc.pixel;
+	   xc.red = (unsigned int) (xc.red * adjust_dark) / 255;
+	   xc.green = (unsigned int) (xc.green * adjust_dark) / 255;
+	   xc.blue = (unsigned int) (xc.blue * adjust_dark) / 255;
+	   if (!XAllocColor(dpy, Context->cmap, &xc)) color_alloc_failed = 1;
+	   if (value[j])
+	      Context->nightpixel[(unsigned char)value[j]] = (char)xc.pixel;
+	   done[j] = 1;
+	   k++;
+	}
+     }
+
+     if (private==0 && color_alloc_failed) {
+	color_alloc_failed = 0;
+	private = 1;
+        goto reattempt;
+     }
+
+     if (verbose)
+        fprintf(stderr, "%d colors allocated in new colormap\n", 2*k+14);
+
+     for (i=0; i<size; i++)
+       image->data[i] = value[(unsigned char)
+                              substit[(unsigned char)image->data[i]]];
+}
+
+int
+createImage(Context)
 struct Sundata * Context;
 {
-   char *file, Image_file[1024]="";
+   FILE *fd;
+   char *file, path[1024]="";
+   int code; 
 
-   if (invert) {
-     makePixmap(Context);
-     Context->pix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
-          Context->bits, Context->geom.width,
-          Context->geom.height, 0, 1, 1);
-     free(Context->bits);
-     return;
+   color_alloc_failed = 0;
+
+   if (!cmap0 && !always_private) {
+      Context->cmap = cmap0 = DefaultColormap(dpy, scr);
+      createGCs(Context);
+      pxl0 = Context->pixlist;
+      gcl0 = Context->gclist;
+      if (color_depth<=8 && color_alloc_failed) {
+	 always_private = 1;
+         color_alloc_failed = 0;
+      }
    }
+   private = always_private;
+
+   if (color_depth>8 || (invert && !private)) {
+      Context->cmap = cmap0;
+      Context->pixlist = pxl0;
+      Context->gclist = gcl0;
+   } else
+      Context->cmap =
+           XCreateColormap(dpy, RootWindow(dpy, scr), &visual, AllocNone);
 
    file = (Context->wintype)? Context->map_img_file : Context->clock_img_file;
+
+ do_path:
+
+   Context->xim = NULL;
+   code = -1;
+
    if (file) {
-	if (*file != '/' && *file != '.' )
-	  sprintf(Image_file, "%s%s", image_dir, file);
-	else
-	  strcpy(Image_file, file);
-   }
-
-   Context->attrib = (XpmAttributes *) salloc(sizeof(XpmAttributes));
-   Context->attrib->valuemask = XpmColormap | XpmReturnPixels;
-   Context->attrib->colormap = Context->cmap;
-
-   if (*Image_file) {
-      struct stat buf;
-      char tmp[80] = "";
-      stat(Image_file, &buf);
-      if (!S_ISREG(buf.st_mode))
-         fprintf(stderr, "File %s doesn't seem to exist !!\n", Image_file);
-      else {
-         if (do_private) {
-            Context->cmap = newColormap();
-            getColors(Context->cmap);
-         }
-         Context->attrib->colormap = Context->cmap;
-	 if (!strstr(Image_file, ".xpm") || (color_depth<=8)) {
-            char convert[2048];
-	    sprintf(tmp, "%s.xpm", tempnam(NULL, "suncl"));
-	    sprintf(convert, "convert %s %s xpm:- > %s", 
-                Image_file, (color_depth<=8)? "-colors 96":"", tmp);
-	    fprintf(stderr, 
-               "Using the ImageMagick \"convert\" tool:\n%s\n", convert);
-	    system(convert);
-	    strcpy(Image_file, tmp);
-	 }
-         if (XpmReadFileToImage(dpy, Image_file, 
-            &Context->xim, NULL, Context->attrib)) {
-            fprintf(stderr, "Cannot read XPM file %s,\nalthough it exists !!\n"
-		    "Colormap possibly full. Retry with -private option.\n",
-                    Image_file);
-	    if (*tmp) unlink(tmp);
+      strcpy(path, file);
+      if (*file != '/' && *file != '.' ) {
+         if ((fd=fopen(file, "r"))) {
+	    fclose(fd);
 	 } else {
-	    if (*tmp) unlink(tmp);
-	    Context->geom.width = Context->attrib->width;
-	    Context->geom.height = Context->attrib->height; 
-            fixTextPosition(Context);
-	    return;
+	    if (verbose)
+	      fprintf(stderr, "%s not in current directory ...\n"
+		      "Trying to load %s from share directory instead\n", 
+                      file, file);
+            sprintf(path, "%s%s", share_maps_dir, file);
 	 }
       }
    }
 
-   /* Otherwise (no pixmap file specified) use default vector map  */
-   makePixmap(Context);
-   XpmCreateImageFromData(dpy, Context->xpmdata, &Context->xim, 
-      NULL, Context->attrib);
-   free(Context->xpmdata[0]);
-   free(Context->xpmdata);
-   if (Context->xim==0) {
-      fprintf(stderr, "Cannot create map. Colormap possibly full. "
-                     "Retry with -private option.\n");
-      shutDown(Context, -1);
+   if (*path && strcmp(path, Default_vmf)) {
+      if ((fd = fopen(path, "r"))) 
+	 fclose(fd);
+      else {
+	 file = Default_vmf;
+         fprintf(stderr, "File %s doesn't seem to exist !!\n"
+                         "Trying default  %s\n",
+                         path, file);
+	 goto do_path;
+      }
    }
-}
 
-void
-setDarkPixels(Context, a, b)
-struct Sundata * Context;
-int a, b;
-{
-     int i, j, k, full=1;
-     XColor color, colorp, approx;
-     unsigned int red[256], green[256], blue[256];
-     double steps[COLORSTEPS];
-
-     if (invert || a==b) return;
-
-     for (j=0; j<color_scale; j++) 
-          steps[j] = 1.0 -
-              (1.0 - ((double)j)/((double) color_scale))*(1.0 - darkness);
-
-     for (j=a; j<b; j++) {
-          for (i=0; i<Context->attrib->npixels; i++) { 
-	      color.pixel = Context->attrib->pixels[i];
-              XQueryColor(dpy, Context->cmap, &color);
-              k = i + j * Context->attrib->npixels;
-              colorp.red = (unsigned int) ((double) color.red * steps[j]);
-              colorp.green = (unsigned int) ((double) color.green * steps[j]);
-              colorp.blue = (unsigned int) ((double) color.blue * steps[j]);
-	      colorp.flags = DoRed | DoGreen | DoBlue;
-	      if (XAllocColor(dpy, Context->cmap, &colorp))
-                 Context->darkpixel[k] = colorp.pixel;
-	      else {
-		 if (full) {
-		   int l;
-                   fprintf(stderr, 
-                      "Colormap full: cannot allocate color series %d/%d!\n"
-		      "Trying to allocate other sufficiently close color.\n"
-		      "You'll get a pretty ugly shading anyway...\n",
-                      j, color_scale);
-		   full = 0;
-		   for (l=0; l<256; l++) {
-		      approx.pixel = l;
-		      XQueryColor(dpy, Context->cmap, &approx);
-		      red[l] = approx.red;
-		      green[l] = approx.red;
-		      blue[l] = approx.blue;
-		   }
-		 }
-		 if (color_depth == 8) {
-		    int delta, delta0 = 1000000000, l, l0 = 0;
-		    for (l=0; l<256; l++) {
-		        int u, v, w;
-		        u = ((int)colorp.red - (int)red[l])/16;
-                        v = ((int)colorp.green - (int)green[l])/16;
-                        w = ((int) colorp.blue - (int)blue[l])/16;
-			delta = u*u+v*v+w*w;
-			if (delta < delta0) { delta0 = delta; l0 = l;}
-		    }
-		    Context->darkpixel[k] = l0;
-		 } else
-		 Context->darkpixel[k] = black;
-	      }
-	  }
+   if (Context->wintype) {
+     if (Context->map_img_file && file!=Context->map_img_file) {
+       free(Context->map_img_file);
+       Context->map_img_file = RCAlloc(file);
      }
+   } else {
+     if (Context->clock_img_file && file!=Context->clock_img_file) {
+       free(Context->clock_img_file);
+       Context->clock_img_file = RCAlloc(file);
+     }
+   }
+
+   if (invert) {
+     XGCValues		gcv;
+     if (Context->cmap!=cmap0) createGCs(Context);
+   retry:
+     readVMF(path, Context);
+     if (Context->bits) {
+       Context->pix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
+          Context->bits, Context->geom.width,
+          Context->geom.height, 0, 1, 1);
+       gcv.background = white;
+       gcv.foreground = black;
+       gcv.function = GXinvert;
+       Context->gclist.invert = XCreateGC(dpy, Context->pix, 
+               GCForeground | GCBackground | GCFunction, &gcv);
+       free(Context->bits);
+       if (color_alloc_failed) report_failure(path, 6);
+       return 0;
+     } else {
+       if (strcmp(path, Default_vmf)) {
+	  report_failure(path, 1);
+	  strcpy(path, Default_vmf);
+	  report_failure(path, 7);
+	  goto retry;
+       }
+       report_failure(path, 1);
+       return 1;
+     }
+   }
+
+   if (strstr(path, ".jpg"))
+     code = readJPEG(path, Context);
+   else
+   if (strstr(path, ".vmf"))
+     code = readVMF(path, Context);
+   else
+   if (strstr(path, ".xpm"))
+     code = readXPM(path, Context);
+
+   if (code) {
+      report_failure(path, code);
+      if (strcmp(path, Default_vmf)) {
+         file = Default_vmf;
+	 report_failure(file, 7);
+	 goto do_path;
+      }
+   }
+
+   if (color_depth<=8) {
+      quantize(Context, Context->xim, QUANTUM);
+      if (private && !strcmp(path, Default_vmf)) always_private = 1;
+      if (color_alloc_failed) {
+	 code = 6;
+	 XDestroyImage(Context->xim);
+	 Context->xim = 0;
+      }
+   }
+
+   return code;
 }
 
 void 
@@ -3287,12 +3581,13 @@ createWorkImage(Context)
 struct Sundata * Context;
 {
    int size;
+
    if (Context->xim) {
-     Context->darkpixel = (Pixel *) 
-          salloc(color_scale * (Context->attrib->npixels) * sizeof(Pixel));
-     Context->flags.alloc_level = (Context->flags.shading>=2)?color_scale:1;
-     setDarkPixels(Context, 0, Context->flags.alloc_level);
-     size = Context->xim->width*Context->xim->height*(Context->xim->bitmap_pad/8);
+     /* Context->flags.alloc_level = (Context->flags.shading>=2)?color_scale:1;
+	setDarkPixels(Context, 0, Context->flags.alloc_level); */
+     size = Context->xim->bytes_per_line*Context->xim->height;
+     if (verbose)
+        fprintf(stderr, "Creating work image data of size %d bytes\n", size);
      Context->ximdata = (char *)salloc(size);
      memcpy(Context->ximdata, Context->xim->data, size); 
    }
@@ -3312,12 +3607,15 @@ struct Sundata * Context;
 	     if (Context->wintype) {
 	        do_menu = 0;
    	        PopMenu(Context);
+        	initMenu();
 	     } else
                 XUnmapWindow(dpy, Menu);
       } 
       if (do_selector) {
 	  do_selector = 0;
 	  PopSelector(Context);
+	  do_selector = 1;
+	  initSelector();
       }
 }
 
@@ -3328,6 +3626,8 @@ buildMap(Context, wintype, build)
 struct Sundata * Context;
 int wintype, build;
 {
+   Window win;
+
    if (build) {
       struct Sundata * NewContext;
       NewContext = (struct Sundata *)salloc(sizeof(struct Sundata));
@@ -3342,29 +3642,79 @@ int wintype, build;
          Seed = NewContext;
       Context = NewContext;
       Context->wintype = wintype;
+      if (do_selector) SelCaller = Context;
    }
    makeContext(Context, build);
-   createPixmap(Context);
+   win = Context->win;
+   if (win) {
+      XSelectInput(dpy, Context->win, 0);
+      XSync(dpy, True);
+   } else
+      createWindow(Context, wintype);
+
+   if (createImage(Context)) {
+     if (Seed->next) {
+         shutDown(Context, 0);
+	 exit(0);
+	 Context = Seed;
+         return;
+     } else
+         shutDown(Context, -1);
+   }
    checkGeom(Context, 0);
-   createWindow(Context, wintype);
-   createWorkImage(Context);
-   checkLocation(Context, CityInit);
-   setProtocols(Context, wintype);
-   setAllHints(Context, wintype);
-   XMapWindow(dpy, Context->win);
+   if (win) {
+      setAllHints(Context, wintype);
+      if (Context->wintype)
+         XMoveWindow(dpy, Context->win, Context->geom.x,Context->geom.y);
+      XResizeWindow(dpy, Context->win, 
+          Context->geom.width, Context->geom.height + Context->geom.strip);
+      if (!Context->wintype)
+         XMoveWindow(dpy, Context->win, Context->geom.x,Context->geom.y);
+      checkLocation(Context, CityInit);
+      XSync(dpy, True);
+      createWorkImage(Context);
+      if (private && do_menu && Context == MenuCaller) {
+	 clearMenu();
+	 initMenu();
+      }
+      if (private && do_selector && Context == SelCaller) { 
+         do_selector = 1; 
+         clearSelector();
+	 initSelector();
+      }
+      XSync(dpy, True);
+      setProtocols(Context, Context->wintype);
+   } else {
+      createWorkImage(Context);
+      checkLocation(Context, CityInit);
+      setAllHints(Context, wintype);
+      setProtocols(Context, wintype);
+      XMapWindow(dpy, Context->win);
+      XSync(dpy, True);
+      usleep(2*TIMESTEP);
+      if (do_title) 
+        setClassHints(Context->win, wintype);
+   }
    if (build)
       Context->prevgeom = Context->geom;
-   else
-      XMoveWindow(dpy, Context->win, Context->geom.x,Context->geom.y);
    if (Context->wintype)
       Context->mapgeom = Context->geom;
    else
       Context->clockgeom = Context->geom;
-   XFlush(dpy);
-   if (do_title) {
-      usleep(4*TIMESTEP);
-      setClassHints(Context->win, wintype);
+   if (private)
+      XSetWindowColormap(dpy, Context->win, Context->cmap);
+   if (color_depth<=8) {
+      if (do_menu) {
+         clearMenu();
+         initMenu();
+      }
+      if (do_selector) {
+         do_selector = 1;
+         clearSelector();
+         initSelector();
+      }
    }
+   clearStrip(Context);
 }
 
 void RaiseAndFocus(win)
@@ -3397,7 +3747,8 @@ char	key;
 
 	old_mode = Context->flags.map_mode;
 
-	/* printf("Test: <%c> %u\n", key, key); */
+	/* fprintf(stderr, "Test: <%c> %d %u\n", key, key, key); */
+
 	if (win==Selector) {
 	   switch(key) {
 	     case '\033':
@@ -3436,7 +3787,7 @@ char	key;
 	     default :
 	        return;
 	   }
-	   clearSelector();
+	   clearSelectorPartially();
 	   return;
 	}
 	 
@@ -3451,10 +3802,6 @@ char	key;
 	   case '<':
 	     if (Context->flags.resized) {
 		Context->geom = Context->prevgeom;
-                if (!invert) {
-                  XDestroyImage(Context->xim);
-		  Context->xim=0;
-	    	}
                 adjustGeom(Context, 0);
                 shutDown(Context, 0);
 	        buildMap(Context, Context->wintype, 0);
@@ -3476,10 +3823,27 @@ char	key;
 	     if (label_shift<50)
 	       ++label_shift;
 	     break;
-	   case '!':
+	   case '=':
 	     do_sync = 1 - do_sync;
 	     break;
+	   case 'ª':
+	   case '*':
+             i = Context->geom.width/2;
+	     if (i>0 && Context->geom.height!=i) {
+                Context->geom.height = i;
+	        if (Context->wintype)
+	              MapGeom.height = i;
+	        else
+	              ClockGeom.height = i;
+                adjustGeom(Context, 0);
+                shutDown(Context, 0);
+	        buildMap(Context, Context->wintype, 0);
+	        checkAuxilWins(Context);
+	        Context->flags.resized = 0;
+	     }
+	     break;
 	   case ' ':
+	   case '!':
 	     if (Context==Seed && do_dock) return;
              if (do_menu) PopMenu(Context);
              if (do_selector) PopSelector(Context);
@@ -3491,7 +3855,14 @@ char	key;
 	     adjustGeom(Context, 1);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
+	     doTimeout(Context);
 	     return;
+	   case '­':
+	   case '-':
+	     Context->jump = 0;
+	     Context->flags.force_proj = 1;
+	     Context->flags.last_hint = -1;
+	     break;
 	   case 'a': 
 	     Context->jump += Context->progress;
 	     Context->flags.force_proj = 1;
@@ -3603,10 +3974,6 @@ char	key;
 	     else {
 	        int size;
 	        Context->flags.shading = (Context->flags.shading+1) % 5;
-                if (Context->flags.shading>=2) {
-                   setDarkPixels(Context, Context->flags.alloc_level, color_scale);
-		   Context->flags.alloc_level = color_scale;
-		}
 		for (i = 0; i < Context->geom.height; i++)
 		    Context->cwtab[i] = Context->geom.width;
                 size = Context->xim->width*Context->xim->height*(Context->xim->bitmap_pad/8);
@@ -3652,8 +4019,7 @@ char	key;
              exposeMap(Context);
 	     break;
 	   case 'w': 
-             if (do_menu) PopMenu(Context);
-             if (do_selector) PopSelector(Context);
+             /* if (do_menu) PopMenu(Context); */
 	     if (Context->time<=last_time+2)
 		return;
              buildMap(Context, 1, 1);
@@ -3666,11 +4032,6 @@ char	key;
 	   case 'x':
 	     if (Command) system(Command);
 	     break;
-	   case 'z':
-	     Context->jump = 0;
-	     Context->flags.force_proj = 1;
-	     Context->flags.last_hint = -1;
-	     break;
            default:
 	     if (!Context->wintype) {
 	       Context->flags.clock_mode = 
@@ -3680,7 +4041,8 @@ char	key;
 	     break ;
 	}
 
-        if (old_mode == EXTENSION && Context->flags.map_mode != old_mode) clearStrip(Context);
+        if (old_mode == EXTENSION && Context->flags.map_mode != old_mode) 
+             clearStrip(Context);
 
 	if (do_menu) {
           for (i=0; i<N_OPTIONS; i++)
@@ -3710,20 +4072,27 @@ int	click_pos;
         showMenuHint(MenuCaller, click_pos);
 }
 
-void freeImageFiles(Context, bool)
+void refreshPopups(Context, w, h)
 struct Sundata * Context;
-int * bool;
+unsigned int w, h;
 {
-	if (!Context->wintype && Context->clock_img_file) {
-	      free(Context->clock_img_file);
-              Context->clock_img_file = NULL;
-	      *bool = 1;
-	}
-	if (Context->wintype && Context->map_img_file) {
-	      free(Context->map_img_file);
-              Context->map_img_file = NULL;
-	      *bool = 1;
-	}
+	int i;
+
+        if (w!=Context->geom.width || h!=Context->geom.height) {
+	   XFlush(dpy);
+	   usleep(3*TIMESTEP);
+           if (do_menu) for (i=0; i<=1; i++) PopMenu(Context);
+	   XFlush(dpy);
+	   usleep(TIMESTEP);
+           if (do_selector) for (i=0; i<=1; i++) PopSelector(Context);
+	   XFlush(dpy);
+	   usleep(2*TIMESTEP);
+        }
+        if (do_selector) {
+           RaiseAndFocus(Selector);
+	   if (private) 
+              XSetWindowColormap(dpy, Selector, SelCaller->cmap);
+        }
 }
 
 void 
@@ -3732,8 +4101,6 @@ struct Sundata * Context;
 int a;
 int b;
 {
-	int  bool;
-
         if (b <= MapGeom.strip) {
 	  a = a/(2*chwidth);
 	  if (a==0 && getenv("HOME"))
@@ -3760,28 +4127,16 @@ int b;
 	     do_selector = 0;
 	     return;
 	  }
-	  if (a>=8) {
-	      bool=0;
-	      freeImageFiles(Context, &bool);
-	      if (bool) {
-		 if (do_menu) PopMenu(Context);
-		 adjustGeom(Context, 0);
-	         shutDown(Context, 0);
-	         buildMap(Context, Context->wintype, 0);
-		 if (do_selector) {
-                    RaiseAndFocus(Selector);
-		    if (do_private) 
-                       XSetWindowColormap(dpy, Selector, SelCaller->cmap);
-		 }
-	      }
+	  if (a>=8) {	
+              processKey(SelCaller->win, 'w');
 	      return;
 	  }
-	  clearSelector();
+	  clearSelectorPartially();
 	  return;
 	}
         if (b <= 2*MapGeom.strip) {
 	  selector_shift = 0;
-	  clearSelector();
+	  clearSelectorPartially();
 	  return;
 	}
 	b = (b-2*MapGeom.strip-3)/(4*MapGeom.strip/5) + selector_shift;
@@ -3811,30 +4166,34 @@ int b;
 	      dirtable = NULL;
 	      selector_shift = 0;
 	      num_table_entries=0;
-              clearSelector();
+              clearSelectorPartially();
 	      return;
 	   } else {
-	      char *f, *Image_file;
-	      Image_file = (Context->wintype)? 
+	      char *f, *path;
+	      unsigned int w, h;
+	      path = (Context->wintype)? 
                     Context->map_img_file : Context->clock_img_file;
 	      f = (char *)
                 salloc((strlen(image_dir)+strlen(s)+2)*sizeof(char));
 	      sprintf(f, "%s%s", image_dir, s);
-	      if (!Image_file || strcmp(f, Image_file)) {
-	         freeImageFiles(Context, &bool);
-                 if (do_menu) PopMenu(Context);
+	      if (!path || strcmp(f, path)) {
+ 		 if (Context->wintype) {
+                    free(Context->map_img_file);
+		    Context->map_img_file = NULL;
+		 } else {
+                    free(Context->clock_img_file);
+		    Context->clock_img_file = NULL;
+		 }
 		 adjustGeom(Context, 0);
 	         shutDown(Context, 0);
 		 if (Context->wintype) 
                     Context->map_img_file = f;
 		 else
                     Context->clock_img_file = f;
+		 w = Context->geom.width;
+		 h = Context->geom.height;
 	         buildMap(Context, Context->wintype, 0);
-		 if (do_selector) {
-                    RaiseAndFocus(Selector);
-		    if (do_private) 
-                       XSetWindowColormap(dpy, Selector, SelCaller->cmap);
-		 }
+                 /* refreshPopups(Context, w, h); */
 	      } else free(f);
 	   }
 	}
@@ -3860,7 +4219,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
 	      return;
 	   }
            key = tolower(Option[2*click_pos]);
-	   processKey(win, key);
+	   processKey(MenuCaller->win, key);
 	   return;
 	}
 
@@ -3934,12 +4293,18 @@ Window win;
 	      if (h<SelGeom.h_mini) h = SelGeom.h_mini;
 	      SelGeom.width = w;
 	      SelGeom.height = h;
-	      XDestroyWindow(dpy, Selector);
-              Selector = 0;
-	      do_selector = 0;
-	      createWindow(NULL, 3);
-	      setProtocols(NULL, 3);
-	      PopSelector(Context);
+	      if (verbose)
+	         fprintf(stderr, "Resizing Selector to %d %d\n", w, h);
+	      XSelectInput(dpy, Selector, 0);
+	      XSync(dpy, True);
+	      XResizeWindow(dpy, Selector, w, h);
+	      XSync(dpy, True);
+	      usleep(TIMESTEP);
+              setAllHints(NULL,3);
+              setProtocols(NULL,3);
+	      do_selector = 1;
+	      initSelector();
+	      return;
 	   }
 
 	   if (win == Menu) return;
@@ -3957,10 +4322,13 @@ Window win;
 	   if (h<Context->geom.h_mini) h = Context->geom.h_mini;
 	   Context->geom.width = w;
 	   Context->geom.height = h;
-           if (!invert && Context->xim) {
-              XDestroyImage(Context->xim);
-              Context->xim=0;
-    	   }
+	   if (Context->wintype) {
+	      MapGeom.width = w;
+	      MapGeom.height = h;
+	   } else {
+	      ClockGeom.width = w;
+	      ClockGeom.height = h;
+	   }
            adjustGeom(Context, 0);
            shutDown(Context, 0);
 	   buildMap(Context, Context->wintype, 0);
@@ -3984,10 +4352,9 @@ struct Sundata * Context;
 
         Context->count = (Context->count+1) % TIMECOUNT;
 
-	if (--Context->timeout <= 0 && (Context->count==0)) {
+	if (Context->count==0) {
 		updateImage(Context);
 		showImage(Context);
-		Context->timeout = 1;
                 if (mono) pulseMarks(Context);
 	}
 }
@@ -3998,15 +4365,11 @@ register Window	w;
 {
         struct Sundata * Context = (struct Sundata *)NULL;
 
-        if (w == Menu) {
+        if (w == Menu)
 	   initMenu(Context);
-	   return;
-	}
 
-        if (w == Selector) {
+        if (w == Selector)
            initSelector(Context);
-	   return;
-	}
 
         Context = getContext(w);
 	if (!Context) return;
@@ -4051,6 +4414,10 @@ eventLoop()
 
 			switch(ev.type) {
 		
+			case VisibilityNotify:
+			        doExpose(ev.xexpose.window);
+				break;
+
 			case Expose:
 				if (ev.xexpose.count == 0)
 					doExpose(ev.xexpose.window);
@@ -4161,26 +4528,50 @@ register char **		argv;
 
 	scr = DefaultScreen(dpy);
         color_depth = DefaultDepth(dpy, scr);
+        visual = *DefaultVisual(dpy, scr);
+	black = BlackPixel(dpy, scr);
+	white = WhitePixel(dpy, scr);
+
+        if (color_depth == 16 && visual.green_mask==992) color_depth = 15;
+        if (color_depth > 16)
+            color_pad = 32;
+        else if (color_depth > 8)
+            color_pad = 16;
+        else
+            color_pad = 8;
+
+        if (verbose) {
+           fprintf(stderr, "%s: version %s, %s\nDepth %d    Bits/RGB %d\n"
+                    "Red mask %ld    Green mask %ld    Blue mask %ld\n", 
+                ProgName, VERSION, COPYRIGHT,
+                color_depth, visual.bits_per_rgb, 
+                visual.red_mask, visual.green_mask, visual.blue_mask);
+	}
+
         wm_protocols = XInternAtom(dpy, "WM_PROTOCOLS", False);
         wm_delete_window = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 
         /* Correct some option parameters */
 	if (placement<0) placement = NW;
 	if (invert && (gflags.shading>=2)) gflags.shading = 1;
-	if (color_depth>8) do_private = 0;
+	if (color_depth>8 || mono) private = always_private = 0;
+	adjust_dark = (unsigned int) ((1.0-darkness) * 255.25);
 	parseFormats(ListFormats);
 
-	cmap0 = newColormap();
-	getColors(cmap0);
-
 	getFonts();
+
+        buildMap(NULL, win_type, 1);
+
 	for (i=2; i<=3; i++) {
 	   createWindow(NULL, i);
 	   setProtocols(NULL, i);
 	   setAllHints(NULL, i);
 	}
-        buildMap(NULL, win_type, 1);
-        createGCs(Seed);
+
+	if (do_menu) {
+	   do_menu = 0;
+	   PopMenu(Seed);
+	}
 	eventLoop();
 	exit(0);
 }
