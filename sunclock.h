@@ -109,6 +109,7 @@ typedef struct Flags {
   /* Status values */
         short colorlevel;               /* 0=mono 1=invert1 2=invert2 3=color*/
         short fillmode;                 /* 0=coastlines 1=contour 2=landfill */
+        short vmfflags;                 /* flags for VMF format */
         short dotted;                   /* use dotted lines ? */
         short colorscale;               /* number of colors in shading */
         short darkness;                 /* level of darkness in shading */

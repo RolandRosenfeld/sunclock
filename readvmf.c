@@ -1,7 +1,7 @@
 /*
  * readvmf.c
  * Jean-Pierre Demailly
- * February 2001
+ * July 2001
  *
  * Copyright (C) 2001 by Jean-Pierre Demailly <demailly@ujf-grenoble.fr>
  *
@@ -27,11 +27,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#ifdef ZLIB
+#include <zlib.h>
+#endif
 
 #include "sunclock.h"
 
+#define LINELENGTH 256
+
 extern char *ProgName;
 extern char *vmfcolors;
+extern char *vmfrange;
+extern char *vmfcoordformat;
 
 extern Display *	dpy;
 extern Colormap         tmp_cmap;
@@ -43,32 +50,21 @@ extern int              color_pad;
 extern int              bytes_per_pixel;
 extern int              color_alloc_failed;
 extern int              verbose;
+extern int              reformat;
 
 static struct Sundata *map;
 static int mapwidth;
 static int mapheight;
+static int fillmode;
 
-static Pixel *colors;
-static int *palette;
-
-static char buf[128];	/* Buffer to hold input lines */
+static char *buffer;  /* Buffer to hold input lines */
 static int *grid;     /* Pointer to grid data */
+static int *palette;  /* Pointer to list of color codes */
+static Pixel *colors; /* Pointer to list of colors */
+
 static int uu, cc, vv, vv1, vv2, full;
-static int max_palette;
-
-int screemx(x,y) 
-int x, y;
-{
-if (x<=0 || x>=mapwidth) fprintf(stderr, "Horror x=%d y=%d\n", x, y);
-return x;
-}
-
-int screemy(x,y) 
-int x,y;
-{
-if (y<0 || y>=mapheight) fprintf(stderr, "Horror y=%d\n", y);
-return y;
-}
+static int num_palette;
+static int default_color;
 
 char *
 salloc(nbytes)
@@ -97,7 +93,7 @@ int u, v, s;
   c -= map->zoom.dx-1;
   v -= map->zoom.dy;
 
-  if (map->flags.fillmode==0) {
+  if (fillmode==0) {
      if (c>=0 && c<=mapwidth && v>=0 && v<mapheight) {
         ind = c*mapheight+v;
         if (s>0) grid[ind] = s * 65536;
@@ -177,9 +173,9 @@ filterdata()
 {
 int i, j, t, ind;
 
-    if (map->flags.fillmode==0) return;
+    if (fillmode==0) return;
 
-    if (map->flags.fillmode==1) {
+    if (fillmode==1) {
 
       for (j=0; j<mapheight; j++)
         for (i=0; i<=mapwidth; i++) {
@@ -283,10 +279,10 @@ pixmap_image()
     for (i=0; i<mapwidth; i++) {
        k = bytes_per_pixel * i;
        l = grid[(i+1)*mapheight+j]/65536;
-       if (l>=0 && l<=max_palette) 
+       if (l>=0 && l<num_palette) 
            l = palette[l];
        else
-	   l = max_palette+1;
+	   l = default_color;
        if (bigendian) {
           c[k+1] = (colors[l] >> 16) & 255;
           c[k+2] = (colors[l] >> 8) & 255;
@@ -305,10 +301,10 @@ pixmap_image()
     for (i=0; i<mapwidth; i++) {
        k = bytes_per_pixel * i;
        l = grid[(i+1)*mapheight+j]/65536;
-       if (l>=0 && l<=max_palette) 
+       if (l>=0 && l<num_palette) 
            l = palette[l];
        else
-	   l = max_palette+1;
+	 l = default_color;
        if (bigendian) {
           c[k] = colors[l] / 256;
           c[k+1] = colors[l] & 255;
@@ -324,10 +320,10 @@ pixmap_image()
     for (i=0; i<mapwidth; i++) {
        k = bytes_per_pixel * i;
        l = grid[(i+1)*mapheight+j]/65536;
-       if (l>=0 && l<=max_palette) 
+       if (l>=0 && l<num_palette) 
            l = palette[l];
        else
-	   l = max_palette+1;
+	   l = default_color;
        c[k] = colors[l] & 255;
     }
   }
@@ -337,19 +333,35 @@ pixmap_image()
 
 char *
 getdata(fd)
-FILE * fd;
+#ifdef ZLIB
+gzFile * fd;
+#else
+FILE *fd;
+#endif
 {
   int i, j;
   char c;
 
  repeat:
+#ifdef ZLIB
+  i = gzgetc(fd);
+#else
   i = fgetc(fd);
+#endif
   if (i==EOF) return NULL;
 
   c = (char) i;
 
-  if (c=='#') {
-     while (i!=EOF && (char) i!= '\n') i = fgetc(fd);
+  if (c=='%') {
+     if (reformat) printf("%c", i);
+     while (i!=EOF && (char) i!= '\n') {
+#ifdef ZLIB
+        i = gzgetc(fd);
+#else
+        i = fgetc(fd);
+#endif
+	if (reformat) printf("%c", i);
+     }
      if (i==EOF) return NULL;
      goto repeat;
   }
@@ -357,16 +369,43 @@ FILE * fd;
   while(isspace(c)) goto repeat;
   
   j = 0;
-  while(!isspace(c) && j<125) {
-    buf[j] = c;
+  while(!isspace(c) && j<LINELENGTH) {
+    buffer[j] = c;
     ++j;
+#ifdef ZLIB
+    i = gzgetc(fd);
+#else
     i = fgetc(fd);
+#endif
     if (i==EOF) break;
     c = (char) i;
   }
 
-  buf[j] = '\0';
-  return buf;
+  buffer[j] = '\0';
+  return buffer;
+}
+
+Pixel
+getPixel(cmap, str)
+Colormap cmap;
+char *str;
+{
+Status s;
+XColor c, e;
+
+      if (!str) {
+	 color_alloc_failed += 2;;
+	 return 0;
+      }
+
+      s = XAllocNamedColor(dpy, cmap, str, &c, &e);
+      if (s != (Status)1) {
+	 fprintf(stderr, "%s: warning: can't allocate color `%s'\n",
+		 ProgName, buffer);
+	 color_alloc_failed += 2;
+	 return 0;
+      }
+      return c.pixel;
 }
 
 int
@@ -374,18 +413,37 @@ readVMF(path, Context)
 char * path;
 struct Sundata * Context;
 {
-  int num_colors, correct, maxgrid;
-  int color, i, j, k, l, num, count, u=0, v=0, up, vp;
+  char coordformat[32] = "%7.3f %8.3f";
+  int num_colors, correct, maxgrid, run_flag = -1, opencurves = 0, 
+      ret_value = -1;
+  int color=0, i, j, k, l, num=0, count=0, u=0, v=0, up, vp;
   int m, min, max, addumin, addvmin, addumax, addvmax, diffu, diffv, sum;
-  int ix, iy, ix0=0, iy0=0;
+  double fx=0.0, fy=0.0, fx0=0.0, fy0=0.0;
+  double fxmin=-180.0, fxmax=180.0, fymin=-90.0, fymax=90.0, 
+         fdx=360.0, fdy=180.0;
+  double rxmin=-180.0, rxmax, rymin=-90.0, rymax;
+  double cx=1.0, cy=1.0, cdx=0.0, cdy=0.0;
   double theta, phi;
-  XColor c, e;
   char *str;
+#ifdef ZLIB
+  gzFile * fd;
+#else
   FILE *fd;
+#endif
 
-  if (!path) return 1;
+  fd = NULL;
+  buffer = NULL;
+  palette = NULL;
+  colors = NULL;
+  grid = NULL;
+
+  if (!path) {
+     ret_value = 1;
+     goto abort;
+  }
 
   map = Context;
+  fillmode = Context->flags.fillmode;
   mapwidth = Context->geom.width;
   if (mapwidth <=10) return 4;
   mapheight = Context->geom.height;
@@ -393,214 +451,338 @@ struct Sundata * Context;
 
   if (verbose)
     fprintf(stderr, "Loading vector map %s\n", path);
+#ifdef ZLIB
+  fd = gzopen(path, "r");
+#else
   fd = fopen(path, "r");
+#endif
   if (fd == NULL) {
-     return 1;
+     ret_value = 1;
+     goto abort;
   }
 
-  str = fgets(buf, 120, fd);
-  if (!str || strncmp(buf, "%!VMF", 5)) {
-     fclose(fd);
-     return 5;
-  }
-  str = getdata(fd);
-  if (!str) {
-     fclose(fd);
-     return 5;
-  }
-  Context->ncolors = num_colors = atoi(str);
+  buffer = (char *) salloc(LINELENGTH+2);
+  if (!buffer) goto abort;
 
-  str = getdata(fd);
-  if (!str) {
-     fclose(fd);
-     return 5;
+#ifdef ZLIB
+  str = gzgets(fd, buffer, LINELENGTH);
+#else
+  str = fgets(buffer, LINELENGTH, fd);
+#endif
+  if (!str || strncmp(buffer, "%!VMF", 5)) {
+     ret_value = 5;
+     goto abort;
   }
-  max_palette = atoi(str);
-
-  colors = (long *) salloc(num_colors*sizeof(Pixel));
-  palette = (int *) salloc((max_palette+2)*sizeof(int));
-  maxgrid = (mapwidth+1)*mapheight;
-  grid = (int *) salloc(maxgrid*sizeof(int));
+  if (reformat) printf(str);
 
   k = 0;
-  for (j=0; j<num_colors; j++) {
-    register Status s;
-    str = getdata(fd);
-    if (vmfcolors) {
-       if (vmfcolors[k] && vmfcolors[k]!='|') {
-          strcpy(buf, vmfcolors+k);
-	  l = 0;
-          while (buf[l]!='|' && buf[l] != '\0') ++l;
-	  if (buf[l]=='|') 
-	     k=k+l+1;
-	  else
-	     k=k+l;
-	  buf[l] = '\0';
-       }
-    }
-    if (!str) goto abort;
+  num_colors = 0;
+  while (1) {
     if (map->flags.colorlevel==FULLCOLORS) {
-      s = XAllocNamedColor(dpy, tmp_cmap, str, &c, &e);
-	if (s != (Status)1) {
-		fprintf(stderr, "%s: warning: can't allocate color `%s'\n",
-			ProgName, buf);
-		color_alloc_failed = 1;
-		goto abort;
-	}
-      colors[j] = c.pixel;
-    if (color_depth<=8)
-       Context->daypixel[j] = (unsigned char) c.pixel;
-#ifdef DEBUG
-    printf("%d : %s \n", j, str);
-#endif
+       count = color_alloc_failed;
+       if (vmfcolors) {
+          if (vmfcolors[k]) {
+	     strcpy(buffer, vmfcolors+k);
+             str = buffer;
+	     l = 0;
+             while (str[l]!='|' && str[l] != '\0') ++l;
+	     if (str[l]=='|') 
+	        k=k+l+1;
+	     else
+	        k=k+l;
+	     str[l] = '\0';
+             if (*str) {
+	        ++num_colors;
+                colors = 
+                  (Pixel *)realloc((void *)colors, num_colors*sizeof(Pixel));
+	        if (!colors) goto abort;
+                colors[num_colors-1] = getPixel(tmp_cmap, str);
+	     } else
+	        --count;
+          } else
+	     --count;
+       }
+       str = getdata(fd);
+       if (!strcmp(str, ";")) break;
+       if (!vmfcolors || color_alloc_failed>count) {
+	  count = color_alloc_failed;
+	  ++num_colors;
+          colors = (Pixel *)realloc((void *)colors, num_colors*sizeof(Pixel));
+	  if (!colors) goto abort;
+	  colors[num_colors-1] = getPixel(tmp_cmap, str);
+       }
+       if (color_alloc_failed>count) {
+	  color_alloc_failed = 1;
+	  ret_value = 6;
+	  goto abort;
+       } else
+	  color_alloc_failed &= 1;
+       if (color_depth<=8)
+          Context->daypixel[num_colors-1] = 
+             (unsigned char) colors[num_colors-1];
+    } else {
+       str = getdata(fd);
+       ++num_colors;
+       if (!strcmp(str, ";")) break;
     }
+    if (reformat) printf("%s\t", str);
   }
+  if (reformat) printf(";\n\n");
+  Context->ncolors = num_colors;
 
   str = getdata(fd);
   if (!str) goto abort;
-  v = atoi(str);
-  if (v<0 || v>=num_colors) goto abort;
+  default_color = atoi(str);
+  if (default_color<0 || default_color>=num_colors) goto abort;
+  if (reformat) printf("%d\n\n", default_color);
 
-  for (j=0; j<=max_palette+1; j++) palette[j] = v;
-
-  while (strcmp(str, ".")) {
+  j = 0;
+  num_palette = 0;
+  while (1) {
     str = getdata(fd);
     if (!str) goto abort;
-    if (*str=='.') continue;
+    if (*str==';') {
+       if (reformat) printf("\n;\n\n");
+       break;
+    }
     if (*str=='c') {
        v = atoi(str+1);
        if (v<0 || v>=num_colors) goto abort;
+       if (reformat) {
+	  if (j) printf("\n");
+	  printf("c%d", v);
+       }
     }
     else {
        u = atoi(str);
-       if (u<0 || u>max_palette) goto abort;
+       if (u<0) goto abort;
+       if (u>=num_palette) {
+	  palette = (int *) realloc(palette, (u+1)*sizeof(int));
+	  if (!palette) goto abort;
+	  for (k=num_palette; k<u; ++k) palette[k] = default_color;
+	  num_palette = u+1;
+       }
        palette[u] = v;
+       if (reformat) printf(" %d", u);
     }
-#ifdef DEBUG
-    printf("%d : %d \n", u, v);
-#endif
+    ++j;
   }
 
   str = getdata(fd);
   if (!str) goto abort;
-  if (map->flags.fillmode)
-     correct = atoi(str) * 65536;
+  if (fillmode)
+     correct = atoi(str);
   else
      correct = 0;
+  if (reformat) printf("%d\n\n", correct);
+  correct *= 65536;
 
+  maxgrid = (mapwidth+1)*mapheight;
+  grid = (int *) salloc(maxgrid*sizeof(int));
   for (i=0; i<maxgrid; i++) grid[i] = correct;
 
   count = 0;
 
-  while(1) {
-    str = getdata(fd);
-    if (!str) goto abort;
-    num = atoi(str);
-    if (!num) break;
-    str = getdata(fd);
-    if (!str) goto abort;
-    color = atoi(str);
-#ifdef DEBUG
-    fprintf(stderr, "Loop %d, num %d, color %d\n", count, num, color);
-#endif
-    for (j=0; j<=num; j++) {
-      if (j<num) {
-	str = getdata(fd);
-        if (!str) goto abort;
-        ix = atoi(str);
-	str = getdata(fd);
-        if (!str) goto abort;
-        iy = atoi(str);
-	if (j == 0) {
-	  ix0 = ix;
-	  iy0 = iy;
-	}
-      } else {
-	ix = ix0;
-        iy = iy0;
-      }
-      theta = 0.5 + ix / 65520.001;
-      phi = 0.5 - iy / 65520.001;
-      cc = uu = up = u;
-
-      if (cc<0) cc+=map->zoom.width;
-      if (cc>=map->zoom.width) cc-=map->zoom.width;      
-      cc -= map->zoom.dx-1;
-
-      vp = v;
-      vv = v - map->zoom.dy;
-      vv1 = vv + 1;
-      if (vv1<0) vv1 = 0;
-      vv2 = vv;
-      if (vv2>=mapheight) vv2 = mapheight-1;
-
-      u = (int) (theta * (double) map->zoom.width);
-      v = (int) (phi * (double) map->zoom.height);
-      if (j) {
-#ifdef DEBUG
-        fprintf(stderr, "Point %d/%d, Segment %d %d %d %d\n", 
-                 j, num, up, vp, u, v);
-#endif
-        diffu = abs(u-up);
-        if (diffu>map->zoom.width/2) {
-	   if (u>up) 
-              u -= map->zoom.width;
-	   else
-	      u += map->zoom.width;
-           diffu = abs(u-up);
-	}
-        diffv = abs(v-vp);
-        addumin = (u>up)? 1:-1;
-        addvmin = (v>vp)? 1:-1;
-        if (diffu>diffv) {
-	  max = diffu ; 
-          min = diffv;
-	  addumax = addumin;
-	  addvmax = 0;
-	} else {
-          max = diffv ; 
-          min = diffu;
-	  addumax = 0;
-	  addvmax = addvmin;
-	}
-	sum = max/2-max;
-	for (m=0; m<max; m++) {
-          sum = sum + min;
-          if (sum>=max/2) {
-	      sum -= max;
-	      up += addumin;
-              vp += addvmin;
-	    } else {
-	      up += addumax; 
-              vp += addvmax;
-	    }
-          plotdata(up, vp, color);
-	}
-#ifdef DEBUG
-        if (up!=u || vp!=v) 
-	   fprintf(stderr, "Ending up with %d %d !!!\n", up, vp);
-#endif
-      }
-    }
-    ++count;
+  if (reformat) {
+     if (vmfrange) {
+        if (vmfcoordformat)
+	   strncpy(coordformat, vmfcoordformat, 30);
+	else
+           strcpy(coordformat, "%g %g");
+        for (i=0; i<strlen(vmfrange); i++) 
+            if (vmfrange[i]=='|') vmfrange[i] = ' ';
+        if (sscanf(vmfrange, "%lg %lg %lg %lg", 
+            &rymin, &rymax, &rxmin, &rxmax)<4)
+            goto abort;
+     } else {
+        rxmin = fxmin;
+        rxmax = fxmax;
+        rymin = fymin;
+        rymax = fymax;
+     }
+     cx =  (rxmax-rxmin)/fdx;
+     cy =  (rymax-rymin)/fdy;
+     cdx = -fxmin*cx+rxmin;
+     cdy = -fymin*cy+rymin;
   }
 
-  fclose(fd);
+ iter:
+  str = getdata(fd);
+  if (!str) goto abort;
+  if (*str >= 'A') {
+     if (!strcmp(str, "end")) {
+        if (reformat) 
+           printf("\n%s\n", str);
+        goto endcurves;
+     } else
+     if (!strcmp(str, "flag")) {
+        str = getdata(fd);
+        if (!str) goto abort;
+	run_flag = atoi(str);
+        if (reformat) 
+           printf("flag %d\n\n", run_flag);
+     } else
+     if (!strcmp(str, "opencurves")) {
+        if (reformat) 
+           printf("%s\n", str);
+        opencurves = 1;
+     } else
+     if (!strcmp(str, "closedcurves")) {
+        if (reformat) 
+           printf("%s\n", str);
+        opencurves = 0;
+     } else
+     if (!strcmp(str, "fillmode")) {
+        str = getdata(fd);
+        if (!str) goto abort;
+	i = atoi(str);
+        if (reformat) 
+           printf("fillmode %d\n", i);	
+	if (i>map->flags.fillmode) 
+           i = map->flags.fillmode;
+	if (i<fillmode) filterdata();
+	fillmode = i;
+     } else
+     if (!strcmp(str, "range")) {
+        str = getdata(fd);
+        if (!str) goto abort;
+        fymin = atof(str);
+        str = getdata(fd);
+        if (!str) goto abort;
+        fymax = atof(str);
+        str = getdata(fd);
+        if (!str) goto abort;
+        fxmin = atof(str);
+        str = getdata(fd);
+        if (!str) goto abort;
+        fxmax = atof(str);
+        fdx = fxmax - fxmin;
+        fdy = fymax - fymin;
+	if (reformat) {
+	   if (!vmfrange){
+	      rxmin = fxmin;
+	      rxmax = fxmax;
+	      rymin = fymin;
+	      rymax = fymax;
+	   }
+	   cx = (rxmax-rxmin)/fdx;
+	   cy = (rymax-rymin)/fdy;
+           cdx = -fxmin*cx+rxmin;
+           cdy = -fymin*cy+rymin;
+           printf("range %g %g %g %g\n\n", rymin, rymax, rxmin, rxmax);
+        }
+     }
+     goto iter;
+  } else
+  if (*str == '#') {
+     num = 0;
+     str = getdata(fd);
+     if (!str) goto abort;
+     color = atoi(str);
+     if (reformat)
+        printf("\n#%d %d", count, color);
+     ++count;
+  } else 
+  if (*str == ';') {
+     fx = fx0;
+     fy = fy0;
+     if (reformat) printf("\n;\n");
+     if (opencurves) goto iter;
+  } else {
+     fy = atof(str);
+     str = getdata(fd);
+     if (!str) goto abort;
+     fx = atof(str);
+     if (num == 0) {
+	fx0 = fx;
+	fy0 = fy;
+     }
+     if (reformat) {
+        if (num%4 == 0) printf("\n"); else printf("  ");
+        printf(coordformat, fy*cy+cdy, fx*cx+cdx);
+     }
+     ++num;
+  }
+
+  if (!(run_flag & map->flags.vmfflags)) goto iter;
+
+  theta = (fx - fxmin) / fdx;
+  phi = (fymax - fy) / fdy;
+  cc = uu = up = u;
+  if (cc<0) cc+=map->zoom.width;
+  if (cc>=map->zoom.width) cc-=map->zoom.width;      
+  cc -= map->zoom.dx-1;
+
+  vp = v;
+  vv = v - map->zoom.dy;
+  vv1 = vv + 1;
+  if (vv1<0) vv1 = 0;
+  vv2 = vv;
+  if (vv2>=mapheight) vv2 = mapheight-1;
+
+  u = (int) (theta * (double) map->zoom.width);
+  v = (int) (phi * (double) map->zoom.height);
+  if (num>=2) {
+     diffu = abs(u-up);
+     if (diffu>map->zoom.width/2) {
+        if (u>up) 
+           u -= map->zoom.width;
+	else
+	   u += map->zoom.width;
+        diffu = abs(u-up);
+     }
+     diffv = abs(v-vp);
+     addumin = (u>up)? 1:-1;
+     addvmin = (v>vp)? 1:-1;
+     if (diffu>diffv) {
+	max = diffu ; 
+        min = diffv;
+        addumax = addumin;
+	addvmax = 0;
+     } else {
+        max = diffv ; 
+        min = diffu;
+	addumax = 0;
+	addvmax = addvmin;
+     }
+     sum = max/2-max;
+     for (m=0; m<max; m++) {
+        sum = sum + min;
+        if (sum>=max/2) {
+	   sum -= max;
+	   up += addumin;
+           vp += addvmin;
+        } else {
+	   up += addumax; 
+           vp += addvmax;
+	}
+        plotdata(up, vp, color);
+     }
+  }
+  goto iter;
+
+ endcurves:
   filterdata();
 
   if (map->flags.colorlevel==FULLCOLORS)
      Context->xim = pixmap_image();
   else
      Context->bits = blacknwhite_image();
-
- abort:
-  free(grid); 
-  free(colors);
-  free(palette);
-  if (color_alloc_failed) return 6;
   if ((map->flags.colorlevel<FULLCOLORS && Context->bits==NULL) || 
       (map->flags.colorlevel==FULLCOLORS && Context->xim==NULL)) 
-     return 2;
-  else
-     return 0;
+     ret_value = 2;
+  if (ret_value < 0) ret_value = 0;
+
+ abort:
+  if (ret_value < 0) ret_value = 2;
+#ifdef ZLIB
+  if (fd) gzclose(fd);
+#else
+  if (fd) fclose(fd);
+#endif
+  if (buffer) free(buffer); 
+  if (grid) free(grid); 
+  if (colors) free(colors);
+  if (palette) free(palette);
+  return ret_value;
 }

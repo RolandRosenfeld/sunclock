@@ -8,7 +8,7 @@
 #include "sunclock.h"
 
 extern Display *	dpy;
-extern Visual		visual;
+extern Visual * 	visual;
 extern Colormap         tmp_cmap;
 
 extern int		scr;
@@ -43,13 +43,13 @@ struct Sundata * Context;
      else
          return 4;
 
-     Context->xim = XCreateImage(dpy, &visual, 
+     Context->xim = XCreateImage(dpy, visual, 
          DefaultDepth(dpy, scr), ZPixmap,0, NULL, 
          Context->geom.width, Context->geom.height, color_pad,0);
      XFlush(dpy);
      if (!Context->xim) return 4;
      Context->xim->data = (char *) salloc(Context->xim->bytes_per_line 
-                                       * Context->geom.height);
+                                       * Context->xim->height);
      if (!Context->xim->data) return 4;
      Context->ncolors = attrib.npixels;
      if (color_depth<=8) 

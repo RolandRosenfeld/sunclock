@@ -6,13 +6,26 @@ Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 Planned versions 3.4x, 3.5x... (features to appear in some order)
 
 - Implement a (Sunclocksaver , ~/.sunclocksaver) pair of config files 
-  for fancier screensaver functionality (almost done - planned for 3.47...)
-- Produce other vector maps, especially one(s) showing time zones
-  and/or nation boundaries
+  for fancier screensaver functionality (almost done - planned for 3.5x...)
 - Spherical representation of Earth
 - Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 
   database would be great...)
+
+Version 3.50pre1, August 13, 2001
+
+- Created "xrmap", derived from Reza Naima's vector map software "rmap".
+  This allows (or will allow) to build very accurate .vmf maps.
+  (A much better integration with sunclock should come at some point...)
+- Introduced the /tools directory
+- Sunclock can now read compressed .vmf.gz files (and uses the zlib
+  library for that purpose)
+- Created the timezones.vmf vector map, showing time zones (and/or nation 
+  boundaries in near future :-)
+- Changes in the VMF format to accomodate numerous new possibilities.
+- Corrected a long standing bug in readvmf.c
+- New -reformat option, useful to reformat .vmf files according to syntax
+  and standard line width.
 
 Version 3.46, July 5, 2001
 

@@ -20,35 +20,39 @@ XCOMM Pick -O or -g
 XCOMM
 
 #ifdef HPArchitecture
-XPMLIB=-L/opt/xpm/lib/X11
+XPMLIBDIR=-L/opt/xpm/lib/X11
 XPMINC=-I/opt/xpm/include
-JLIB=-L/opt/jpeg-6/lib
+JLIBDIR=-L/opt/jpeg-6/lib
+ZLIBDIR=
 JINC=-I/opt/jpeg-6/include
 
-CCOPTIONS = -Ae $(XPMINC) $(JINC) -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS = -Ae $(XPMINC) $(JINC) -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #else
 # SunOS
 
-#XPMLIB=-L/usr/X11R6/lib
+#XPMLIBDIR=-L/usr/X11R6/lib
 #XPMINC=-I/usr/X11R6/include/X11
-#JLIB=-L/usr/lib
+#JLIBDIR=-L/usr/lib
+#ZLIBDIR=-L/usr/lib
 #JINC=-I/usr/include
-#CCOPTIONS=-O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CCOPTIONS=-O -DZLIB -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # Solaris, Linux
-#XPMLIB=-L/usr/X11R6/lib
+#XPMLIBDIR=-L/usr/X11R6/lib
 #XPMINC=-I/usr/X11R6/include/X11
-#JLIB=-L/usr/lib
+#JLIBDIR=-L/usr/lib
+#ZLIBDIR=-L/usr/lib
 #JINC=-I/usr/include
 
-CCOPTIONS=-O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS=-O -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
 SRCS=sunclock.c astro.c widgets.c tildepath.c dirlist.c \
      readvmf.c readxpm.c readjpeg.c
 OBJS=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
      readvmf.o readxpm.o readjpeg.o
-LOCAL_LIBRARIES=$(XLIB) $(XPMLIB) -lXpm $(JLIB) -ljpeg -lm
+LOCAL_LIBRARIES=$(XLIB) $(XPMLIBDIR) -lXpm $(ZLIBDIR) -lz \
+     $(JLIBDIR) -ljpeg -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
@@ -65,7 +69,9 @@ install:: install.man
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
 
-realclean:: clean
-	rm -f Makefile *.xpm *.xbm
+clean::
+	cd tools ; make clean
 
+realclean:: clean
+	rm -f Makefile
 

@@ -29,12 +29,12 @@ MKDIRHIER=mkdir -p
 #LFLAGS=-L/usr/openwin/lib
 
 # For OpenServer
-CFLAGS=-I/usr/include/X11 -DMAXPATHLEN=1024 -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)"
-LFLAGS=-L/usr/lib/X11 -lXpm -ljpeg -lsocket
+#CFLAGS=-I/usr/include/X11 -DMAXPATHLEN=1024 -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)"
+#LFLAGS=-L/usr/lib/X11 -lXpm -ljpeg -lsocket
 
 # For Linux
-CFLAGS=-I/usr/include/X11 -O -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
-LFLAGS=-L/usr/X11/lib -lXpm -ljpeg
+CFLAGS=-I/usr/include/X11 -O -Wall -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+LFLAGS=-L/usr/X11/lib -lXpm -ljpeg -lz
 
 OFILES=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
        readjpeg.o readvmf.o readxpm.o
@@ -67,11 +67,12 @@ install.man:
 
 clean:
 	rm -f core *.bak *.o *~ sunclock
+	cd tools ; make clean
 
 realclean: clean
 	rm -f Makefile 
 
-tgz:
-	tar cvf ../sunclock.tar .
-	gzip ../sunclock.tar
+tar.gz:
+	DIR=`pwd` ; cd .. ; tar cvf - $DIR | gzip -fc - > $DIR.tar.gz
+
 

@@ -216,6 +216,8 @@ char * share_maps_dir = NULL;
 char * image_dir = NULL;
 char * rc_file = NULL;
 char * vmfcolors = NULL;
+char * vmfrange = NULL;
+char * vmfcoordformat = NULL;
 
 char * ExternAction = NULL;
 char * HelpCommand = NULL;
@@ -271,7 +273,7 @@ char *          SpotSizes = NULL;
 char *          SizeLimits = NULL;
 
 Display *       dpy;
-Visual          visual;
+Visual *        visual;
 Colormap        cmap0, tmp_cmap;
 
 Flags           gflags;
@@ -346,6 +348,7 @@ int             color_alloc_failed = 0;
 int             num_formats;
 int             runlevel;
 int             verbose = 1;
+int             reformat = 0;
 int             citycheck = 0;
 int             num_lines;
 int             num_table_entries;
@@ -471,7 +474,7 @@ Usage()
      SP"[-auxilclassname name] [-classname name]\n"
      SP"[-setfont field|name (field = clockstrip, mapstrip, city, coord, menu)\n"
      SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
-     SP"[-colorlevel level] [-vmfcolors col1|col2|col3...] [-aspect mode]\n"
+     SP"[-colorlevel level] [-aspect mode]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
      SP"[-placementshift x, y] [-extrawidth value]\n"
      SP"[-decimal] [-dms] [-city name] [-position latitude|longitude]\n"
@@ -492,7 +495,9 @@ Usage()
      SP"[-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3]\n"
      SP"[-meridianspacing value] [-parallelspacing value]\n"
      SP"[-dottedlines] [-plainlines] [-bottomline] [-nobottomline]\n"
-     SP"[-vmfcolors color1|color2|color3...] [-setcolor field|color]\n\n"
+     SP"[-reformat] [-vmfcolors color1|color2|color3...]\n"
+     SP"[-vmfrange a|b|c|d] [-vmfcoordformat format] [-vmfflags integer]\n"
+     SP"[-setcolor field|color]\n\n"
      SP"field = clockbg, clockfg, mapbg, mapfg, menubg, menufg,\n"
      SP"clockstripbg, clockstripfg, mapstripbg, mapstripfg,\n"
      SP"cityname, zoombg, zoomfg, optionbg, optionfg, caret, change, choice,\n"
@@ -521,6 +526,7 @@ initValues()
 
         gflags.colorlevel = FULLCOLORS;
         gflags.fillmode = 2;
+        gflags.vmfflags = -1;
         gflags.dotted = 0;
         gflags.colorscale = 16;
 
@@ -1085,6 +1091,8 @@ char **                argv;
                 ++argv;
                 if (strcasecmp(*argv, "-verbose") == 0)
                         verbose = 1;
+                else if (strcasecmp(*argv, "-reformat") == 0)
+                        reformat = 1;
                 else if (strcasecmp(*argv, "-silent") == 0)
                         verbose = 0;
                 else if (strcasecmp(*argv, "-synchro") == 0)
@@ -1256,8 +1264,22 @@ char **                argv;
 			} else
  			   gflags.fillmode = 1;
   	        }
+		else if (strcasecmp(*argv, "-vmfflags") == 0) {
+		        gflags.vmfflags = atoi(*++argv);
+			option_changes |= 4;			
+		}
+		else if (strcasecmp(*argv, "-vmfrange") == 0) {
+                        StringReAlloc(&vmfrange, *++argv);
+		}
+		else if (strcasecmp(*argv, "-vmfcoordformat") == 0) {
+                        StringReAlloc(&vmfcoordformat, *++argv);
+		}
 		else if (strcasecmp(*argv, "-vmfcolors") == 0) {
                         StringReAlloc(&vmfcolors, *++argv);
+                        if (strcmp(vmfcolors, "|") == 0) {
+			   free(vmfcolors);
+			   vmfcolors = NULL;
+			}
 			option_changes |= 4;
 		}
 		else if (strcasecmp(*argv, "-clockgeom") == 0) {
@@ -1818,7 +1840,7 @@ int private;
            Context->gdata->cmap = cmap0;
         else
            Context->gdata->cmap =
-                XCreateColormap(dpy, Root, &visual, AllocNone);
+                XCreateColormap(dpy, Root, visual, AllocNone);
 
         color_alloc_failed = 0;
 
@@ -1906,9 +1928,9 @@ struct Sundata * Context;
         XSetForeground(dpy, Context->gdata->wingc, 
 		    Context->gdata->pixel[CLOCKSTRIPBGCOLOR+Context->wintype]);
         XFillRectangle(dpy, Context->win, Context->gdata->wingc, 
-              0, Context->geom.height+Context->flags.bottom-1, 
+              0, Context->geom.height+(Context->flags.bottom&1)-1, 
               Context->geom.width, 
-              Context->hstrip-Context->flags.bottom+1);
+              Context->hstrip-(Context->flags.bottom&1)+1);
 }
 
 /*
@@ -4094,7 +4116,7 @@ struct Sundata * Context;
    }
 
    if (color_depth<=8 && Context->flags.colorlevel>0)
-     tmp_cmap = XCreateColormap(dpy, Root, &visual, AllocNone);
+     tmp_cmap = XCreateColormap(dpy, Root, visual, AllocNone);
    else
      tmp_cmap = cmap0;
 
@@ -4185,16 +4207,19 @@ struct Sundata * Context;
    }
 
  run_direct2:
-   if (color_depth<=8) {
+   if (color_depth<=8)
       quantize(Context);
-      if (color_alloc_failed && runlevel == RUNNING) {
+   
+   if (color_alloc_failed) {
          code = 6;
-         XDestroyImage(Context->xim);
-         Context->xim = 0;
-      }
-   } else
-      createGData(Context, 0);
-
+	 if (Context->xim) {
+            XDestroyImage(Context->xim);
+            Context->xim = 0;
+	 }
+	 return code;
+   }
+    
+   createGData(Context, 0);
    createGCs(Context);
 
    return code;
@@ -4470,11 +4495,9 @@ int wintype, build;
    if (createImage(Context)) {
      if (Seed->next) {
          shutDown(Context, 0);
-         exit(0);
          Context = Seed;
          return;
      } else
-     if (runlevel == RUNNING)
          shutDown(Context, -1);
    }
    checkGeom(Context, 0);
@@ -5619,9 +5642,9 @@ Window w;
         if (w == Urban) { setupUrban(-1); return; }
 
         Context->flags.update = 2;
-	Context->flags.bottom &= 1;
-
         showMapImage(Context);
+
+	Context->flags.bottom &= 1;
 	drawBottomline(Context);
 
 	clearStrip(Context);
@@ -5833,13 +5856,13 @@ char **         argv;
 
         color_depth = DefaultDepth(dpy, scr);
 	bigendian = (ImageByteOrder(dpy) == MSBFirst);
-        visual = *DefaultVisual(dpy, scr);
+        visual = DefaultVisual(dpy, scr);
         cmap0 = DefaultColormap(dpy, scr);
 
         black = BlackPixel(dpy, scr);
         white = WhitePixel(dpy, scr);
 
-        if (color_depth == 16 && visual.green_mask==992) color_depth = 15;
+        if (color_depth == 16 && visual->green_mask==992) color_depth = 15;
         if (color_depth > 16)
             color_pad = 32;
         else if (color_depth > 8)
@@ -5855,8 +5878,8 @@ char **         argv;
               "%s: version %s, %s\nDepth %d    Bits/RGB %d   Bigendian : %s\n"
               "Red mask %ld    Green mask %ld    Blue mask %ld\n", 
                 ProgName, VERSION, COPYRIGHT,
-                color_depth, visual.bits_per_rgb, (bigendian)? "yes":"no",
-                visual.red_mask, visual.green_mask, visual.blue_mask);
+                color_depth, visual->bits_per_rgb, (bigendian)? "yes":"no",
+                visual->red_mask, visual->green_mask, visual->blue_mask);
         }
 
         /* Correct some option parameters */

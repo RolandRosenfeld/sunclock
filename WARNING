@@ -42,5 +42,10 @@ option -colorlevel <value> (0, 1, 2, 3)
 3.44/3.45 have introduced the ability to DISPLAY MAPS ON THE ROOT WINDOW
 3.46 can be used as a SCREENSAVER (-screensaver option)
 
+In 3.47, the VMF format has SUBSTANTIALLY CHANGED. A new fancy vector map
+timezones.vmf displays the timezones !! 
+A NEW X UTILITY 'xrmap' can be used to visualize and produce extremely 
+accurate vector maps of the Earth, from the CIA world data bank II.
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

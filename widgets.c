@@ -264,7 +264,7 @@ int				num;
 	      xsh.flags |= PMaxSize | PMinSize;
 	    } else {
               xsh.min_width = Geom->w_mini;
-              xsh.min_height = Geom->h_mini;
+              xsh.min_height = Geom->h_mini + Context->hstrip;
 	    }
 	} else 
 	if (num>=2) {

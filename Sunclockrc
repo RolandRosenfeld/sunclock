@@ -94,8 +94,9 @@ addcity 2|Brazzaville|-4.200|15.300|Africa/Brazzaville
 addcity 2|Djibouti|11.567|43.000|Africa/Djibouti
 addcity 2|CapeTown|-33.933|18.371|SAT-2
 addcity 2|Antananarivo|-18.520|48.300|Indian/Antananarivo
-addcity 2|Perth|-31.833|116.167|Australia/Perth
-addcity 2|Darwin|-12.416|130.881|CST-9:30
+addcity 2|Adelaide|-34.767|138.537|CST-9:30CST,M10.5.0,M3.5.0
+addcity 2|Darwin|-12.420|130.837|CST-9:30
+addcity 2|Perth|-31.941|115.965|WST-8
 addcity 2|Auckland|-36.883|174.750|Pacific/Auckland
 addcity 2|Tahiti|-17.550|-149.600|Pacific/Tahiti
 addcity 2|Toronto|43.670|-79.370|Canada/Eastern
@@ -121,7 +122,6 @@ addcity 2|Erebus|-77.457|+167.080|Pacific/Auckland
 addcity 3|Aachen|50.784|6.053|MET-1METDST,M3.5.0,M10.5.0
 addcity 3|Aberdeen|57.207|-2.209|GMT0BST,M3.5.0,M10.5.0
 addcity 3|Abilene|32.451|-99.731|CST6CDT
-addcity 3|AdelaideSA|-34.917|138.583|CST-9:30CST,M10.5.0,M3.5.0
 addcity 3|Akron|41.083|-81.512|EST5EDT
 addcity 3|Albany|42.650|-73.750|EST5EDT
 addcity 3|Albuquerque|35.084|-106.651|MST7MDT
@@ -305,7 +305,7 @@ addcity 3|Luxembourg|49.617|6.150|MET-1METDST,M3.5.0,M10.5.0
 addcity 3|Macon|32.837|-83.627|EST5EDT
 addcity 3|MacquarieIsland|-54.500|158.950|NZT-12NZS,M10.1.0,M3.2.0
 addcity 3|Madison|43.073|-89.382|CST6CDT
-addcity 3|Managua|13.267|-87.667|CST6
+addcity 3|Managua|13.167|-86.267|CST6
 addcity 3|Manchester|42.991|-71.461|EST5EDT
 addcity 3|Marseille|43.283|5.367|MET-1METDST,M3.5.0,M10.5.0
 addcity 3|Marshall|32.550|-94.383|CST6CDT
@@ -329,7 +329,6 @@ addcity 3|Nashville|36.159|-86.782|CST6CDT
 addcity 3|Natchez|31.563|-91.392|CST6CDT
 addcity 3|NewBedford|41.637|-70.928|EST5EDT
 addcity 3|NewBritain|41.669|-72.783|EST5EDT
-addcity 3|NewDelhi|28.633|77.200|IST-5:30
 addcity 3|NewHaven|41.307|-72.925|EST5EDT
 addcity 3|NewOrleans|29.948|-90.069|CST6CDT
 addcity 3|Newark|40.737|-74.172|EST5EDT
@@ -348,7 +347,6 @@ addcity 3|Pasadena|34.146|-118.145|PST8PDT
 addcity 3|Paterson|40.917|-74.172|EST5EDT
 addcity 3|Pensacola|30.414|-87.216|CST6CDT
 addcity 3|Peoria|40.695|-89.593|CST6CDT
-addcity 3|Perth|-31.941|115.965|WST-8
 addcity 3|Philadelphia|39.949|-75.156|EST5EDT
 addcity 3|Phoenix|33.453|-112.074|MST7
 addcity 3|Pierre|44.372|-100.348|CST6CDT
