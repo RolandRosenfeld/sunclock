@@ -63,10 +63,12 @@ Dibujar/Borrar ciudades
 Dibujar/Borrar meridianos
 Dibujar/Borrar paralelos
 Dibujar/Borrar círculos Trópicos/Polares/Ecuador
-Mostrar ayuda y opciones
+Cambiar entre ventana mapa y ventana reloj 
+Abrir una nueva ventana de mapa (W o ratón, botone 3)
+Cerrar la ventana
 Minimizar ventanas
 Refrescar ventana de mapa
-Cambiar entre ventana mapa y ventana reloj (W o ratón, botone 3)
+Mostrar ayuda y opciones
 Activar comando (opción -command)
 Salir del programa
 Escapar del menú

@@ -21,13 +21,13 @@ extern int free_data;
 
 #define XPM 1
 
-struct earthmap Earthmap;
+struct Geometry MapGeom;
+struct Sundata Earthmap;
 struct Color LandColor, WaterColor, ArcticColor;
 
 char ProgName[] = "mapgen";
 char name[256] = "earthmap";
 int invert=0;
-
 
 void
 print_xpm()
@@ -41,10 +41,10 @@ print_xpm()
          "/* columns rows colors chars-per-pixel */\n"
          "\"%s\",\n\"%s\",\n\"%s\",\n"
          "/* pixels */\n", 
-         name, Earthmap.data[0], Earthmap.data[1], Earthmap.data[2]);
+         name, Earthmap.xpmdata[0], Earthmap.xpmdata[1], Earthmap.xpmdata[2]);
 
-    for (j=0; j<Earthmap.height; j++) {
-      printf("\"%s\",\n", Earthmap.data[j+3]);
+    for (j=0; j<Earthmap.geom.height; j++) {
+      printf("\"%s\",\n", Earthmap.xpmdata[j+3]);
     }
   }
 
@@ -55,11 +55,11 @@ print_xpm()
          "/* columns rows colors chars-per-pixel */\n"
          "\"%s\",\n\"%s\",\n\"%s\",\n\"%s\",\n"
          "/* pixels */\n", 
-         name, Earthmap.data[0], Earthmap.data[1], 
-               Earthmap.data[2], Earthmap.data[3]);
+         name, Earthmap.xpmdata[0], Earthmap.xpmdata[1], 
+               Earthmap.xpmdata[2], Earthmap.xpmdata[3]);
 
-    for (j=0; j<Earthmap.height; j++) {
-      printf("\"%s\",\n", Earthmap.data[j+4]);
+    for (j=0; j<Earthmap.geom.height; j++) {
+      printf("\"%s\",\n", Earthmap.xpmdata[j+4]);
     }
   }
 
@@ -75,10 +75,10 @@ print_xbm()
   printf("#define %s_width %d\n"
          "#define %s_height %d\n"
 	 "static unsigned char %s_bits[] = {\n",
-	 name, Earthmap.width, name, Earthmap.height, name);
+	 name, Earthmap.geom.width, name, Earthmap.geom.height, name);
 	 
   count = 0;
-  for (j=0; j<(1+Earthmap.width/8)*Earthmap.height; j++) {
+  for (j=0; j<(1+Earthmap.geom.width/8)*Earthmap.geom.height; j++) {
      u = Earthmap.bits[j];
      a = ((int) u)/16;
      b = ((int) u)%16;
@@ -120,8 +120,8 @@ main (int argc, char ** argv)
   strcpy(LandColor.name, "Chartreuse2");
   strcpy(WaterColor.name, "RoyalBlue");
   strcpy(ArcticColor.name, "LemonChiffon");
-  Earthmap.width = 720;
-  Earthmap.height = 360;
+  Earthmap.geom.width = 720;
+  Earthmap.geom.height = 360;
 
   for (i=1; i<argc; i++) {
     if ((!strcmp(argv[i],"-h") || !strcmp(argv[i],"-help"))) {
@@ -154,12 +154,12 @@ main (int argc, char ** argv)
 	if (fill_mode>2) fill_mode = 2;
     } else
     if (!strcmp(argv[i],"-width") && i<argc-1) {
-        Earthmap.width = atoi (argv[++i]);
-	if (Earthmap.width<10) Earthmap.width = 10;
+        Earthmap.geom.width = atoi (argv[++i]);
+	if (Earthmap.geom.width<10) Earthmap.geom.width = 10;
     } else
       if (!strcmp(argv[i],"-height") && i<argc-1) {
-        Earthmap.height = atoi (argv[++i]);
-        if (Earthmap.height<10) Earthmap.height = 10;
+        Earthmap.geom.height = atoi (argv[++i]);
+        if (Earthmap.geom.height<10) Earthmap.geom.height = 10;
     } else
     if (!strcmp(argv[i],"-name") && i<argc-1)
         strncpy(name, argv[++i], 250);
@@ -171,7 +171,7 @@ main (int argc, char ** argv)
   }
  
   free_data = 0;
-  makePixmap();
+  makePixmap(&Earthmap);
   
   if (output==XPM)
     print_xpm();

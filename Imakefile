@@ -44,7 +44,7 @@ realclean:: clean
 
 ComplexProgramTarget(sunclock)
 InstallAppDefaults(Sunclock)
-	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/i18n
+	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	cat WARNING
 	./check_i18n $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)

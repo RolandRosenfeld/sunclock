@@ -21,7 +21,7 @@ Okt
 Nov
 Dec
 # Additional labels
-Position
+Läge
 GMT tid
 Solstånd
 Nationell tid
@@ -44,10 +44,10 @@ timme
 dag
 dagar
 # Help
-Laddar karta Jord (F or mouse button 2)
+Laddar karta Jord (F eller mus-klick knapp 2)
 Zoom + (bara med vektor karta)
 Zoom -
-Back to previous window size
+Back till föregående kartfönster mått
 Använd koordinat mode
 Använd solstånd mode
 Använd distans mode
@@ -63,14 +63,18 @@ Rita/Radera städer
 Rita/Radera meridianer
 Rita/Radera breddgrader
 Rita/Radera Tropik/Ekvator/Arktik cirklar
-Visa hjälp och alternativ
+Växla tidszon och kartfönster 
+Öppnar ny kartfönster (W eller mus-klick knapp 3)
+Slutar fönster
 Ikonifiera fönster
 Förnya kartfönster
-Växla tidszon och kartfönster (W or mouse button 3)
+Visa hjälp och alternativ
 Aktivera kommando (-command option)
 Avsluta program
-Escape menu
+Escape meny
 # Short help
 Sunclock har ett antal funktioner som kan åtkommas
 genom mus-klick eller tastaturet:
 # End
+
+

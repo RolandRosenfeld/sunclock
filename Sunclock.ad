@@ -22,7 +22,9 @@
 #language: en
 #city: Washington
 #map
+#mapimage: /usr/share/sunclock/earthmaps/large/caida.xpm.gz
 #tropics
+#twilight
 
 [Cities]
 Paris: 48.850 2.333 Europe/Paris

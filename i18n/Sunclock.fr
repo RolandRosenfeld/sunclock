@@ -62,11 +62,13 @@ Montrer/ne pas montrer le Soleil
 Montrer/ne pas montrer les villes
 Montrer/ne pas montrer les Méridiens
 Montrer/ne pas montrer les Parallèles
-Montrer/ne pas montrer les Tropiques/Equateur/Cercles polaires
-Afficher l'aide et les options
+Montrer/ne pas montrer les Tropiques/Equateur/Cercles arctiques
+Commuter les fenêtres carte/horloge 
+Ouvrir une nouvelle fenêtre-carte (W ou souris, bouton 3)
+Fermer la fenêtre
 Iconifier la fenêtre
 Rafraîchir la fenêtre
-Commuter les fenêtres carte/horloge (W ou souris, bouton 3)
+Afficher l'aide et les options
 Activer la commande spécifiée par l'option -command
 Quitter le programme
 Sortir du menu

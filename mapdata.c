@@ -47,18 +47,17 @@
 
 #include "sunclock.h"
 
-#define grid(x,y) GRID[x*Earthmap.height+y]
+#define grid(x,y) GRID[x*map->geom.height+y]
 
-extern struct earthmap Earthmap;
 extern struct Color LandColor, WaterColor, ArcticColor;
 
 extern char *ProgName;
 extern int invert;
 
+struct Sundata *map;
 int fill_mode=2;
 int free_data=1;
 int full;
-int which;
 
 short *GRID;
 char *line;
@@ -6548,8 +6547,8 @@ int u, v, s;
   int c, w;
 
   c = u;
-  if (c<0) c+=Earthmap.width;
-  if (c>=Earthmap.width) c-=Earthmap.width;
+  if (c<0) c+=map->geom.width;
+  if (c>=map->geom.width) c-=map->geom.width;
 
   if (fill_mode==0) {
     grid(c,v) = 1;
@@ -6575,15 +6574,15 @@ int u, v, s;
 int check(i,j, which)
 int i, j, which;
 {
-   if ((grid((i+Earthmap.width-1)%Earthmap.width,j)&3)!=which) return 1;
-   if ((grid((i+1)%Earthmap.width,j)&3)!=which) return 1;
+   if ((grid((i+map->geom.width-1)%map->geom.width,j)&3)!=which) return 1;
+   if ((grid((i+1)%map->geom.width,j)&3)!=which) return 1;
    if (j>1 && (grid(i,j-1)&3)!=which) return 1;
-   if (j<Earthmap.height-1 && (grid(i,j+1)&3)!=which) return 1;
+   if (j<map->geom.height-1 && (grid(i,j+1)&3)!=which) return 1;
    if (full) {
-     if (j>1 && (grid((i+Earthmap.width-1)%Earthmap.width,j-1)&3)!=which) return 1;
-     if (j>1 && (grid((i+1)%Earthmap.width,j-1)&3)!=which) return 1;
-     if (j<Earthmap.height-1 && (grid((i+Earthmap.width-1)%Earthmap.width,j+1)&3)!=which) return 1;
-     if (j<Earthmap.height-1 && (grid((i+1)%Earthmap.width,j+1)&3)!=which) return 1;
+     if (j>1 && (grid((i+map->geom.width-1)%map->geom.width,j-1)&3)!=which) return 1;
+     if (j>1 && (grid((i+1)%map->geom.width,j-1)&3)!=which) return 1;
+     if (j<map->geom.height-1 && (grid((i+map->geom.width-1)%map->geom.width,j+1)&3)!=which) return 1;
+     if (j<map->geom.height-1 && (grid((i+1)%map->geom.width,j+1)&3)!=which) return 1;
    }
    return 0;
 }
@@ -6598,14 +6597,14 @@ int i, j, t;
     if (fill_mode==1) {
 
       /* replace arctic color by land */
-      for (j=0; j<Earthmap.height; j++)
-        for (i=0; i<Earthmap.width; i++) {
+      for (j=0; j<map->geom.height; j++)
+        for (i=0; i<map->geom.width; i++) {
 	    if (grid(i,j)<=0) grid(i,j) = 1;
 	    grid(i,j) &= 253;
 	}
 
-      for (j=0; j<Earthmap.height; j++)
-        for (i=0; i<Earthmap.width; i++) {
+      for (j=0; j<map->geom.height; j++)
+        for (i=0; i<map->geom.width; i++) {
 	    t = grid(i,j)&3;
 	    full=1;
 	    if (check(i,j,0)) grid(i,j) &= 31;
@@ -6614,8 +6613,8 @@ int i, j, t;
 	    if ((t==1) && !check(i,j,1)) grid(i,j) |= 128;
         }
 
-      for (j=0; j<Earthmap.height; j++)
-        for (i=0; i<Earthmap.width; i++) {
+      for (j=0; j<map->geom.height; j++)
+        for (i=0; i<map->geom.width; i++) {
 	    t = grid(i,j);
 	    if (t&96) grid(i,j) = 1;
 	      else
@@ -6628,12 +6627,12 @@ int i, j, t;
     /* only remains fill_mode = 2 */
     full = 1;
 
-    for (j=0; j<Earthmap.height; j++)
-      for (i=0; i<Earthmap.width; i++)
+    for (j=0; j<map->geom.height; j++)
+      for (i=0; i<map->geom.width; i++)
 	  if (check(i,j,2)) grid(i,j) &= 31;
 
-    for (j=0; j<Earthmap.height; j++)
-      for (i=0; i<Earthmap.width; i++) {
+    for (j=0; j<map->geom.height; j++)
+      for (i=0; i<map->geom.width; i++) {
 	  t = grid(i,j);
 	  if (t&32) grid(i,j) = 1;
 	    else
@@ -6652,27 +6651,27 @@ create_xpm()
   int i, j, k;
   char *line;
 
-  sprintf(Earthmap.data[0], "%d %d %d 1", 
-        Earthmap.width, Earthmap.height, 2+(fill_mode==2));
-  Earthmap.data[1] = Earthmap.data[0] + 20;
-  sprintf(Earthmap.data[1], "0 c %s", 
+  sprintf(map->xpmdata[0], "%d %d %d 1", 
+        map->geom.width, map->geom.height, 2+(fill_mode==2));
+  map->xpmdata[1] = map->xpmdata[0] + 20;
+  sprintf(map->xpmdata[1], "0 c %s", 
      (fill_mode==2)?ArcticColor.name:WaterColor.name);
-  Earthmap.data[2] = Earthmap.data[1] + 60;
-  sprintf(Earthmap.data[2], "1 c %s", LandColor.name);
-  line = Earthmap.data[3] = Earthmap.data[2] + 60;
+  map->xpmdata[2] = map->xpmdata[1] + 60;
+  sprintf(map->xpmdata[2], "1 c %s", LandColor.name);
+  line = map->xpmdata[3] = map->xpmdata[2] + 60;
   if (fill_mode==2) {
-     sprintf(Earthmap.data[3], "2 c %s", WaterColor.name);
-     line = Earthmap.data[3] + 60;
+     sprintf(map->xpmdata[3], "2 c %s", WaterColor.name);
+     line = map->xpmdata[3] + 60;
      k = 4;
   } else
      k = 3;
 
-  for (j=0; j<Earthmap.height; j++) {
-    for (i=0; i<Earthmap.width; i++)
+  for (j=0; j<map->geom.height; j++) {
+    for (i=0; i<map->geom.width; i++)
          line[i] = '0'+ grid(i,j);
-    line[Earthmap.width] = '\0';
-    Earthmap.data[j+k] = line;
-    line += Earthmap.width+1;
+    line[map->geom.width] = '\0';
+    map->xpmdata[j+k] = line;
+    line += map->geom.width+1;
   }
 }
 
@@ -6683,14 +6682,14 @@ create_xbm()
 
   k = 0;
   if (fill_mode==2) t=2; else t=1;
-  for (j=0; j<Earthmap.height; j++) {
+  for (j=0; j<map->geom.height; j++) {
     l = 1;
     u = 0;
-    for (i=0; i<Earthmap.width; i++) {
+    for (i=0; i<map->geom.width; i++) {
       if (grid(i,j)>=t) u = u+l;
       l = l+l;
-      if (l==256 || i==Earthmap.width-1) {
-        Earthmap.bits[k] = u;
+      if (l==256 || i==map->geom.width-1) {
+        map->bits[k] = u;
 	u = 0;
 	l = 1;
         ++k;
@@ -6707,31 +6706,33 @@ freeData()
 }
 
 void
-makePixmap()
+makePixmap(Context)
+struct Sundata * Context;
 {
   int sign, i, j, num, count, u=0, v=0, up, vp;
   int m, min, max, addumin, addvmin, addumax, addvmax, diffu, diffv, sum;
   int ix, iy;
   double theta, phi;
 
-  if (Earthmap.width <=10) return;
-  if (Earthmap.height<= 5) return;
+  map = Context;
+  if (map->geom.width <=10) return;
+  if (map->geom.height<= 5) return;
 
-  GRID = (short *) salloc(Earthmap.width*Earthmap.height*sizeof(short));
-  line = (char *) salloc((Earthmap.width+20)*sizeof(char));
+  GRID = (short *) salloc(map->geom.width*map->geom.height*sizeof(short));
+  line = (char *) salloc((map->geom.width+20)*sizeof(char));
 
   if (invert) {
-    Earthmap.bits = (char *)
-        salloc((1+Earthmap.width/8)*Earthmap.height*sizeof(char));
+    map->bits = (char *)
+        salloc((1+map->geom.width/8)*map->geom.height*sizeof(char));
   } else {
-    Earthmap.data = (char **)
-        salloc((5+Earthmap.height)*sizeof(char *));
-    Earthmap.data[0] = (char *)
-        salloc((250+(Earthmap.width+1)*Earthmap.height)*sizeof(char));
+    map->xpmdata = (char **)
+        salloc((5+map->geom.height)*sizeof(char *));
+    map->xpmdata[0] = (char *)
+        salloc((250+(map->geom.width+1)*map->geom.height)*sizeof(char));
   }
 
-  for (i=0; i<Earthmap.width; i++) 
-    for (j=0; j<Earthmap.height; j++) grid(i,j) = 0;
+  for (i=0; i<map->geom.width; i++) 
+    for (j=0; j<map->geom.height; j++) grid(i,j) = 0;
 
   i = 0;
   count = 0;
@@ -6756,11 +6757,11 @@ makePixmap()
         phi = 0.5 - iy / 65520.0;
       }
       uu = uc = up = u;
-      if (uc<0) uc+=Earthmap.width;
-      if (uc>=Earthmap.width) uc-=Earthmap.width;
+      if (uc<0) uc+=map->geom.width;
+      if (uc>=map->geom.width) uc-=map->geom.width;
       vv = vp = v;
-      u = (int) (theta * (Earthmap.width-1));
-      v = (int) (phi * (Earthmap.height-1));
+      u = (int) (theta * (map->geom.width-1));
+      v = (int) (phi * (map->geom.height-1));
       if (j) {
 	/*
 	if (debug)
@@ -6768,11 +6769,11 @@ makePixmap()
                  j, num, up, vp, u, v);
 	*/
         diffu = abs(u-up);
-        if (diffu>Earthmap.width/2) {
+        if (diffu>map->geom.width/2) {
 	   if (u>up) 
-              u -= Earthmap.width;
+              u -= map->geom.width;
 	   else
-	      u += Earthmap.width;
+	      u += map->geom.width;
            diffu = abs(u-up);
 	}
         diffv = abs(v-vp);

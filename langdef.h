@@ -33,9 +33,9 @@ char	Label[L_END][60] = {
         "days"
 };
 
-#define N_OPTIONS 25
+#define N_OPTIONS 27
 char    Option[2*N_OPTIONS] = 
-"F,+,-,<;C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T;H,I,R,W,X,Q;";
+"F,+,-,<;C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T; ,W,K,I,R;H,X,Q;";
 char	ListOptions[4*N_OPTIONS+2];
 
 char	Help[N_OPTIONS+1][80] = {
@@ -58,10 +58,12 @@ char	Help[N_OPTIONS+1][80] = {
 "Draw/Erase meridians",
 "Draw/Erase parallels",
 "Draw/Erase Tropics/Equator/Arctic circles",
-"Show help and options",
+"Switch clock and map windows",
+"Open new map window (W or Mousebutton 3)",
+"Close window",
 "Iconify window",
 "Refresh map window",
-"Switch clock and map windows",
+"Show help and options",
 "Activate command (-cmd option)",
 "Quit program",
 "Escape menu"

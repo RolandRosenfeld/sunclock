@@ -240,22 +240,25 @@ or rc file. The operating mode is set to Coordinates mode.
 .BI "\-position " latitude longitude
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
-.TP
 .BI "\-shading " mode=0,1,2,3,4
 Start sunclock with the specified shading mode. Mode 0 means that the night
 area is not displayed. In higher modes, the night area is displayed, with
-increasingly sophisticated shading algorithms. Mode 1 stans for no shading
-(i.e. just bright and dark colors). Mode 2 shades the area in which the
-sun is partially hidden by the horizon. Mode 3 shades the region in which
-there is still substantial luminosity left after sunset (depending on
-the diffusion parameter below). Mode 4 additionally represents the 
-luminosity in the full illuminated area.
-.TP
-.BI "\-night "
-Start sunclock with the night region displayed in mode 1 (it's the default).
-.TP
-.BI "\-terminator \-twilight \-luminosity " 
-Start sunclock with the night region displayed in mode 2, 3, 4 respectively.
+increasingly sophisticated shading algorithms. Mode 1 stands for no shading
+(i.e. just bright and dark colors are shown). Mode 2 shades the 
+terminator area -- the area in which the sun is partially hidden by the 
+horizon. Mode 3 shades the region in which there is still substantial 
+luminosity left after sunset (depending on the diffusion parameter below). 
+Default is 6° below horizon. Mode 4 additionally represents the luminosity 
+values in all parts of the illuminated area.
+.TP 
+.BI "\-terminator " 
+Equivalent to \-shading 2 
+.TP 
+.BI "\-twilight "
+Equivalent to \-shading 3 
+.TP 
+.BI "\-luminosity "
+Equivalent to \-shading 4
 .TP
 .BI "\-diffusion " value (degrees)
 Sets the amplitude of the area in which diffusion of light in the
@@ -267,6 +270,9 @@ Sets the value of the refraction angle for tangential sun rays at sunset.
 This is related to the fact that the sun sometimes looks bigger at sunset.
 Changing the refraction degree slightly affects the computation of sunrise
 and sunset times. Default is 0.1 degree.
+.TP
+.BI "\-night "
+Start sunclock with the night region displayed (by default, it is).
 .TP
 .BI "\-cities "
 Start sunclock with the cities displayed (by default, they are).

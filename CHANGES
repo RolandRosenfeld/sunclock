@@ -3,13 +3,42 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
-Planned Version 3.20, ???
+Planned versions 3.30, 3.40... (features to appear in some order)
+
+- Possibility of zooming the maps
+- Larger data base of cities/coordinates, with level of size
+- Searching cities
+- Moon phases
+- Possibility of loading external vector maps (?)
+- Spherical representation of Earth (?)
+
+Version 3.25, December 21, 2000
+
+- Simultaneous windows (in arbitrary number...)
+  All this required a lot of changes in the Sundata structures, which
+  now carry all information about the status of various maps. This
+  should make everything much more flexible...
+- As a corollary, sunclock should now be dockable
+
+Version 3.22, December 12, 2000 (not released...)
+
+- Fixed incorrect (zero!) distance calculations, minor bug noticed by
+  Marc Colling (mcol@village.uunet.lu)
+
+Version 3.21, December 4, 2000
+
+- Bug fixes in the window placement routines (as suggested by Roland
+  Rosenfeld)
+- Various improvements in the shading algorithm
+
+Version 3.20, November 24, 2000
 
 - Sunclock includes vector map routines which generate Earth maps on the fly.
-- These maps are zoomable and resizeable, they can generate contours or
-  filled areas (6 fill/contour options...)
+- These maps are resizeable, they can generate contours or filled areas 
+  (3 fill/contour options...)
 - Sunclock can optionally handle (non resizeable) external pixmaps as well
 - Resizing routines for map and clock windows.
+- Shading algorithm showing twilight / luminosity
 
 Version 3.13, October 26, 2000.
 
@@ -26,6 +55,7 @@ Version 3.12, October 9, 2000.
 
 - Fix for a bug affecting the configuration of language and color settings 
   through the config file. 
+
 Version 3.11, October 8, 2000.
 
 - Italian localization by Alessio Bragadini <alessio@sevenseas.org>

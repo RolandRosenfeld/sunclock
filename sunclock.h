@@ -8,6 +8,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysymdef.h>
+#include <X11/xpm.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,32 +60,39 @@
 
 enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
 
-/* sunmap structure */
-struct earthmap {
-	int		width;		/* width of pixmap */
-	int		height;         /* height of pixmap */
-	char **		data;           /* pointer to char ** pixmap data */
-	char *		bits;           /* pointer to char * bitmap bits */
-	int		flags;		/* see below */
-	int		noon;		/* position of noon */
-	short *		nwtab;		/* current width table (?) */
-	short *		owtab;		/* previous width table (?) */
-	long		increm;		/* increment for fake time */
-	long		time;		/* time - real or fake, see flags */
-	GC		gc;		/* GC for writing text into window */
-	char		text[128];	/* and the current text that's there */
-	int		textx;		/* where to draw the text */
-	int		texty;		/* where to draw the text */
-	long		projtime;	/* last time we projected illumination */
-	int		timeout;	/* time until next image update */
-};
+/* Geometry structure */
 
-/* Color record */
-typedef struct Color {
-	char		name[COLORLENGTH+1];
-	unsigned long	pix;
-	GC		gc;
-} Color;
+typedef struct Geometry {
+	int	mask;
+	int	x;
+	int	y;
+	unsigned int	width;
+	unsigned int	height;
+        unsigned int    w_mini;
+        unsigned int    h_mini;
+        unsigned int    strip;
+} Geometry;
+
+typedef struct Flags {
+        short dirty;                    /* pixmap -> window copy required */
+        short force_proj;               /* force projection */
+        short last_hint;                /* is hint changed ? */
+        short firsttime;                /* is it first window mapping ? */
+        short bottom;                   /* bottom strip to be cleaned */
+        short hours_shown;              /* hours in extension mode shown? */
+        short map_mode;                 /* are we in C, D, E, L, S mode? */
+        short clock_mode;               /* clock mode */
+        short progress;                 /* special progress time ?*/
+        short shading;                  /* shading mode */
+        short alloc_level;              /* allocation level */
+        short resized;                  /* has window been resized ? */
+        short dms;                      /* degree, minute, second mode */
+        short sun;                      /* is Sun to be shown ? */
+        short cities;                   /* are cities to be shown ? */
+        short meridian;                 /* are meridian to be shown ? */
+        short parallel;                 /* are parallel to be shown ? */
+        short tropics;                  /* are tropics to be shown ? */
+} Flags;
 
 /* Records to hold cities */
 
@@ -104,16 +112,53 @@ typedef struct Mark {
     struct tm sr, ss, dl;
 } Mark;
 
-/* Geometry structure */
+/* Sundata structure */
+typedef struct Sundata {
+        int             wintype;        /* is window map or clock ? */
+        Window          win;            /* window id */
+        Colormap        cmap;           /* window private colormap */  
+	Flags		flags;		/* window behavioral flags */
+        Geometry        geom;           /* geometry */
+	Geometry        mapgeom;        /* map geometry */
+	Geometry        clockgeom;      /* clock geometry */
+	Geometry        prevgeom;       /* previous geometry */
+        char *          clock_img_file; /* name of clock xpm file */
+        char *          map_img_file;   /* name of map xpm file */
+	char **		xpmdata;        /* pointer to char ** pixmap data */
+        XImage *        xim;            /* ximage of map */ 
+        char *          ximdata;        /* ximage data copy*/ 
+        XpmAttributes * attrib;         /* attributes */
+        Pixel *         darkpixel;      /* pointer to dark pixels */
+        Pixmap          pix;            /* pixmap */
+	char *		bits;           /* pointer to char * bitmap bits */
+	short *		cwtab;		/* current width table (?) */
+	short *		pwtab;		/* previous width table (?) */
+	long		time;		/* time - real or fake, see flags */
+	long		projtime;	/* last time projected illumination */
+        long            progress;       /* time progression (in sec) */
+        long            jump;           /* time jump (in sec) */
+	int		noon;		/* position of noon */
+        int             local_day;      /* previous local day */
+        int             solar_day;      /* previous solar day */
+	int		textx;		/* x where to draw the text */
+	int		texty;		/* y where to draw the text */
+	int		timeout;	/* time until next image update */
+	int		count;	        /* number of time iterations */
+        double          sundec;         /* Sun declination */
+        double          sunlon;         /* Sun longitude */
+        struct City     pos1;           /* first position */
+        struct City     pos2;           /* second position */
+        struct Mark     mark1;          /* first mark */
+        struct Mark     mark2;          /* second mark */
+        struct Sundata *next;           /* pointer to next structure */
+} Sundata;
 
-typedef struct geom {
-	int	mask;
-	int	x;
-	int	y;
-	unsigned int	width;
-	unsigned int	height;
-        unsigned int     w_mini;
-        unsigned int     h_mini;
-        int     strip;
-} geom;
+/* Color record */
+typedef struct Color {
+	char		name[COLORLENGTH+1];
+	unsigned long	pix;
+	GC		gc;
+} Color;
+
+
 

@@ -63,10 +63,12 @@ Draw/Erase cities
 Draw/Erase meridians
 Draw/Erase parallels
 Draw/Erase Tropics/Equator/Arctic circles
-Show help and options
+Switch clock and map windows 
+Open new map window (W or mouse button 3)
+Close window
 Iconify window
 Refresh map window
-Switch clock and map windows (W or mouse button 3)
+Show help and options
 Activate command (-command option)
 Quit program
 Escape menu

@@ -1,7 +1,9 @@
 TODO
 ====
 
-- Should still improve shading algorithm; shading is in fact somewhat
-  incorrect near the extrema.
-
-- Implementing the zoom...
+- Implementing zoom functinality...
+- Larger data base of cities/coordinates, with level of size
+- Searching cities
+- Moon phases
+- Spherical representation of Earth (?)
+- Possibility of loading external vector maps (?)
