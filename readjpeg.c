@@ -26,7 +26,10 @@
 
 extern Display *	dpy;
 extern Visual		visual;
+extern Colormap         tmp_cmap;
+
 extern int		scr;
+extern int		bigendian;
 extern int              color_depth;
 extern int              color_pad;
 extern int              bytes_per_pixel;
@@ -154,20 +157,19 @@ Sundata * Context;
 	  c = Context->xim->data + l * Context->xim->bytes_per_line;
 	  k = 0;
 	  if (color_depth>16) {
-#ifdef BIGENDIAN
-            k = bytes_per_pixel - 3;
-#endif
+            if (bigendian)
+               k = bytes_per_pixel - 3;
             for (i = 0; i < Context->geom.width; i++) {
     	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
-#ifdef BIGENDIAN
-	       c[k] = scan[j];
-               c[k+1] = scan[j+1];
-	       c[k+2] = scan[j+2];
-#else
-	       c[k] = scan[j+2];
-               c[k+1] = scan[j+1];
-	       c[k+2] = scan[j];
-#endif
+               if (bigendian) {
+	          c[k] = scan[j];
+                  c[k+1] = scan[j+1];
+	          c[k+2] = scan[j+2];
+	       } else {
+	          c[k] = scan[j+2];
+                  c[k+1] = scan[j+1];
+	          c[k+2] = scan[j];
+	       }
 	       k +=  bytes_per_pixel;
 	    }
           } else
@@ -180,13 +182,13 @@ Sundata * Context;
 	    /* blue  c[k] = 31;  c[k+1] = 0;
 	       green c[k] = 224  (low weight) c[k+1] = 7 (high weight)
 	       red   c[k] = 0;   c[k+1] = 248; */
-#ifdef BIGENDIAN
-               c[k+1] = (((b&248)>>3) | ((g&28)<<3));
-	       c[k] = (((g&224)>>5) | (r&248));
-#else
-               c[k] = (((b&248)>>3) | ((g&28)<<3));
-	       c[k+1] = (((g&224)>>5) | (r&248));
-#endif
+               if (bigendian) {
+                  c[k+1] = (((b&248)>>3) | ((g&28)<<3));
+	          c[k] = (((g&224)>>5) | (r&248));
+	       } else {
+                  c[k] = (((b&248)>>3) | ((g&28)<<3));
+	          c[k+1] = (((g&224)>>5) | (r&248));
+	       }
 	       k += 2;
 	     }
           else
@@ -199,13 +201,13 @@ Sundata * Context;
 	    /* blue  c[k] = 31;  c[k+1] = 0;
 	       green c[k] = 224  (low weight) c[k+1] = 7 (high weight)
 	       red   c[k] = 0;   c[k+1] = 248; */
-#ifdef BIGENDIAN
-               c[k+1] = (b&248)>>3 | (g&56)<<2;
-	       c[k] = (g&192)>>6 | (r&248)>>1;
-#else
-               c[k] = (b&248)>>3 | (g&56)<<2;
-	       c[k+1] = (g&192)>>6 | (r&248)>>1;
-#endif
+               if (bigendian) {
+                  c[k+1] = (b&248)>>3 | (g&56)<<2;
+	          c[k] = (g&192)>>6 | (r&248)>>1;
+	       } else {
+                  c[k] = (b&248)>>3 | (g&56)<<2;
+	          c[k+1] = (g&192)>>6 | (r&248)>>1;
+	       }
 	       k += 2;
 	     }
 	  else {
@@ -245,7 +247,8 @@ Sundata * Context;
         xc.red = (lr[m]/lnum[m])*257;
         xc.green = (lg[m]/lnum[m])*257;
         xc.blue = (lb[m]/lnum[m])*257;
-	if (!XAllocColor(dpy, Context->cmap, &xc)) color_alloc_failed = 1;
+	if (!XAllocColor(dpy, tmp_cmap, &xc)) 
+           color_alloc_failed = 1;
 	pix[m] = (char) xc.pixel;
 	Context->daypixel[k] = (unsigned char) xc.pixel;
 	++k;

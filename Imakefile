@@ -45,8 +45,10 @@ CCOPTIONS = -Ae $(XPMINC) $(JINC) -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAR
 CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
-SRCS=sunclock.c astro.c tildepath.c dirlist.c readvmf.c readxpm.c readjpeg.c
-OBJS=sunclock.o astro.o tildepath.o dirlist.o readvmf.o readxpm.o readjpeg.o
+SRCS=sunclock.c astro.c widgets.c tildepath.c dirlist.c \
+     readvmf.c readxpm.c readjpeg.c
+OBJS=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
+     readvmf.o readxpm.o readjpeg.o
 LOCAL_LIBRARIES=$(XLIB) $(XPMLIB) -lXpm $(JLIB) -ljpeg -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 

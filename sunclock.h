@@ -73,11 +73,13 @@ typedef struct Geometry {
 } Geometry;
 
 typedef struct Flags {
-        short update;                   /* update image (=-1 full update) */
-        short last_hint;                /* is hint changed ? */
-        short firsttime;                /* is it first window mapping ? */
-        short bottom;                   /* bottom strip to be cleaned */
-        short hours_shown;              /* hours in extension mode shown? */
+  /* Status flags */
+        short mono;                     /* 0=color 1=invert 2=B&W */
+        short fillmode;                 /* 0=coastlines 1=contour 2=landfill */
+        short dotted;                   /* use dotted lines ? */
+        short spotsize;                 /* size of spots repr. cities */
+        short colorscale;               /* number of colors in shading */
+        short darkness;                 /* level of darkness in shading */
         short map_mode;                 /* are we in C, D, E, L, S mode? */
         short clock_mode;               /* clock mode */
         short progress;                 /* special progress time ?*/
@@ -88,6 +90,11 @@ typedef struct Flags {
         short meridian;                 /* are meridian to be shown ? */
         short parallel;                 /* are parallel to be shown ? */
         short tropics;                  /* are tropics to be shown ? */
+  /* Internal switches */
+        short update;                   /* update image (=-1 full update) */
+        short firsttime;                /* is it first window mapping ? */
+        short bottom;                   /* bottom strip to be cleaned */
+        short hours_shown;              /* hours in extension mode shown? */
 } Flags;
 
 typedef struct ZoomSettings {
@@ -95,7 +102,7 @@ typedef struct ZoomSettings {
         double          fy;             /* zoom factor along height */
         double          fdx;            /* translation factor along width */
         double          fdy;            /* translation factor along height */
-        int             mode;           /* zoom behaviour mode=0,1,2,3 */
+        int             mode;           /* zoom behaviour mode=0,1,2 */
         int             width;          /* width of full extent zoomed area */
         int             height;         /* height of full extent zoomed area */
         int             dx;             /* translation along width */
@@ -103,20 +110,28 @@ typedef struct ZoomSettings {
 } ZoomSettings;
 
 typedef struct GClist {
-        GC store;
-        GC invert;
+        GC mapstore;
+        GC mapinvert;
         GC smallfont;
         GC bigfont;
+        GC optionfont;
         GC dirfont;
         GC imagefont;
+        GC choice;
+        GC change;
+        GC zoombg;
+        GC zoomfg;
         GC citycolor0;
         GC citycolor1;
         GC citycolor2;
         GC markcolor1;
         GC markcolor2;
         GC linecolor;
+        GC meridiancolor;
+        GC parallelcolor;
         GC tropiccolor;
         GC suncolor;
+        GC mooncolor;
 } GClist;
 
 typedef struct Pixlist {
@@ -124,17 +139,34 @@ typedef struct Pixlist {
         Pixel white;
         Pixel textbgcolor;
         Pixel textfgcolor;
+        Pixel mapbgcolor;
+        Pixel mapfgcolor;
+        Pixel zoombgcolor;
+        Pixel zoomfgcolor;
         Pixel dircolor;
         Pixel imagecolor;
+        Pixel changecolor;
+        Pixel choicecolor;
         Pixel citycolor0;
         Pixel citycolor1;
         Pixel citycolor2;
         Pixel markcolor1;
         Pixel markcolor2;
         Pixel linecolor;
+        Pixel meridiancolor;
+        Pixel parallelcolor;
         Pixel tropiccolor;
         Pixel suncolor;
+        Pixel mooncolor;
 } Pixlist;
+
+typedef struct GraphicData {
+        Colormap        cmap;           /* window (private?) colormap */  
+        short links;                    /* how many other Windows linked ? */
+        short usedcolors;               /* number of colors used */
+        GClist          gclist;         /* window GCs */  
+        Pixlist         pixlist;        /* special color pixels */  
+} GraphicData;
 
 /* Records to hold cities */
 
@@ -157,9 +189,7 @@ typedef struct Mark {
 /* Sundata structure */
 typedef struct Sundata {
         Window          win;            /* window id */
-        Colormap        cmap;           /* window private colormap */  
-        GClist          gclist;         /* window GCs */  
-        Pixlist         pixlist;        /* special color pixels */  
+        GraphicData *   gdata;          /* associated graphical data */
         int             wintype;        /* is window map or clock ? */
         int             hstrip;         /* height of bottom strip */
         Geometry        geom;           /* geometry */
@@ -182,18 +212,17 @@ typedef struct Sundata {
         int             ncolors;        /* number of colors in day pixels */
 	long		time;		/* time - real or fake, see flags */
 	long		projtime;	/* last time projected illumination */
-        long            progress;       /* time progression (in sec) */
         long            jump;           /* time jump (in sec) */
-        double          fnoon;          /* position of noon, double prec */
+        double          sundec;         /* Sun declination */
+        double          sunlon;         /* Sun longitude */
+        double          shadefactor;    /* shading factor */
+        double          fnoon;          /* position of noon, double float */
 	int		noon;		/* position of noon, integer */
         int             local_day;      /* previous local day */
         int             solar_day;      /* previous solar day */
 	int		textx;		/* x where to draw the text */
 	int		texty;		/* y where to draw the text */
 	int		count;	        /* number of time iterations */
-        double          sundec;         /* Sun declination */
-        double          sunlon;         /* Sun longitude */
-        double          shadefactor;    /* shading factor */
         struct City     pos1;           /* first position */
         struct City     pos2;           /* second position */
         struct Mark     mark1;          /* first mark */
@@ -207,8 +236,4 @@ typedef struct Sundata {
 #define _OS_LINUX_
 #elif defined(hpux) || defined(__hpux) || defined(__hpux__)
 #define _OS_HPUX_
-#endif
-
-#if defined(__powerpc__)
-#define BIGENDIAN
 #endif

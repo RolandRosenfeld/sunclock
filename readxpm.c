@@ -9,6 +9,8 @@
 
 extern Display *	dpy;
 extern Visual		visual;
+extern Colormap         tmp_cmap;
+
 extern int		scr;
 extern int              color_depth;
 extern int              color_pad;
@@ -26,7 +28,7 @@ struct Sundata * Context;
      XImage *image = NULL;
      int b, c, i, j, k, ip, jp;
 
-     attrib.colormap = Context->cmap;
+     attrib.colormap = tmp_cmap;
      attrib.valuemask = XpmColormap | XpmReturnPixels;
 
      if (verbose)

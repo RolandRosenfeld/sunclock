@@ -32,10 +32,15 @@ Cliquer sur une ville
 Cliquer sur un point
 Cliquer sur deux points
 Cliquer 2 fois ou taper Tab pour ° ' "
-Nouvelle carte/fenêtre
+Option
+Activation de l'option sélectionnée...
+Option incorrecte ou non disponible en exécution !!
 Touche
 Contrôles Clavier/Souris
 Echap
+Sortir du menu
+Touche non liée à une fonction !!
+Synchro
 Progression =
 Décalage temporel =
 secondes
@@ -43,10 +48,11 @@ minute
 heure
 jour
 jours
-# Help
+# Menu window help
 Afficher l'aide et les options (H ou clic sur la bande du bas)
 Charger une carte de la Terre (F ou souris, bouton 2)
 Zoom (Z ou souris, bouton 3)
+Ouvrir la denêtre de commande des Options
 Utiliser le mode Coordonnées
 Utiliser le mode heure Solaire
 Utiliser le mode Distances
@@ -68,21 +74,25 @@ Iconifier la fenêtre
 Rafraîchir la fenêtre
 Ajuster la largeur de fenêtre à la taille de l'écran
 Retour à la taille de fenêtre précédente
-Synchroniser les fenêtres - ou non
 Commuter les fenêtres carte/horloge 
 Activer la commande spécifiée par l'option -command
 Quitter le programme
-Sortir du menu
+# Zoom window help
 Activer les nouvelles valeurs de zoom
 Revenir aux anciennes valeurs de zoom
+Rectifier l'aspect en modifiant la taille de fenêtre
 Permuter les modes de zoom 0,1,2
 Zoomer d'un facteur 1.2
 Rétrécir d'un factor 1/1.2 = 0.833
 Revenir à un facteur de zoom = 1 (carte entière)
 Centrer le rectangle de zoom sur la localité choisie
-# Short help
+# Option window help
+Activer l'option
+Effacer la ligne de commande
+Synchroniser les fenêtres entre elles ou non
+# Configurability
+A partir de **, les options sont configurables pendant l'exécution.
+# Command line help
 Sunclock dispose d'un certain nombre de fonctions accessibles au
 moyen de la souris ou des touches du clavier:
 # End
-
-

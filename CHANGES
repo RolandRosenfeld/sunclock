@@ -12,6 +12,17 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
+Version 3.35, April 11, 2001
+
+- A new "Option" widget appears; many command line options can be set
+  interactively at runtime from the option window.
+- The bigendian property is checked at runtime on the X display, not
+  just at compile time (the older way made sense only if the X display 
+  and X server were both of the same endian nature!)
+- Zoom colors are now configurable
+- Code clean-ups 
+- Bug fixes
+
 Version 3.34, March 30, 2001
 
 - Huge improvements in the zoom widget: a black and white map is now used

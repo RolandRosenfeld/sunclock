@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "March 30, 2001"
+.TH SUNCLOCK 1 "April 11, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing time and
 geographical data through point and click actions.
@@ -108,18 +108,29 @@ Start sunclock with an Earth map image loaded in the clock window.
 The same maps can be used used for the map and clock windows, but
 in the latter case they will tend to be scaled down.
 .TP
-.B "\-mono "
-Use monochrome settings (recommended only for monochrome screens!).
-Day and night appear respectively as white and black, and no shading
-is available. Only .vmf vector maps can be used in that case.
+.B "\-fullcolors "
+Use full color mode (default). This mode is needed to load jpeg or 
+other colorful images. Day and night can be drawn with various shading
+parameters. This is the recommended option if you have a reasonably
+recent machine with enough video RAM, otherwise see below.
 .TP
-.B "\-invert "
-This is essentially the same as the -mono option, except that menus
-and cities can be in colors. This mode only involves 12 colors in
-total, and can be used for Pseudocolor displays which have only a
-small number of available colors. Also, the -mono and -invert options
-considerably reduce both memory and CPU usage, and can be useful on
-slower machines.
+.B "\-monochrome "
+Use monochrome settings. Day and night appear respectively as 
+mapbgcolor (white by default) and mapfgcolor (black by default), and 
+no shading is available. This mode saves a lot of CPU power - since 
+a simple algorithm of inversion of colors is used to set colors of all 
+points in the map. It can be useful for very slow CPUs, such as those 
+in use in PDAs with black and white screen. Only .vmf vector maps can
+be loaded in this mode. 
+.TP
+.B "\-invertcolors "
+The map appears exactly as for the -monochrome option, but menus
+and cities are now shown in colors. This mode only involves about 15 colors 
+in total, and can be used for Pseudocolor displays which only have a
+small number of available colors. The -monochrome and -invertcolors options
+considerably reduce memory and CPU usage, and can be useful on
+slower machines. The option can also be useful if you want to produce 
+Earth maps in which only the coast lines of continents and lands.
 .TP
 .B "\-private "
 Force the allocation of a private colormap. This option has no effect on 
@@ -427,6 +438,30 @@ Specifies the bottom text background color. Default is Grey92.
 .TP
 .BI "\-textfgcolor " color
 Specifies the bottom text foreground color. Default is Black.
+.TP
+.BI "\-mapbgcolor " color
+Specifies the map background color to be used with monochrome maps
+(options -mono and -invert). Default is White.
+.TP
+.BI "\-mapfgcolor " color
+Specifies the map foreground color to be used with monochrome maps
+(options -mono and -invert). Default is Black.
+.TP
+.BI "\-zoombgcolor " color
+Specifies the zoom area background color to be used with the small
+monochrome map used in the zoom widget. Default is White.
+.TP
+.BI "\-zoomfgcolor " color
+Specifies the zoom area background color to be used with the small
+monochrome map used in the zoom widget. Default is Black.
+.TP
+.BI "\-changecolor " color
+Specifies the color to be used for widget objects that are supposed
+to indicate a change or a move (selector and zoom). Default is Brown.
+.TP
+.BI "\-choicecolor " color
+Specifies the color to be used for widget objects that are supposed
+to indicate a new selection (selector and zoom). Default is SkyBlue2.
 .TP
 .BI "\-dircolor " color
 Specifies the color used for representing directories in the file selection

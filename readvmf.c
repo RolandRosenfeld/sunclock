@@ -33,15 +33,16 @@
 #define grid(x,y) GRID[x*map->geom.height+y]
 
 extern char *ProgName;
-extern int invert, mono;
 
 extern Display *	dpy;
+extern Colormap         tmp_cmap;
+
 extern int		scr;
+extern int		bigendian;
 extern int              color_depth;
 extern int              color_pad;
 extern int              bytes_per_pixel;
 extern int              color_alloc_failed;
-extern int              fill_mode;
 extern int              verbose;
 
 static struct Sundata *map;
@@ -80,7 +81,7 @@ int u, v, s;
   c -= map->zoom.dx;
   v -= map->zoom.dy;
 
-  if (fill_mode==0) {
+  if (map->flags.fillmode==0) {
      if (c>=0 && c<(int)map->geom.width && v>=0 && v<(int)map->geom.height) {
         if (s>0) grid(c,v) = s * 65536;
         if (s<0) grid(c,v) = -s * 65536;
@@ -142,9 +143,9 @@ filterdata()
 {
 int i, j, t;
 
-    if (fill_mode==0) return;
+    if (map->flags.fillmode==0) return;
  
-    if (fill_mode==1) {
+    if (map->flags.fillmode==1) {
 
       for (j=0; j<map->geom.height; j++)
         for (i=0; i<map->geom.width; i++) {
@@ -173,7 +174,7 @@ int i, j, t;
       return;
     }
 
-    /* only remains fill_mode = 2 */
+    /* only remains fillmode = 2 */
     full = 1;
 
     for (j=0; j<map->geom.height; j++)
@@ -244,15 +245,15 @@ pixmap_image()
            l = palette[l];
        else
 	   l = max_palette+1;
-#ifdef BIGENDIAN
-       c[k+1] = (colors[l] >> 16) & 255;
-       c[k+2] = (colors[l] >> 8) & 255;
-       c[k+3] = colors[l];
-#else
-       c[k] = colors[l];
-       c[k+1] = (colors[l] >> 8) & 255;
-       c[k+2] = (colors[l] >> 16) & 255;
-#endif
+       if (bigendian) {
+          c[k+1] = (colors[l] >> 16) & 255;
+          c[k+2] = (colors[l] >> 8) & 255;
+          c[k+3] = colors[l];
+       } else {
+          c[k] = colors[l];
+          c[k+1] = (colors[l] >> 8) & 255;
+          c[k+2] = (colors[l] >> 16) & 255;
+       }
     }
   }
   else
@@ -266,13 +267,13 @@ pixmap_image()
            l = palette[l];
        else
 	   l = max_palette+1;
-#ifdef BIGENDIAN
-       c[k] = colors[l] / 256;
-       c[k+1] = colors[l] & 255;
-#else
-       c[k] = colors[l] & 255;
-       c[k+1] = colors[l] / 256;
-#endif
+       if (bigendian) {
+          c[k] = colors[l] / 256;
+          c[k+1] = colors[l] & 255;
+       } else {
+          c[k] = colors[l] & 255;
+          c[k+1] = colors[l] / 256;
+       }
     }
   }
   else
@@ -380,8 +381,8 @@ struct Sundata * Context;
     register Status s;
     str = getdata(fd);
     if (!str) goto abort;
-    if (!mono) {
-      s = XAllocNamedColor(dpy, map->cmap, str, &c, &e);
+    if (!map->flags.mono) {
+      s = XAllocNamedColor(dpy, tmp_cmap, str, &c, &e);
 	if (s != (Status)1) {
 		fprintf(stderr, "%s: warning: can't allocate color `%s'\n",
 			ProgName, buf);
@@ -424,7 +425,7 @@ struct Sundata * Context;
 
   str = getdata(fd);
   if (!str) goto abort;
-  if (fill_mode)
+  if (map->flags.fillmode)
      correct = atoi(str) * 65536;
   else
      correct = 0;
@@ -528,7 +529,7 @@ struct Sundata * Context;
   fclose(fd);
   filterdata();
 
-  if (invert)
+  if (map->flags.mono)
      Context->bits = blacknwhite_image();
   else
      Context->xim = pixmap_image();
@@ -538,7 +539,8 @@ struct Sundata * Context;
   free(colors);
   free(palette);
   if (color_alloc_failed) return 6;
-  if ((invert && Context->bits==NULL) || (!invert && Context->xim==NULL)) 
+  if ((map->flags.mono && Context->bits==NULL) || 
+      (!map->flags.mono && Context->xim==NULL)) 
      return 2;
   else
      return 0;

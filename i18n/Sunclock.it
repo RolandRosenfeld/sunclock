@@ -32,10 +32,15 @@ Cliccare su una città
 Cliccare su un punto
 Cliccare su due punti
 Cliccare ancora o premere Tab per ° ' "
-Nuova Carta/Finestra
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
 Tasto
 Tasto/Mouse
 Escape
+Uscire dal menu
+Unknown key binding !!
+Synchro
 Progressione =
 Scarto temporale =
 secondi
@@ -47,6 +52,7 @@ giorni
 Mostrare aiuto ed opzioni (H o mouse, bottone 1)
 Caricare carta della Terra (F o mouse, bottone 2)
 Zoom (Z o mouse, bottone 3)
+Option command window
 Utilizza la modalità coordinate
 Utilizza la modalità ora solare
 Utilizza la modalità distanze
@@ -68,18 +74,24 @@ Ridurre la finestra
 Rinfrescare la finestra
 Allargare la finestra alla dimensione dello schermo
 Ritornare a dimensione anteriore della carta
-Finestri sincronizzati - o no
 Invertire le finestre mappa/orologio 
 Attivare il comando specifico per l'opzione -command
 Abbandonare il programma
-Uscire dal menu
+# Zoom window help
 Activate new zoom settings
+Return to previous zoom settings
 Return to previous zoom settings
 Cycle through zoom modes 0,1,2
 Zoom in by factor 1.2
 Zoom out by factor 1/1.2 = 0.833
 Return to zoom factor = 1 (full map)
 Center zoom area on selected city or location
+# Option window help
+Activate the option
+Erase the option command line
+Finestri sincronizzati o no
+# Configurability
+Starting from **, options are runtime configurable.
 # Short help
 Sunclock dispone di un certo numero di funzioni accessibili per
 mezzo del mouse o della tastiera:

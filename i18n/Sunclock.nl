@@ -32,10 +32,15 @@ Klik op een plaats
 Klik op een locatie
 Klik achtereenvolgens op 2 locaties
 Dubbelklik of gebruik Tab voor ° ' "
-Nieuw Kaart/Scherm
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
 Toets
 Toets/muis controls
 Escape
+Beeindig menu
+Unknown key binding !!
+Synchro
 Stapgrootte =
 Tijdverschuiving =
 seconden
@@ -47,6 +52,7 @@ dagen
 Toon help en opties (H of muisknop 1)
 Laad aardkaart (F of muisknop 2)
 Zoom (Z of muisknop 3)
+Option command window
 Gebruik coordinaat modus
 Gebruik zonnetijd modus
 Gebruik afstands modus
@@ -68,18 +74,24 @@ Iconiseer scherm
 Ververs kaart scherm
 Pas venster aan aan schermgrootte
 Terug naar vorige schermgrootte
-Synchroniseer schermen of niet
 Schakel tussen klok en kaart scherm
 Activeer commando (-command optie)
 Verlaat programma
-Beeindig menu
+# Zoom window help
 Activate new zoom settings
+Return to previous zoom settings
 Return to previous zoom settings
 Cycle through zoom modes 0,1,2
 Zoom in by factor 1.2
 Zoom out by factor 1/1.2 = 0.833
 Return to zoom factor = 1 (full map)
 Center zoom area on selected city or location
+# Option window help
+Activate the option
+Erase the option command line
+Synchroniseer schermen of niet
+# Configurability
+Starting from **, options are runtime configurable.
 # Short help
 Sunclock heeft een aantal interne procedures welke met de muis of toetsen
 geactiveerd kunnen worden:

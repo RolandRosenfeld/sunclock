@@ -1,6 +1,7 @@
 # Installation options
 #
 DESTDIR=/usr
+MANDIR=/X11R6/man/man1
 SHAREDIR=/share/sunclock
 XAPPLOADDIR=/lib/X11/app-defaults
 XBINDIR=/bin/X11
@@ -33,7 +34,8 @@ LFLAGS=-L/usr/lib/X11 -lXpm -ljpeg -lsocket
 CFLAGS=-I/usr/include/X11 -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 LFLAGS=-L/usr/X11/lib -lXpm -ljpeg
 
-OFILES=sunclock.o astro.o tildepath.o dirlist.o readjpeg.o readvmf.o readxpm.o
+OFILES=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
+       readjpeg.o readvmf.o readxpm.o
 HFILES=langdef.h sunclock.h version.h
 
 all: sunclock
@@ -56,6 +58,9 @@ install: sunclock
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
 	./check_obsolete $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
+
+install.man:
+	cp -f sunclock.man $(DESTDIR)$(MANDIR)/sunclock.1x
 
 clean:
 	rm -f core *.bak *.o *~ sunclock
