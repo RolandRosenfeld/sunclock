@@ -138,8 +138,10 @@ extern double   phase();
 
 extern char *   salloc();
 extern int      readVMF();
+extern int      readGIF();
 extern int      readJPEG();
 extern int      readXPM();
+extern int      readPNG();
 
 extern void free_dirlist();
 
@@ -329,7 +331,7 @@ Window          Root,
 struct Geometry MapGeom    = { 0, 30,  30, 792, 396, 320, 160 };
 struct Geometry ClockGeom  = { 0, 30,  30, 128,  64,  48,  24 };
 struct Geometry MenuGeom   = { 0,  0,  30, 792,  40, 792,  40 };
-struct Geometry FileselGeom= { 0,  0,  30, 600, 180, 450,  80 };
+struct Geometry FileselGeom= { 0,  0,  30, 450, 180, 400,  80 };
 struct Geometry ZoomGeom   = { 0,  0,  30, 500, 320, 360, 250 };
 struct Geometry OptionGeom = { 0,  0,  30, 630,  80, 630,  80 };
 struct Geometry UrbanGeom  = { 0,  0,  30, 640, 120, 360, 120 };
@@ -472,7 +474,9 @@ Usage()
      SP"[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>]\n"
      SP"[-title name] [-mapclassname name] [-clockclassname name]\n"
      SP"[-auxilclassname name] [-classname name]\n"
-     SP"[-setfont field|name (field = clockstrip, mapstrip, city, coord, menu)\n"
+     SP"[-setfont <field>|<fontsetting>{|<languages>}]\twhere\n"
+     SP"\t<field> = clockstrip, mapstrip, city, coord, menu\n"
+     SP"\t<languages> = comma separated list (optional)\n"	     
      SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
      SP"[-colorlevel level] [-aspect mode]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
@@ -547,7 +551,7 @@ initValues()
         gflags.meridian = 0;
         gflags.parallel = 0;
 
-        gzoom.mode = 0;
+        gzoom.mode = 2;
         gzoom.fx = 1.0;
         gzoom.fy = 1.0;
         gzoom.fdx = 0.5;
@@ -583,6 +587,90 @@ initValues()
            strncpy(language, getenv("LANG"), 2);
         if (!(language[0] && language[1]))
            strcpy (language,"en");
+}
+
+/*
+ *  Fill line procedure for scanned images
+ */
+#define RANGE 252
+long lr[RANGE], lg[RANGE], lb[RANGE], lnum[RANGE];
+
+void
+fill_line(char *scan, char* c, int w, int zw, int wp, int dx)
+{
+unsigned char r, g, b;
+int i, j, k, m;
+  k = 0;
+  if (color_depth>16) {
+    if (bigendian)
+       k = bytes_per_pixel - 3;
+    for (i = 0; i < w; i++) {
+       j = 3 * (((i+dx) * wp)/zw);
+       if (bigendian) {
+          c[k] = scan[j];
+          c[k+1] = scan[j+1];
+          c[k+2] = scan[j+2];
+       } else {
+          c[k] = scan[j+2];
+          c[k+1] = scan[j+1];
+          c[k+2] = scan[j];
+       }
+       k +=  bytes_per_pixel;
+    }
+  } else
+  if (color_depth==16)
+     for (i = 0; i < w; i++) {
+       j = 3 * (((i+dx) * wp)/zw);
+       r = scan[j];
+       g = scan[j+1];
+       b = scan[j+2];
+       /* blue  c[k] = 31;  c[k+1] = 0;
+          green c[k] = 224  (low weight) c[k+1] = 7 (high weight)
+          red   c[k] = 0;   c[k+1] = 248; */
+       if (bigendian) {
+          c[k+1] = (((b&248)>>3) | ((g&28)<<3));
+          c[k] = (((g&224)>>5) | (r&248));
+       } else {
+          c[k] = (((b&248)>>3) | ((g&28)<<3));
+          c[k+1] = (((g&224)>>5) | (r&248));
+       }
+       k += 2;
+     }
+  else
+  if (color_depth==15)
+     for (i = 0; i < w; i++) {
+       j = 3 * (((i+dx) * wp)/zw);
+       r = scan[j];
+       g = scan[j+1];
+       b = scan[j+2];
+       /* blue  c[k] = 31;  c[k+1] = 0;
+          green c[k] = 224  (low weight) c[k+1] = 7 (high weight)
+          red   c[k] = 0;   c[k+1] = 248; */
+       if (bigendian) {
+          c[k+1] = (b&248)>>3 | (g&56)<<2;
+          c[k] = (g&192)>>6 | (r&248)>>1;
+       } else {
+          c[k] = (b&248)>>3 | (g&56)<<2;
+          c[k+1] = (g&192)>>6 | (r&248)>>1;
+       }
+       k += 2;
+     }
+  else {
+     for (i = 0; i < w; i++) {
+       j = 3 * (((i+dx) * wp)/zw);
+       r = scan[j];
+       g = scan[j+1];
+       b = scan[j+2];
+       c[k] = (unsigned char) 
+       (((7*g)/256)*36)+(((6*r)/256)*6)+((6*b)/256);
+       m = (unsigned char)c[k];
+       lr[m] += r;
+       lg[m] += g;
+       lb[m] += b;
+       lnum[m] += 1;
+       k += 1;
+     }
+  }
 }
 
 void
@@ -781,7 +869,7 @@ char *string;
 {
 double deg=0.0, min=0.0, sec=0.0;
 
-    if (rindex(string, '°')) {
+    if (index(string, '°')) {
        sscanf(string, "%lf°%lf'%lf", &deg, &min, &sec);
        return deg+(min+sec/60.0)/60.0;
     } else
@@ -822,7 +910,7 @@ char *params;
 
      if (!params || !*params) return NULL;
 
-     if (rindex(params, '|')) {
+     if (index(params, '|')) {
         l =strlen(params);
         for (i=0; i<l; i++) {
             if (params[i] == ' ') params[i]= '\037';
@@ -1046,33 +1134,44 @@ int
 parseFont(s)
 char * s;
 {
-int i, l, done = 0;
-char *ptr = NULL;
+int i, l1, l2 = 0, done;
+char *ptr1 = NULL, *ptr2 = NULL;
 
-    l = strlen(s);
-    for (i=0; i<l; i++) {
+    done = strlen(s);
+    for (i=0; i<done; i++) {
         if (s[i]=='|') {
 	   s[i] = '\0';
-	   ptr = s+i+1;
-	   break;
+	   if (!ptr1) {
+	      ptr1 = s+i+1;
+	      l1 = i;
+	   } else {
+	      ptr2 = s+i+1;
+	      l2 = i;
+  	      break;
+	   } 
 	}
     }
-    l = i;
-
-    if (!strcasecmp(s, "menu") && ptr && strcmp(ptr, SunFont[i]))
+   
+    /* Do not take font setting into account if selected language is
+       not specified in list of languages */
+    if (ptr2 && !strstr(ptr2, language)) return 0;
+	
+    if (!strcasecmp(s, "menu") && ptr1 && strcmp(ptr1, SunFont[4]))
        option_changes |= 1;
 	
-    if (ptr) {
+    done = 0;
+    if (ptr1) {
        for (i=0; i<NUMFONTS; i++)
           if (!strcasecmp(s, fontfield[i])) {
-             StringReAlloc(&SunFont[i], ptr);
+             StringReAlloc(&SunFont[i], ptr1);
              done = 1;
 	     break;
           }
-       s[l] = '|';
+       s[l1] = '|';
+       if (l2) s[l2] = '|';
     }
 
-    if (!ptr || !done) {
+    if (!ptr1 || !done) {
        fprintf(stderr, "Incorrect -setfont specification\n");
        return 1;
     }
@@ -1089,128 +1188,128 @@ char **                argv;
 
         while (--argc > 0) {
                 ++argv;
-                if (strcasecmp(*argv, "-verbose") == 0)
+                if (!strcasecmp(*argv, "-verbose"))
                         verbose = 1;
-                else if (strcasecmp(*argv, "-reformat") == 0)
+                else if (!strcasecmp(*argv, "-reformat"))
                         reformat = 1;
-                else if (strcasecmp(*argv, "-silent") == 0)
+                else if (!strcasecmp(*argv, "-silent"))
                         verbose = 0;
-                else if (strcasecmp(*argv, "-synchro") == 0)
+                else if (!strcasecmp(*argv, "-synchro"))
                         do_sync = 1;
-                else if (strcasecmp(*argv, "-nosynchro") == 0)
+                else if (!strcasecmp(*argv, "-nosynchro"))
                         do_sync = 0;
-                else if (strcasecmp(*argv, "-zoomsync") == 0)
+                else if (!strcasecmp(*argv, "-zoomsync"))
                         do_zoomsync = 1;
-                else if (strcasecmp(*argv, "-nozoomsync") == 0)
+                else if (!strcasecmp(*argv, "-nozoomsync"))
                         do_zoomsync = 0;
-                else if (strcasecmp(*argv, "-animation") == 0)
+                else if (!strcasecmp(*argv, "-animation"))
                         gflags.animate = 1;
-                else if (strcasecmp(*argv, "-noanimation") == 0)
+                else if (!strcasecmp(*argv, "-noanimation"))
                         gflags.animate = 0;
-                else if (strcasecmp(*argv, "-coastlines") == 0)
+                else if (!strcasecmp(*argv, "-coastlines"))
                         gflags.fillmode = 0;
-                else if (strcasecmp(*argv, "-contour") == 0)
+                else if (!strcasecmp(*argv, "-contour"))
                         gflags.fillmode = 1;
-                else if (strcasecmp(*argv, "-landfill") == 0)
+                else if (!strcasecmp(*argv, "-landfill"))
                         gflags.fillmode = 2;
-                else if (strcasecmp(*argv, "-dottedlines") == 0)
+                else if (!strcasecmp(*argv, "-dottedlines"))
                         gflags.dotted = 0;
-                else if (strcasecmp(*argv, "-plainlines") == 0)
+                else if (!strcasecmp(*argv, "-plainlines"))
                         gflags.dotted = 1;
-                else if (strcasecmp(*argv, "-bottomline") == 0)
+                else if (!strcasecmp(*argv, "-bottomline"))
                         gflags.bottom = 1;
-                else if (strcasecmp(*argv, "-nobottomline") == 0)
+                else if (!strcasecmp(*argv, "-nobottomline"))
                         gflags.bottom = 0;
-                else if (strcasecmp(*argv, "-decimal") == 0)
+                else if (!strcasecmp(*argv, "-decimal"))
                         gflags.dms = 0;
-                else if (strcasecmp(*argv, "-dms") == 0)
+                else if (!strcasecmp(*argv, "-dms"))
                         gflags.dms = gflags.dms = 1;
-                else if (strcasecmp(*argv, "-nonight") == 0)
+                else if (!strcasecmp(*argv, "-nonight"))
                         gflags.shading = 0;
-                else if (strcasecmp(*argv, "-night") == 0)
+                else if (!strcasecmp(*argv, "-night"))
                         gflags.shading = 1;
-                else if (strcasecmp(*argv, "-terminator") == 0)
+                else if (!strcasecmp(*argv, "-terminator"))
                         gflags.shading = 2;
-                else if (strcasecmp(*argv, "-twilight") == 0)
+                else if (!strcasecmp(*argv, "-twilight"))
                         gflags.shading = 3;
-                else if (strcasecmp(*argv, "-luminosity") == 0)
+                else if (!strcasecmp(*argv, "-luminosity"))
                         gflags.shading = 4;
-                else if (strcasecmp(*argv, "-lightgradient") == 0)
+                else if (!strcasecmp(*argv, "-lightgradient"))
                         gflags.shading = 5;
-                else if (strcasecmp(*argv, "-tropics") == 0)
+                else if (!strcasecmp(*argv, "-tropics"))
                         gflags.parallel |= 8;
-                else if (strcasecmp(*argv, "-notropics") == 0)
+                else if (!strcasecmp(*argv, "-notropics"))
                         gflags.parallel &= 3;
-                else if (strcasecmp(*argv, "-sun") == 0)
+                else if (!strcasecmp(*argv, "-sun"))
                         gflags.objects |= 1;
-                else if (strcasecmp(*argv, "-nosun") == 0)
+                else if (!strcasecmp(*argv, "-nosun"))
                         gflags.objects &= ~1;
-                else if (strcasecmp(*argv, "-moon") == 0)
+                else if (!strcasecmp(*argv, "-moon"))
                         gflags.objects |= 2;
-		else if (strcasecmp(*argv, "-nomoon") == 0)
+		else if (!strcasecmp(*argv, "-nomoon"))
                         gflags.objects &= ~2;
-                else if (strcasecmp(*argv, "-dock") == 0)
+                else if (!strcasecmp(*argv, "-dock"))
                         do_dock = 1;
-                else if (strcasecmp(*argv, "-undock") == 0)
+                else if (!strcasecmp(*argv, "-undock"))
                         do_dock = 0;
                 else if (runlevel == RUNTIMEOPTION) {
                         if (needMore(&argc, argv)) return(1);
                         goto options_with_parameter;
 		}
-                else if (strcasecmp(*argv, "-citycheck") == 0)
+                else if (!strcasecmp(*argv, "-citycheck"))
                         citycheck = 1;
-                else if (strcasecmp(*argv, "-clock") == 0)
+                else if (!strcasecmp(*argv, "-clock"))
                         win_type = 0;
-                else if (strcasecmp(*argv, "-map") == 0)
+                else if (!strcasecmp(*argv, "-map"))
                         win_type = 1;
-                else if (strcasecmp(*argv, "-screensaver") == 0 &&
+                else if (!strcasecmp(*argv, "-screensaver") &&
 			 runlevel <= PARSECMDLINE) {
                         screen_saver = 1;
 			random_rootpos = 1;
 			win_type = 1;
 		}
-                else if (strcasecmp(*argv, "-noscreensaver") == 0 &&
+                else if (!strcasecmp(*argv, "-noscreensaver") &&
 			 runlevel <= PARSECMDLINE) {
                         screen_saver = 0;
 			random_rootpos = 0;
 		}
-                else if (strcasecmp(*argv, "-fixedrootpos") == 0)
+                else if (!strcasecmp(*argv, "-fixedrootpos"))
                         random_rootpos = 0;
-                else if (strcasecmp(*argv, "-randomrootpos") == 0)
+                else if (!strcasecmp(*argv, "-randomrootpos"))
                         random_rootpos = 1;
-                else if (strcasecmp(*argv, "-menu") == 0)
+                else if (!strcasecmp(*argv, "-menu"))
                         do_menu = 1;
-                else if (strcasecmp(*argv, "-nomenu") == 0)
+                else if (!strcasecmp(*argv, "-nomenu"))
                         do_menu = 0;
-                else if (strcasecmp(*argv, "-filesel") == 0)
+                else if (!strcasecmp(*argv, "-filesel"))
                         do_filesel = 1;
-                else if (strcasecmp(*argv, "-nofilesel") == 0)
+                else if (!strcasecmp(*argv, "-nofilesel"))
                         do_filesel = 0;
-                else if (strcasecmp(*argv, "-zoom") == 0)
+                else if (!strcasecmp(*argv, "-zoom"))
                         do_zoom = 1;
-                else if (strcasecmp(*argv, "-nozoom") == 0)
+                else if (!strcasecmp(*argv, "-nozoom"))
                         do_zoom = 0;
-                else if (strcasecmp(*argv, "-option") == 0)
+                else if (!strcasecmp(*argv, "-option"))
                         do_option = 1;
-                else if (strcasecmp(*argv, "-nooption") == 0)
+                else if (!strcasecmp(*argv, "-nooption"))
                         do_option = 0;
-                else if (strcasecmp(*argv, "-urban") == 0)
+                else if (!strcasecmp(*argv, "-urban"))
                         do_urban = 1;
-                else if (strcasecmp(*argv, "-nourban") == 0)
+                else if (!strcasecmp(*argv, "-nourban"))
                         do_urban = 0;
-                else if (strcasecmp(*argv, "-help") == 0) {
+                else if (!strcasecmp(*argv, "-help")) {
 		        if (runlevel == PARSECMDLINE) {
 			   Usage();
 			   exit(0);
 			}
 		}
-                else if (strcasecmp(*argv, "-listmenu") == 0) {
+                else if (!strcasecmp(*argv, "-listmenu")) {
                         if (runlevel == PARSECMDLINE) { 
                            ListMenu();
 			   exit(0);
 			}
                 }
-                else if (strcasecmp(*argv, "-version") == 0) {
+                else if (!strcasecmp(*argv, "-version")) {
                         fprintf(stderr, "%s: version %s, %s\n",
                                 ProgName, VERSION, COPYRIGHT);
                         if (runlevel == PARSECMDLINE) 
@@ -1220,20 +1319,20 @@ char **                argv;
 		}
              else {
                 if (needMore(&argc, argv)) return(1);
-                if (strcasecmp(*argv, "-display") == 0)
+                if (!strcasecmp(*argv, "-display"))
                         StringReAlloc(&Display_name, *++argv); 
-                else if (strcasecmp(*argv, "-sharedir") == 0) {
+                else if (!strcasecmp(*argv, "-sharedir")) {
                         StringReAlloc(&share_maps_dir, *++argv);
                         strncpy(image_dir, *argv, 1020);
 		}
-                else if (strcasecmp(*argv, "-citycategories") == 0) {
+                else if (!strcasecmp(*argv, "-citycategories")) {
                         city_cat = atoi(*++argv);
 			if (city_cat <= 0) city_cat = 1;
 			if (city_cat > 100) city_cat = 100;
 		}
                 else 
 	        options_with_parameter :
-                     if (strcasecmp(*argv, "-rcfile") == 0) {
+                     if (!strcasecmp(*argv, "-rcfile")) {
 		        if (runlevel == RUNTIMEOPTION) {
 			   runlevel = READUSERRC;
                            if (readRC(*++argv)) runlevel = FAILEDOPTION;
@@ -1241,21 +1340,21 @@ char **                argv;
                               runlevel = RUNTIMEOPTION;
 			}
 		}
-                else if (strcasecmp(*argv, "-language") == 0) {
+                else if (!strcasecmp(*argv, "-language")) {
                         strncpy(language, *++argv, 2);
 			if (strcmp(language, oldlanguage)) readLanguage();
                 } 
-	        else if (strcasecmp(*argv, "-title") == 0)
+	        else if (!strcasecmp(*argv, "-title"))
                         StringReAlloc(&Title, *++argv);
-	        else if (strcasecmp(*argv, "-clockclassname") == 0)
+	        else if (!strcasecmp(*argv, "-clockclassname"))
                         StringReAlloc(&ClockClassName, *++argv);
-	        else if (strcasecmp(*argv, "-mapclassname") == 0)
+	        else if (!strcasecmp(*argv, "-mapclassname"))
                         StringReAlloc(&MapClassName, *++argv);
-	        else if (strcasecmp(*argv, "-auxilclassname") == 0)
+	        else if (!strcasecmp(*argv, "-auxilclassname"))
                         StringReAlloc(&AuxilClassName, *++argv);
-	        else if (strcasecmp(*argv, "-classname") == 0)
+	        else if (!strcasecmp(*argv, "-classname"))
                         StringReAlloc(&ClassName, *++argv);
-                else if (strcasecmp(*argv, "-colorlevel") == 0) {
+                else if (!strcasecmp(*argv, "-colorlevel")) {
                         gflags.colorlevel = atoi(*++argv);
 			if (gflags.colorlevel < 0) gflags.colorlevel = 0;
 			if (gflags.colorlevel >= FULLCOLORS) {
@@ -1264,41 +1363,41 @@ char **                argv;
 			} else
  			   gflags.fillmode = 1;
   	        }
-		else if (strcasecmp(*argv, "-vmfflags") == 0) {
+		else if (!strcasecmp(*argv, "-vmfflags")) {
 		        gflags.vmfflags = atoi(*++argv);
 			option_changes |= 4;			
 		}
-		else if (strcasecmp(*argv, "-vmfrange") == 0) {
+		else if (!strcasecmp(*argv, "-vmfrange")) {
                         StringReAlloc(&vmfrange, *++argv);
 		}
-		else if (strcasecmp(*argv, "-vmfcoordformat") == 0) {
+		else if (!strcasecmp(*argv, "-vmfcoordformat")) {
                         StringReAlloc(&vmfcoordformat, *++argv);
 		}
-		else if (strcasecmp(*argv, "-vmfcolors") == 0) {
+		else if (!strcasecmp(*argv, "-vmfcolors")) {
                         StringReAlloc(&vmfcolors, *++argv);
-                        if (strcmp(vmfcolors, "|") == 0) {
+                        if (!strcmp(vmfcolors, "|")) {
 			   free(vmfcolors);
 			   vmfcolors = NULL;
 			}
 			option_changes |= 4;
 		}
-		else if (strcasecmp(*argv, "-clockgeom") == 0) {
+		else if (!strcasecmp(*argv, "-clockgeom")) {
                         getGeom(*++argv, &ClockGeom);
 			option_changes |= 8;
                 }
-                else if (strcasecmp(*argv, "-mapgeom") == 0) {
+                else if (!strcasecmp(*argv, "-mapgeom")) {
                         getGeom(*++argv, &MapGeom);
 			option_changes |= 16;
                 }
-                else if (strcasecmp(*argv, "-clockimage") == 0) {
+                else if (!strcasecmp(*argv, "-clockimage")) {
                         StringReAlloc(&Clock_img_file, *++argv);
 			option_changes |= 32;
                 }
-                else if (strcasecmp(*argv, "-mapimage") == 0) {
+                else if (!strcasecmp(*argv, "-mapimage")) {
                         StringReAlloc(&Map_img_file, *++argv);
 			option_changes |= 64;
                 }
-                else if (strcasecmp(*argv, "-auxilgeom") == 0) {
+                else if (!strcasecmp(*argv, "-auxilgeom")) {
                         getGeom(*++argv, &MenuGeom);
 			option_changes |= 2;
 			ZoomGeom.x = FileselGeom.x 
@@ -1310,60 +1409,60 @@ char **                argv;
                                    = UrbanGeom.y 
                                    = MenuGeom.y;
                 }
-                else if (strcasecmp(*argv, "-menugeom") == 0) {
+                else if (!strcasecmp(*argv, "-menugeom")) {
                         getGeom(*++argv, &MenuGeom);
 			option_changes |= 2;
                 }
-                else if (strcasecmp(*argv, "-selgeom") == 0) {
+                else if (!strcasecmp(*argv, "-selgeom")) {
                         getGeom(*++argv, &FileselGeom);
 			option_changes |= 2;
                 }
-                else if (strcasecmp(*argv, "-zoomgeom") == 0) {
+                else if (!strcasecmp(*argv, "-zoomgeom")) {
                         getGeom(*++argv, &ZoomGeom);
 			option_changes |= 2;
                 }
-                else if (strcasecmp(*argv, "-optiongeom") == 0) {
+                else if (!strcasecmp(*argv, "-optiongeom")) {
                         getGeom(*++argv, &OptionGeom);
 			option_changes |= 2;
                 }
-                else if (strcasecmp(*argv, "-urbangeom") == 0) {
+                else if (!strcasecmp(*argv, "-urbangeom")) {
                         getGeom(*++argv, &UrbanGeom);
 			option_changes |= 2;
                 }
-                else if (strcasecmp(*argv, "-mag") == 0) {
+                else if (!strcasecmp(*argv, "-mag")) {
                         gzoom.fx = atof(*++argv);
                         if (gzoom.fx < 1) gzoom.fx = 1.0;
                         if (gzoom.fx > 100.0) gzoom.fx = 100.0;
                         gzoom.fy = gzoom.fx;
 			option_changes |= 4;
                 }
-                else if (strcasecmp(*argv, "-magx") == 0) {
+                else if (!strcasecmp(*argv, "-magx")) {
                         gzoom.fx = atof(*++argv);
                         if (gzoom.fx < 1) gzoom.fx = 1.0;
 			option_changes |= 4;
                 }
-                else if (strcasecmp(*argv, "-magy") == 0) {
+                else if (!strcasecmp(*argv, "-magy")) {
                         gzoom.fy = atof(*++argv);
                         if (gzoom.fy < 1) gzoom.fy = 1.0;
 			option_changes |= 4;
                 }
-                else if (strcasecmp(*argv, "-dx") == 0) {
+                else if (!strcasecmp(*argv, "-dx")) {
                         gzoom.fdx = atof(*++argv)/360.0+0.5;
                         checkZoomSettings(&gzoom);
 			option_changes |= 4;
                 }
-                else if (strcasecmp(*argv, "-dy") == 0) {
+                else if (!strcasecmp(*argv, "-dy")) {
                         gzoom.fdy = 0.5-atof(*++argv)/180.0;
                         checkZoomSettings(&gzoom);
 			option_changes |= 4;
                 }
-                else if (strcasecmp(*argv, "-rootdx") == 0)
+                else if (!strcasecmp(*argv, "-rootdx"))
 		        rootdx = atof(*++argv);
-                else if (strcasecmp(*argv, "-rootdy") == 0)
+                else if (!strcasecmp(*argv, "-rootdy"))
 		        rootdy = atof(*++argv);
-                else if (strcasecmp(*argv, "-setfont") == 0)
+                else if (!strcasecmp(*argv, "-setfont"))
                         parseFont(*++argv); 
-                else if (strcasecmp(*argv, "-mapmode") == 0) {
+                else if (!strcasecmp(*argv, "-mapmode")) {
                         if (!strcasecmp(*++argv, "c")) 
                            gflags.map_mode = COORDINATES;
                         if (!strcasecmp(*argv, "d")) 
@@ -1377,77 +1476,77 @@ char **                argv;
                         if (!strcasecmp(*argv, "s")) 
                            gflags.map_mode = SOLARTIME;
                 }
-                else if (strcasecmp(*argv, "-parallelmode") == 0) {
+                else if (!strcasecmp(*argv, "-parallelmode")) {
                         opt = atoi(*++argv);
                         if (opt<0) opt = 0;
                         if (opt>3) opt = 3;
 			gflags.parallel = opt + (gflags.parallel & 8);
                 } 
-		else if (strcasecmp(*argv, "-parallelspacing") == 0) {
+		else if (!strcasecmp(*argv, "-parallelspacing")) {
                         gzoom.paralspacing = atof(*++argv);
                         if (gzoom.paralspacing<0) gzoom.paralspacing = 0;
                         if (gzoom.paralspacing>30.0) gzoom.paralspacing = 30.0;
                         if (gzoom.paralspacing<0.1) gzoom.paralspacing = 0.1;
                 } 
-		else if (strcasecmp(*argv, "-meridianmode") == 0) {
+		else if (!strcasecmp(*argv, "-meridianmode")) {
                         gflags.meridian = atoi(*++argv);
                         if (gflags.meridian<0) gflags.meridian = 0;
                         if (gflags.meridian>3) gflags.meridian = 3;
                 } 
-		else if (strcasecmp(*argv, "-meridianspacing") == 0) {
+		else if (!strcasecmp(*argv, "-meridianspacing")) {
                         gzoom.meridspacing = atof(*++argv);
                         if (gzoom.meridspacing<0) gzoom.meridspacing = 0;
                         if (gzoom.meridspacing>30.0) gzoom.meridspacing = 30.0;
                         if (gzoom.meridspacing<0.1) gzoom.meridspacing = 0.1;
                 } 
-		else if (strcasecmp(*argv, "-citymode") == 0) {
+		else if (!strcasecmp(*argv, "-citymode")) {
                         gflags.citymode = atoi(*++argv);
                         if (gflags.citymode<0) gflags.citymode = 0;
                         if (gflags.citymode>3) gflags.citymode = 3;
                 } 
-		else if (strcasecmp(*argv, "-objectmode") == 0) {
+		else if (!strcasecmp(*argv, "-objectmode")) {
                         gflags.objectmode = atoi(*++argv);
                         if (gflags.objectmode<0) gflags.objectmode = 0;
                         if (gflags.objectmode>=2) gflags.objectmode = 2;
 		}
-                else if (strcasecmp(*argv, "-spotsizes") == 0)
+                else if (!strcasecmp(*argv, "-spotsizes"))
                         StringReAlloc(&SpotSizes, *++argv);
-                else if (strcasecmp(*argv, "-sizelimits") == 0)
+                else if (!strcasecmp(*argv, "-sizelimits"))
                         StringReAlloc(&SizeLimits, *++argv);
-                else if (strcasecmp(*argv, "-fillmode") == 0) {
+                else if (!strcasecmp(*argv, "-fillmode")) {
                         gflags.fillmode = atoi(*++argv);
                         if (gflags.fillmode<0) gflags.fillmode = 0;
                         if (gflags.fillmode>3) gflags.fillmode = 3;
                 }
-                else if (strcasecmp(*argv, "-darkness") == 0) {
+                else if (!strcasecmp(*argv, "-darkness")) {
                         darkness = atof(*++argv);
                         if (darkness<0.0) darkness = 0.0;
                         if (darkness>1.0) darkness = 1.0;
                 }
-                else if (strcasecmp(*argv, "-diffusion") == 0) {
+                else if (!strcasecmp(*argv, "-diffusion")) {
                         atm_diffusion = atof(*++argv);
                         if (atm_diffusion<0.0) atm_diffusion = 0.0;
                 }
-                else if (strcasecmp(*argv, "-refraction") == 0) {
+                else if (!strcasecmp(*argv, "-refraction")) {
                         atm_refraction = atof(*++argv);
                         if (atm_refraction<0.0) atm_refraction = 0.0;
                 }
-                else if (strcasecmp(*argv, "-colorscale") == 0) {
+                else if (!strcasecmp(*argv, "-colorscale")) {
 			opt = atoi(*++argv);
 			if (opt<=0) opt = 1;
 			if (opt>32767) opt = 32767;
                         gflags.colorscale = opt;
                 }
-		else if (strcasecmp(*argv, "-setcolor") == 0) {
+		else if (!strcasecmp(*argv, "-setcolor")) {
 		        if (parseColor(*++argv)) return(1);
 		}
-                else if (strcasecmp(*argv, "-addcity") == 0) 
+                else if (!strcasecmp(*argv, "-addcity")) 
 		        (void) addCity(*++argv);
-		else if (strcasecmp(*argv, "-removecity") == 0) {
+		else if (!strcasecmp(*argv, "-removecity")) {
 		        City * c = searchCityLocation(*++argv);
 		        removeCity(c);
 		}
-		else if (strcasecmp(*argv, "-position") == 0) {
+		else if (!strcasecmp(*argv, "-position")) {
                         StringReAlloc(&CityInit, NULL);
                         scanPosition(*++argv, &position);
 			if (position.lat < -90.0) {
@@ -1456,12 +1555,12 @@ char **                argv;
 			  return(1);
 			}
 		}
-                else if (strcasecmp(*argv, "-city") == 0) {
+                else if (!strcasecmp(*argv, "-city")) {
                         StringReAlloc(&CityInit, *++argv);
                         position.lat = 100.0;
                         gflags.map_mode = COORDINATES;
                 }
-                else if (strcasecmp(*argv, "-placement") == 0) {
+                else if (!strcasecmp(*argv, "-placement")) {
 		        option_changes |= 2;
                         if (strcasecmp(*++argv, "random")==0)
                            placement = RANDOM;
@@ -1470,20 +1569,20 @@ char **                argv;
                            MapGeom.mask = XValue | YValue | 
                                           WidthValue | HeightValue;
                         }
-                        if (strcasecmp(*argv, "center")==0)
+                        if (!strcasecmp(*argv, "center")==0)
                            placement = CENTER;
-                        if (strcasecmp(*argv, "nw")==0)
+                        if (!strcasecmp(*argv, "nw")==0)
                            placement = NW;
-                        if (strcasecmp(*argv, "ne")==0)
+                        if (!strcasecmp(*argv, "ne")==0)
                            placement = NE;
-                        if (strcasecmp(*argv, "sw")==0)
+                        if (!strcasecmp(*argv, "sw")==0)
                            placement = SW;
-                        if (strcasecmp(*argv, "se")==0)
+                        if (!strcasecmp(*argv, "se")==0)
                            placement = SE;
                 }
-                else if (strcasecmp(*argv, "-extrawidth") == 0)
+                else if (!strcasecmp(*argv, "-extrawidth"))
 			extra_width = atol(*++argv);
-                else if (strcasecmp(*argv, "-placementshift") == 0) {
+                else if (!strcasecmp(*argv, "-placementshift")) {
 		        option_changes |= 2;
 			if (sscanf(*++argv, "%d %d", 
                             &place_shiftx, &place_shifty) < 2) {
@@ -1492,19 +1591,19 @@ char **                argv;
 			  return(1);
 			}
 		}
-                else if (strcasecmp(*argv, "-command") == 0)
+                else if (!strcasecmp(*argv, "-command"))
                         StringReAlloc(&ExternAction, *++argv);
-                else if (strcasecmp(*argv, "-helpcommand") == 0)
+                else if (!strcasecmp(*argv, "-helpcommand"))
                         StringReAlloc(&HelpCommand, *++argv);
-                else if (strcasecmp(*argv, "-dateformat") == 0)
+                else if (!strcasecmp(*argv, "-dateformat"))
                         StringReAlloc(&ListFormats, *++argv);
-                else if (strcasecmp(*argv, "-shading") == 0) {
+                else if (!strcasecmp(*argv, "-shading")) {
                         gflags.shading = atoi(*++argv);
                         if (gflags.shading < 0) gflags.shading = 0;
                         if (gflags.shading > 5) gflags.shading = 5;
                 }
-                else if ((opt = (strcasecmp(*argv, "-progress") == 0)) ||
-                         (strcasecmp(*argv, "-jump") == 0)) {
+                else if (!(opt = (strcasecmp(*argv, "-progress"))) ||
+                         (strcasecmp(*argv, "-jump"))) {
                         char *str, *invalid, c;
                         long value;
                         str=*++argv;
@@ -1534,17 +1633,17 @@ char **                argv;
                         } else 
                            time_jump = value;
                 }
-                else if (strcasecmp(*argv, "-rootperiod") == 0) {
+                else if (!strcasecmp(*argv, "-rootperiod")) {
                         root_period = atoi(*++argv);
                         if (root_period<=0) root_period = 1;
                         if (root_period>120) root_period = 120;
                 }
-                else if (strcasecmp(*argv, "-animateperiod") == 0) {
+                else if (!strcasecmp(*argv, "-animateperiod")) {
                         gflags.animperiod = atoi(*++argv);
                         if (gflags.animperiod<0) gflags.animperiod = 0;
                         if (gflags.animperiod>5) gflags.animperiod = 5;
                 }
-                else if (strcasecmp(*argv, "-aspect") == 0) {
+                else if (!strcasecmp(*argv, "-aspect")) {
                         gzoom.mode = atoi(*++argv);
                         if (gzoom.mode<0) gzoom.mode = 0;
                         if (gzoom.mode>2) gzoom.mode = 2;
@@ -2123,7 +2222,7 @@ short dms;
           m = (int) value;
           value = 60 * (value - m);       
           s = (int) value;
-          sprintf(string, "%d°%02d'%02d\"", eps*d, m, s);
+          sprintf(string, "%s%d°%02d'%02d\"", (eps==1)?"":"-", d, m, s);
         } else
           sprintf(string, "%.3f", value); 
         return string;
@@ -2217,8 +2316,20 @@ struct Sundata * Context;
 
         if (!Context->wintype) {
                 char num[80];
+                int hour; 
+                char ampm;
+
                 setTZ(NULL);
                 ltp = *localtime(&gtime);
+                gtp = *gmtime(&gtime);	   
+	   
+	        hour = ltp.tm_hour;
+	        if (hour<12)
+	           ampm = 'A';
+	        else
+	           ampm = 'P';
+                if (hour > 12)
+                   hour -= 12;
                 l = strlen(DateFormat[Context->flags.clock_mode]);
                 *s = '\0';
                 for (i=0; i<l; i++) {
@@ -2231,8 +2342,11 @@ struct Sundata * Context;
                       ++i; 
                       c = DateFormat[Context->flags.clock_mode][i];
                       switch(c) {
+                        case 'G': sprintf(num, "%02d", gtp.tm_hour); break;			 
                         case 'H': sprintf(num, "%02d", ltp.tm_hour); break;
                         case 'M': sprintf(num, "%02d", ltp.tm_min); break;
+                        case 'N': sprintf(num, "%02d", gtp.tm_min); break;			 
+                        case 'P': num[0]=ampm; num[1]='\0'; break;
                         case 'S': sprintf(num, "%02d", ltp.tm_sec); break;
 #ifdef NEW_CTIME
                         case 'Z': strcpy(num, ltp.tm_zone); break;
@@ -2241,6 +2355,7 @@ struct Sundata * Context;
 #endif
                         case 'a': strcpy(num, Day_name[ltp.tm_wday]); break;
                         case 'd': sprintf(num, "%02d", ltp.tm_mday); break;
+                        case 'h': sprintf(num, "%02d", hour); break;			 
                         case 'j': sprintf(num, "%02d", 1+ltp.tm_yday); break;
                         case 'b': strcpy(num, Month_name[ltp.tm_mon]); break;
                         case 'm': sprintf(num, "%02d", 1+ltp.tm_mon); break;
@@ -2501,6 +2616,7 @@ int build;
 	   memcpy(Context->spotsizes, city_spotsizes, city_cat*sizeof(int));
  	   memcpy(Context->sizelimits, city_sizelimits, city_cat*sizeof(int));
            Context->zoom = gzoom;
+           Context->oldzoom = gzoom;
            Context->flags = gflags;
            Context->jump = time_jump;
            Context->clock_img_file = strdup(Clock_img_file);
@@ -4188,9 +4304,15 @@ struct Sundata * Context;
      }
    }
 
+   if (strstr(path, ".gif"))
+      code = readGIF(path, Context);
+   else   
    if (strstr(path, ".jpg"))
       code = readJPEG(path, Context);
    else
+   if (strstr(path, ".png"))
+      code = readPNG(path, Context);
+   else     
    if (strstr(path, ".vmf"))
       code = readVMF(path, Context);
    else
@@ -4696,7 +4818,7 @@ KeySym  keysym;
              default :
                 goto general;
            }
-           setupFilesel(0);
+           setupFilesel(1);
            return;
         }
 
@@ -4881,6 +5003,16 @@ KeySym  keysym;
 	     option_newhint = keysym;
 	     showOptionHint();
              break;
+           case XK_Delete:
+	   case XK_BackSpace:
+	   case XK_guillemotleft:
+	     if (!memcmp(&Context->newzoom, &Context->oldzoom,
+                         sizeof(ZoomSettings))) return;
+	     Context->newzoom = Context->oldzoom;
+	     setZoomDimension(Context);
+             zoom_mode |= 15;
+             activateZoom(Context, zoom_active);
+             return;
            case XK_Left:
              v = 0.5/Context->newzoom.fx;
              Context->newzoom.fdx -= v;
@@ -5367,6 +5499,9 @@ int     x, y;
 int     button;
 int     evtype;
 {
+static int  x0 = -1, y0 = -1, pressed3 = 0;
+static int u, v, w = -1, h = -1;
+static Pixmap savepix = 0;
 char             key;
 int              click_pos;
 struct Sundata * Context = (struct Sundata *) NULL;
@@ -5380,7 +5515,11 @@ struct Sundata * Context = (struct Sundata *) NULL;
         }
 
         if (evtype!=MotionNotify) RaiseAndFocus(win);
-        if (evtype==ButtonPress && win!=Zoom) return;
+
+        if (evtype == ButtonPress) {
+	   if (win != Zoom && win != Filesel && win != Context->win) return;
+	   if (win == Context->win && !Context->wintype) return;
+	}
 
         if (win == Menu) {
            if (y>Context->gdata->menustrip) return;
@@ -5401,7 +5540,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
         }
 
         if (win == Filesel) {
-           processFileselAction(FileselCaller, x, y);
+           processFileselAction(FileselCaller, x, y, evtype);
            return;
         }
 
@@ -5446,9 +5585,39 @@ struct Sundata * Context = (struct Sundata *) NULL;
            return;
         }
 
+	if (!Context->wintype) pressed3 = 0;
+
+        if (evtype == MotionNotify && pressed3 && !do_zoom &&
+            x0!=-1 && y0!= -1) {
+	   if (w>0 && h>0) {
+	      if (savepix) {
+                 XCopyArea(dpy, savepix, Context->win, Context->gdata->wingc,
+                        0, 0, w+1, h+1, u, v);
+		 XFreePixmap(dpy, savepix);
+		 savepix = 0;
+	      }
+	   }
+	   if (x0<x) { u = x0; w = x-x0; } else { u = x; w = x0-x; }
+	   if (y0<y) { v = y0; h = y-y0; } else { v = y; h = y0-y; }
+	   if (w>0 && h>0)
+	   savepix = XCreatePixmap(dpy, Root, w+1, h+1, DefaultDepth(dpy,scr));
+	   if (savepix)
+              XCopyArea(dpy, Context->win, savepix, Context->gdata->wingc,
+                        u, v, w+1, h+1, 0, 0);
+           XDrawRectangle(dpy, Context->win, Context->gdata->wingc, 
+              u, v, w, h);
+           Context->flags.update = 4;
+	   return;
+        }
+
         /* Click on the map with button 3*/
         if (button==3) {
-          if (do_zoom && win==ZoomCaller->win) {
+	   if (!Context->wintype) {
+	      if (evtype == ButtonRelease)
+                 processKey(win, XK_z);
+	      return;
+	   }
+           if (do_zoom && win==ZoomCaller->win) {
               Context->newzoom.fdx = ((double)(x+Context->zoom.dx))
                          /((double)Context->zoom.width);
               Context->newzoom.fdy = ((double)(y+Context->zoom.dy))
@@ -5458,12 +5627,49 @@ struct Sundata * Context = (struct Sundata *) NULL;
               zoom_mode = 14;
               zoom_lasthint = ' ';
               activateZoom(Context, zoom_active);
-           } else
-           /* Open zoom filesel */
-             processKey(win, XK_z);
+	   } else {
+	      if (evtype == ButtonPress) {
+	         pressed3 = 1;
+	         x0 = x;
+	         y0 = y;
+		 return;
+	      }
+	      if (x0<x) { u = x0; w = x-x0; } else { u = x; w = x0-x; }
+	      if (y0<y) { v = y0; h = y-y0; } else { v = y; h = y0-y; }
+	      if (evtype == ButtonRelease) {
+		 double fact;
+	         pressed3 = 0;
+		 if (savepix) {
+		    XFreePixmap(dpy, savepix);
+		    savepix = 0;
+		 }
+	         if (x==x0 && y==y0) {
+                    /* Open zoom filesel */
+                    processKey(win, XK_z);
+		    return;
+		 }
+                 Context->newzoom.fdx += 
+                    (((double)(u+w/2)/(double)Context->geom.width)-0.5)/
+                       Context->newzoom.fx;
+                 Context->newzoom.fdy += 
+                    (((double)(v+h/2)/(double)Context->geom.height)-0.5)/
+                       Context->newzoom.fy;
+                 fact = sqrt( ((double)Context->geom.width)/((double)w) *
+                          ((double)Context->geom.height)/((double)h) );
+                 Context->newzoom.fx *= fact;
+                 Context->newzoom.fy *= fact;
+                 setZoomDimension(Context);
+                 zoom_mode |= 14;
+                 activateZoom(Context, zoom_active);
+	         x0 = -1;
+	         y0 = -1;
+		 return;
+	      }
+	   }
            return;
         } 
         
+        if (evtype == MotionNotify) return;
         /* Click with button 1 on the map */
 
         /* It's a clock, just execute predefined command */
@@ -5584,8 +5790,10 @@ Window win;
            adjustGeom(Context, 0);
 	   warningNew(Context);
            shutDown(Context, 0);
-           (void)setZoomAspect(Context, 3);
+           setZoomAspect(Context, 3);
            buildMap(Context, Context->wintype, 2);
+           XSync(dpy, True);
+           usleep(2*TIMESTEP);
 }
 
 /*
@@ -5813,6 +6021,7 @@ int             argc;
 char **         argv;
 {
         char * p;
+        int i;
 
         ProgName = *argv;
         if ((p = strrchr(ProgName, '/'))) ProgName = ++p;
@@ -5820,6 +6029,15 @@ char **         argv;
         /* Set default values */
         initValues();
 
+        /* Check if options define some new language */
+        for (i=1; i<argc-1; i++)
+            if (!strcasecmp(argv[i++], "-language")) {
+	       language[0] = argv[i][0];
+	       language[1] = argv[i][1];
+	       language[2] = '\0';
+	       strcpy(oldlanguage, language);
+	    }
+		
         /* Read the app-default config file */
         runlevel = READSYSRC;
         if (readRC(app_default)) exit(1);

@@ -5,5 +5,4 @@ TODO
   for fancier screensaver functionality
 - Spherical representation of Earth
 - Moon phases
-- Adding new images formats: png, other vector map formats (the rmap 
-  database would be great...)
+- Adding other vector map formats (the xrmap data would be great...)

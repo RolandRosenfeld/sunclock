@@ -18,7 +18,7 @@
 #include <time.h>
 #include "version.h"
 
-#define HELPCOMMAND     "xterm -fn 9x15 -cr green -ms red -e man sunclock &"
+#define HELPCOMMAND     "x-terminal-emulator -e man sunclock &"
 #define	FAILFONT	"fixed"
 
 /* num of bitmaps to accomodate 1 mark and 2 spatial objets (Sun, Moon) */
@@ -26,7 +26,7 @@
 #define CITYBITMAPS 5
 
 #define MENU_WIDTH 38
-#define SEL_WIDTH 28
+#define SEL_WIDTH 20
 #define SEL_HEIGHT 10
 #define MAXSHORT 32767
 #define TOPTITLEBARHEIGHT 40   /* usual height of top title bar for KDE 
@@ -210,6 +210,7 @@ typedef struct Sundata {
 	Geometry        prevgeom;       /* previous geometry */
         ZoomSettings    zoom;           /* Zoom settings of window */
         ZoomSettings    newzoom;        /* New zoom settings */
+        ZoomSettings    oldzoom;        /* Old zoom settings */
 	Flags		flags;		/* window behavioral settings */
         int             hstrip;         /* height of bottom strip */
         char *          clock_img_file; /* name of clock xpm file */

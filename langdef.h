@@ -1,8 +1,8 @@
 #define N_MENU 28
-#define N_ZOOM 13
-#define N_OPTION 11
+#define N_ZOOM 14
+#define N_OPTION 12
 #define N_URBAN 12
-#define N_HELP 48
+#define N_HELP 49
 
 #define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
 
@@ -76,16 +76,16 @@ char    MenuKey[2*N_MENU] =
 "H,F,Z,U,O;C,S,D,E,L;A,B,G,J;N,Y,M,P,T;W,K,I,R;>,<,!;X,Q;";
 
 char    ZoomKey[2*N_ZOOM] =
-"*,#,/;&,+,-,1,.;>,<,!,W,K;";
+"*,«,#,/;&,+,-,1,.;>,<,!,W,K;";
 
 char    OptionKey[2*N_OPTION] = 
-"@,%;=;[,];G,J,';!,W,K;";
+"@,%;=,°;[,];G,J,';!,W,K;";
 
 char    UrbanKey[2*N_URBAN] = 
 "U,°,§,%;C,S;~,(,);!,W,K;";
 
 char    CommandKey[N_HELP] = 
-"HFZUOCSDELABGJNYMPTWKIR><!XQ*#/&+-1.\"@%=[]'°§~()";
+"HFZUOCSDELABGJNYMPTWKIR><!XQ*«#/&+-1.\"@%=[]'°§~()";
 
 char  * Help[N_HELP] = {
 
@@ -122,6 +122,7 @@ char  * Help[N_HELP] = {
 /* Zoom window help */
 "Activate new zoom settings",
 "Return to previous zoom settings",
+"Cancel change in zoom settings",
 "Set aspect by resizing main window",
 "Cycle through zoom modes 0,1,2",
 "Zoom in by factor 1.2",

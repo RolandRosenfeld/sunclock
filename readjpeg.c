@@ -35,8 +35,11 @@ extern int              color_pad;
 extern int              bytes_per_pixel;
 extern int              color_alloc_failed;
 extern int              verbose;
+#define RANGE 252
+extern long lr[RANGE], lg[RANGE], lb[RANGE], lnum[RANGE];
 
-extern char *           salloc();
+extern char * salloc();
+extern void fill_line(char *scan, char* c, int w, int zw, int wp, int dx);
 
 struct error_mgr {
   struct jpeg_error_mgr pub;    /* "public" fields */
@@ -65,7 +68,6 @@ readJPEG(path, Context)
 char *path;
 Sundata * Context;
 {
-#define RANGE 252
     struct jpeg_decompress_struct cinfo;
     struct error_mgr jerr;
     FILE *input_file;
@@ -73,8 +75,6 @@ Sundata * Context;
     int i, j, k, l, m, prev, next, size;
     JSAMPROW scanline[1];
     char *scan, *c;
-    unsigned char r, g, b;
-    long lr[RANGE], lg[RANGE], lb[RANGE], lnum[RANGE];
     char pix[RANGE];
     XColor xc;
 
@@ -155,77 +155,8 @@ Sundata * Context;
 	}
 	for (l = prev+1; l<= next; l++) {
 	  c = Context->xim->data + l * Context->xim->bytes_per_line;
-	  k = 0;
-	  if (color_depth>16) {
-            if (bigendian)
-               k = bytes_per_pixel - 3;
-            for (i = 0; i < Context->geom.width; i++) {
-    	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
-               if (bigendian) {
-	          c[k] = scan[j];
-                  c[k+1] = scan[j+1];
-	          c[k+2] = scan[j+2];
-	       } else {
-	          c[k] = scan[j+2];
-                  c[k+1] = scan[j+1];
-	          c[k+2] = scan[j];
-	       }
-	       k +=  bytes_per_pixel;
-	    }
-          } else
-	  if (color_depth==16)
-             for (i = 0; i < Context->geom.width; i++) {
-	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
-	       r = scan[j];
-	       g = scan[j+1];
-	       b = scan[j+2];
-	    /* blue  c[k] = 31;  c[k+1] = 0;
-	       green c[k] = 224  (low weight) c[k+1] = 7 (high weight)
-	       red   c[k] = 0;   c[k+1] = 248; */
-               if (bigendian) {
-                  c[k+1] = (((b&248)>>3) | ((g&28)<<3));
-	          c[k] = (((g&224)>>5) | (r&248));
-	       } else {
-                  c[k] = (((b&248)>>3) | ((g&28)<<3));
-	          c[k+1] = (((g&224)>>5) | (r&248));
-	       }
-	       k += 2;
-	     }
-          else
-	  if (color_depth==15)
-             for (i = 0; i < Context->geom.width; i++) {
-	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
-	       r = scan[j];
-	       g = scan[j+1];
-	       b = scan[j+2];
-	    /* blue  c[k] = 31;  c[k+1] = 0;
-	       green c[k] = 224  (low weight) c[k+1] = 7 (high weight)
-	       red   c[k] = 0;   c[k+1] = 248; */
-               if (bigendian) {
-                  c[k+1] = (b&248)>>3 | (g&56)<<2;
-	          c[k] = (g&192)>>6 | (r&248)>>1;
-	       } else {
-                  c[k] = (b&248)>>3 | (g&56)<<2;
-	          c[k+1] = (g&192)>>6 | (r&248)>>1;
-	       }
-	       k += 2;
-	     }
-	  else {
-             for (i = 0; i < Context->geom.width; i++) {
-	       j = 3 * (((i+Context->zoom.dx) * cinfo.output_width)/Context->zoom.width);
-	       r = scan[j];
-	       g = scan[j+1];
-	       b = scan[j+2];
-	       c[k] = (unsigned char) 
-                      (((7*g)/256)*36)+(((6*r)/256)*6)+((6*b)/256);
-	       m = (unsigned char)c[k];
-               lr[m] += r;
-               lg[m] += g;
-               lb[m] += b;
-               lnum[m] += 1;
-	       k += 1;
-	     }
-	  }
+          fill_line(scan, c, Context->geom.width,  Context->zoom.width,
+                    cinfo.output_width, Context->zoom.dx);
 	}
         prev = next;
       }

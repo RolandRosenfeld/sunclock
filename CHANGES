@@ -3,14 +3,42 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
-Planned versions 3.4x, 3.5x... (features to appear in some order)
+Planned versions ... (features to appear in some order)
 
 - Implement a (Sunclocksaver , ~/.sunclocksaver) pair of config files 
   for fancier screensaver functionality (almost done - planned for 3.5x...)
 - Spherical representation of Earth
 - Moon phases
-- Adding new images formats: png, other vector map formats (the rmap 
-  database would be great...)
+
+
+Version 3.51 August 27, 2004
+
+- New release, jumped version number to 3.51 because of substantial
+  improvements made
+- Added support for reading GIF and PNG images :
+  readgif.c & readpng.c, snarfed from xpaint's rw/ routines.
+  Sunclock now requires libpng (GIF is read by ad hoc routines)
+- Added a .spec file to enable building rpm packages, thanks to
+  François Massonneau <frmas@free.fr>
+- Added Polish localization, thanks to Cezary Morga <cezarym@pf.pl>
+- improved -setfont option, to take into account language specific
+  font settings
+
+Version 3.50pre3 August 4, 2004
+
+- Added AM/PM indicator, 12/24 hour in date/time format
+  (patch by James Turner <turner@blackbear.com>,
+   ** Senior Editor of LinuxWorld Magazine **)
+   
+Version 3.50pre2 June 30, 2004
+
+- Improvement of internal file explorer
+- Zooming can now be achieved by selecting an area with right mouse button
+  and/or by static click which still pops up the zoom window as before
+- Various updates to Sunclockrc and .vmf files
+
+Version 3.50 was never declared to be released in final form... 
+  so that should have been 3.50pre1, which is quite stable.
 
 Version 3.50pre1, August 13, 2001
 

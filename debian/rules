@@ -1,0 +1,93 @@
+#!/usr/bin/make -f
+#
+# (C) 1998-2003 Roland Rosenfeld <roland@debian.org>, based on
+# Sample debian/rules that uses debhelper. 
+# This file is public domain software, originally written by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+INSTDIR=`pwd`/debian/sunclock
+
+OPTIMIZE=
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+        OPTIMIZE=-O0
+else
+        OPTIMIZE=-O2
+endif
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+
+	xmkmf
+	$(MAKE) CDEBUGFLAGS="$(OPTIMIZE) -Wall -g" \
+		XAPPLOADDIR=/etc/X11/app-defaults
+
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+
+	-$(MAKE) clean
+	rm -f Makefile Makefile.bak
+
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	$(MAKE) install install.man DESTDIR=$(INSTDIR)/usr \
+		BINDIR=/bin MANDIR=/share/man/man1 MANSUFFIX=1 \
+		DOCDIR=/usr/share/doc/sunclock
+
+# 	little hack to have Sunclockrc in /etc:
+	mv $(INSTDIR)/usr/share/sunclock/Sunclockrc $(INSTDIR)/etc
+	(cd $(INSTDIR)/usr/share/sunclock; ln -s /etc/Sunclockrc)
+
+	for x in wm_icons/*.xpm debian/*.xpm; do \
+		install -m644 $$x $(INSTDIR)/usr/share/pixmaps/; \
+	done
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs CHANGES
+	dh_installdocs
+	dh_installexamples
+#	dh_install
+	dh_installmenu
+#	dh_installdebconf	
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_installinit
+#	dh_installcron
+#	dh_installinfo
+#	dh_undocumented
+	dh_installman
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+#	dh_makeshlibs
+	dh_installdeb
+#	dh_perl
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install

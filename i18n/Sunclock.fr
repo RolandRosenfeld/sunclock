@@ -101,6 +101,7 @@ Quitter le programme
 # Zoom window help
 Activer les nouvelles valeurs de zoom
 Revenir aux anciennes valeurs de zoom
+Annuler le changement de valeur de zoom
 Rectifier l'aspect en modifiant la taille de fenêtre
 Permuter les modes de zoom 0,1,2
 Zoomer d'un facteur 1.2

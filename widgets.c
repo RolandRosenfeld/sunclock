@@ -376,6 +376,9 @@ int				num;
                StructureNotifyMask |
                ButtonPressMask | ButtonReleaseMask | KeyPressMask;
 
+	if (num>=1)
+	       mask |= PointerMotionMask;
+
         /* use StructureNotifyMask rather than  ResizeRedirectMask 
            to avoid bug in some window mangers... as enlightenment !
            All events would be:
@@ -392,7 +395,6 @@ int				num;
 
 	   case 2:
 		win = Menu;
-		mask |= PointerMotionMask;
 		break;
 
 	   case 3:
@@ -401,17 +403,16 @@ int				num;
 
 	   case 4:
 	        win = Zoom;
-		mask |= PointerMotionMask;
 		break;
 
 	   case 5:
 	        win = Option;
-		mask |= PointerMotionMask | KeyReleaseMask;
+		mask |= KeyReleaseMask;
 		break;
 
 	   case 6:
 	        win = Urban;
-		mask |= PointerMotionMask | KeyReleaseMask;
+		mask |= KeyReleaseMask;
 		break;
 
  	   default:
@@ -687,47 +688,36 @@ void
 setupFilesel(mode)
 int mode;
 {
-	int i, j, b, d, p, q, h, skip;
+	int i, j, b, d, p, q, w, h, ht, skip;
 	char *s, *sp;
-	char *banner[10] = { "home", "share", "  /", "  .", "", "", 
-	                     "  W", "  K", "  !", Label[L_ESCAPE]};
+	char *banner[7] = { "home", "share", "  /", "  .", 
+	                     "  W", "  !", Label[L_ESCAPE]};
 
         if (!do_filesel) return;
 
         BasicSettings(FileselCaller);
         XSetWindowColormap(dpy, Filesel, FileselCaller->gdata->cmap);
-        XSetWindowBackground(dpy, Filesel, FileselCaller->gdata->pixel[MENUBGCOLOR]);
+        XSetWindowBackground(dpy, Filesel, 
+           FileselCaller->gdata->pixel[MENUBGCOLOR]);
 
 	d = FileselCaller->gdata->charspace/3;
 
 	if (mode < 0) {
 
           XClearArea(dpy, Filesel,  0, 0, 
-             FileselGeom.width, FileselCaller->gdata->menustrip, False);
+             FileselGeom.width, FileselGeom.height, False);
 
-	  for (i=0; i<=9; i++)
+	  for (i=0; i<=6; i++)
              XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc,
                 d+2*i*FileselCaller->gdata->charspace, 
                 FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, 
                 banner[i], strlen(banner[i]));
  
-          for (i=1; i<=9; i++) {
+          for (i=1; i<=6; i++) {
 	     h = 2*i*FileselCaller->gdata->charspace;
              XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, h,0,h,
              FileselCaller->gdata->menustrip);
 	  }
-
-	  /* Drawing small triangular icons */
-	  p = FileselCaller->gdata->menustrip/4;
-	  q = 3*FileselCaller->gdata->menustrip/4;
-	  h = 9*FileselCaller->gdata->charspace;
-	  for (i=0; i<=q-p; i++)
-	      XDrawLine(dpy,Filesel, FileselCaller->gdata->wingc,
-                    h-i, p+i, h+i, p+i);
-	  h = 11*FileselCaller->gdata->charspace;
-	  for (i=0; i<= q-p; i++)
-	      XDrawLine(dpy,Filesel,
-                 FileselCaller->gdata->wingc, h-i, q-i, h+i, q-i);
 
 	  h = FileselCaller->gdata->menustrip;
           XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
@@ -735,8 +725,11 @@ int mode;
 	}
 	
         if (mode <= 0) {
-            XClearArea(dpy, Filesel,  0, FileselCaller->gdata->menustrip+1, 
-                FileselGeom.width, FileselGeom.height, False);
+            XClearArea(dpy, Filesel,  0, FileselCaller->gdata->menustrip+1,
+                FileselGeom.width - 13, FileselGeom.height, False);
+            XClearArea(dpy, Filesel,  
+                FileselGeom.width - 13, FileselCaller->gdata->menustrip+1,
+                13, FileselCaller->gdata->menustrip, False);
 
             XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc,
                 d, FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
@@ -746,7 +739,25 @@ int mode;
             h = 2*FileselCaller->gdata->menustrip;
             XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
                 0, h, FileselGeom.width, h);
+
+            XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
+                FileselGeom.width - 13, 2*FileselCaller->gdata->menustrip, 
+                FileselGeom.width - 13, FileselGeom.height);
+            /* Drawing small triangular icons */
+            w = FileselGeom.width - 6;
+            h = 2 * FileselCaller->gdata->menustrip + 1;
+            for (i=0; i<=10; i++)
+	       XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
+                     w-i/2, h+i, w+i/2, h+i);
+            h = FileselGeom.height-1;
+            for (i=0; i<=10; i++)
+               XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
+                     w-i/2, h-i, w+i/2, h-i);
 	}
+
+	if (mode<=1)
+           XClearArea(dpy, Filesel,  0, 2*FileselCaller->gdata->menustrip+1,
+               FileselGeom.width - 13, FileselGeom.height, False);
 
 	if (!dirtable) 
 	   dirtable = get_dir_list(image_dir, &num_table_entries);
@@ -765,12 +776,31 @@ int mode;
 
 	skip = (3*FileselCaller->gdata->menustrip)/4;
 	num_lines = (FileselGeom.height-2*FileselCaller->gdata->menustrip)/skip;
+        /* drawing the thumb */
+        XClearArea(dpy, Filesel,  
+           FileselGeom.width - 12, 2*FileselCaller->gdata->menustrip+12,
+           12, FileselGeom.height-2*FileselCaller->gdata->menustrip-24, 
+           False);
+
+        w = FileselGeom.width - 10;
+        p = FileselGeom.height - 2 * FileselCaller->gdata->menustrip - 28;
+        ht = p * (num_lines+1) / (num_table_entries+1);
+        if (ht<20) ht = 20;
+        if (ht>p/2) ht = p/2;
+        p = p - ht;
+        h = 2 * FileselCaller->gdata->menustrip + 14;
+        if (num_table_entries>2)
+           h += (filesel_shift * p)/(num_table_entries-2);
+        XDrawRectangle(dpy, Filesel, FileselCaller->gdata->wingc, w, h, 7, ht);
+
         for (i=0; i<num_table_entries-filesel_shift; i++) 
 	if (i<num_lines) {
 	  s = dirtable[i+filesel_shift];
 	  b = (s[strlen(s)-1]=='/');
           if (b==0) {
-	    if (strstr(s,".xpm") || strstr(s,".jpg") || strstr(s,".vmf"))
+	    if (strstr(s,".gif") || strstr(s,".jpg") ||
+		strstr(s,".png") || strstr(s,".xpm") ||
+		strstr(s,".vmf"))
 	       b=2;
 	  }
 	  j = FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
@@ -778,12 +808,12 @@ int mode;
 	  sp = (FileselCaller->wintype)? 
 	    FileselCaller->map_img_file : FileselCaller->clock_img_file;
 	  if (strstr(sp,s)) {
-	     if (mode<=2)
+	     if (mode<=3)
                 XClearArea(dpy, Filesel, 2, 
-                   FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent+
-                      2 * FileselCaller->gdata->menustrip, 3, 
+	   /* FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent+ */
+                      2 * FileselCaller->gdata->menustrip + 1, 3, 
                    FileselGeom.height, False);
-	     if (mode==2) {
+	     if (mode==3) {
   	        XSetForeground(dpy, FileselCaller->gdata->wingc, 
                                FileselCaller->gdata->pixel[CHANGECOLOR]);
                 XDrawRectangle(dpy, Filesel, FileselCaller->gdata->wingc,
@@ -795,7 +825,7 @@ int mode;
                   d/4, j-FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent/2, 3,4);
 	     }
 	  }
-	  if (mode<=0) {
+	  if (mode<=1) {
   	     XSetForeground(dpy, FileselCaller->gdata->wingc,
                 (b==0)? FileselCaller->gdata->pixel[MENUFGCOLOR] :
                         FileselCaller->gdata->pixel[DIRCOLOR+b-1]);
@@ -859,14 +889,29 @@ struct Sundata * Context;
 }
 
 void 
-processFileselAction(Context, a, b)
+processFileselAction(Context, a, b, evtype)
 struct Sundata * Context;
 int a;
 int b;
+int evtype;
 {
         char newdir[1030];
 	char *s, *f, *path;
+	static int pressed3 = 0;
 
+	if (evtype == ButtonPress) {
+	   pressed3 = 1;
+	   return;
+	}
+	if (evtype == ButtonRelease) {
+	   pressed3 = 0;
+	}
+
+	if (evtype == MotionNotify && 
+            (a < FileselGeom.width - 13 ||
+             b <= 2 * Context->gdata->menustrip) )
+	   return;
+	
         if (b <= Context->gdata->menustrip) {
 	  a = a/(2*Context->gdata->charspace);
 	  if (a==0 && getenv("HOME"))
@@ -886,29 +931,16 @@ int b;
 	        dirtable = NULL;
 	     }
 	  }
-	  if (a==4) {
-	     if (filesel_shift == 0) return;
-	     filesel_shift -= num_lines/2;
-	     if (filesel_shift <0) filesel_shift = 0;
-	  }
-	  if (a==5) {
-	     if (num_table_entries-filesel_shift<num_lines) return;
-	     filesel_shift += num_lines/2;
-	  }
-	  if (a==6) {	
+	  if (a==4) {	
 	      do_filesel = -1;
               processKey(Context->win, XK_w);
 	      return;
 	  }
-	  if (a==7) {	
-              processKey(Context->win, XK_k);
-	      return;
-	  }
-	  if (a==8) {	
+	  if (a==5) {	
               processKey(Context->win, XK_exclam);
 	      return;
 	  }
-	  if (a>=9) {
+	  if (a>=6) {
 	     XUnmapWindow(dpy, Filesel);
 	     do_filesel = 0;
 	     return;
@@ -921,6 +953,35 @@ int b;
 	  setupFilesel(0);
 	  return;
 	}
+
+	if (a > FileselGeom.width - 13) {
+	   int old_shift = filesel_shift;
+	   if (b <= 2*Context->gdata->menustrip + 10) {
+	      if (evtype != ButtonRelease) return;
+	      if (filesel_shift == 0) return;
+	      filesel_shift -= num_lines/2;
+	      if (filesel_shift <0) filesel_shift = 0;
+	   } else
+	   if (b >= FileselGeom.height - 10) {
+	      if (evtype != ButtonRelease) return;
+	      if (num_table_entries-filesel_shift<num_lines) return;
+	      filesel_shift += num_lines/2;
+	   } else {
+	      if (evtype == MotionNotify && !pressed3) {
+		 return;
+	      }
+	      filesel_shift = ( num_table_entries *
+		 ( b - 2*Context->gdata->menustrip - 10 ))
+                 / (FileselGeom.height - 2*Context->gdata->menustrip - 20);
+	      if (filesel_shift > num_table_entries - num_lines/2) 
+                 filesel_shift = num_table_entries - num_lines/2;
+	      if (filesel_shift < 0) filesel_shift = 0;
+	   }
+	   if (filesel_shift != old_shift)
+	      setupFilesel(1);
+	   return;
+	}
+
 	b = (b-2*Context->gdata->menustrip-4)/(3*Context->gdata->menustrip/4)
             +filesel_shift;
 	if (b<num_table_entries) {
@@ -966,7 +1027,7 @@ int b;
                     StringReAlloc(&Context->map_img_file, f);
 		 else
 		    StringReAlloc(&Context->clock_img_file, f);
-		 setupFilesel(2);
+		 setupFilesel(3);
 		 adjustGeom(Context, 0);
 	         shutDown(Context, 0);
 	         buildMap(Context, Context->wintype, 0);
@@ -1001,7 +1062,10 @@ int mode;
    int change;
 
    checkZoomSettings(&Context->newzoom);
-   
+
+   if (memcmp(&Context->newzoom, &Context->zoom, sizeof(ZoomSettings)))
+      Context->oldzoom = Context->zoom;
+
    if (!Context->newzoom.mode) return 0;
 
    a = Context->newzoom.fx;
@@ -1012,7 +1076,7 @@ int mode;
       f = 1.0;
    else
       f = (double)Context->geom.width / 
-          ((double)Context->geom.height * 2.0 * sin(M_PI*Context->newzoom.fdy));
+          ((double)Context->geom.height *2.0 * sin(M_PI*Context->newzoom.fdy));
 
    if (mode == 3) {
       p = sqrt( Context->newzoom.fx * Context->newzoom.fy / f);
@@ -1912,19 +1976,28 @@ Sundata * Context;
 City * city;
 {
 char *ptr;
+int w;
 
     text_input = NULL_INPUT;
     if (city == NULL) return;
     if (city->name && city!=&Context->pos1) {
-       strcpy(urban_entry[0].string, city->name);
-       urban_entry[0].caret = strlen(city->name);
+       w = (urban_w[0]/ 
+           XTextWidth(UrbanCaller->gdata->font[MENUFONT],"_",1))-2;
+       if (strlen(city->name)<w) w = strlen(city->name);
+       strncpy(urban_entry[0].string, city->name, w);
+       urban_entry[0].string[w] = '\0';
+       urban_entry[0].caret = strlen(urban_entry[0].string);
     } else {
        urban_entry[0].string[0]='\0';
        urban_entry[0].caret = 0;
     }
     if (city->tz) {
-       strcpy(urban_entry[1].string, city->tz);
-       urban_entry[1].caret = strlen(city->tz);
+       w = (urban_w[1]/ 
+           XTextWidth(UrbanCaller->gdata->font[MENUFONT],"_",1))-2;
+       if (strlen(city->tz)<w) w = strlen(city->tz);
+       strncpy(urban_entry[1].string, city->tz, w);
+       urban_entry[1].string[w] = '\0';
+       urban_entry[1].caret = strlen(urban_entry[1].string);
     }
     ptr = num2str(city->lat, urban_entry[2].string, Context->flags.dms);
     urban_entry[2].caret = strlen(ptr);

@@ -63,7 +63,18 @@ can read .jpg, .xpm or .xpm.gz images, and also its own .vmf vector map
 format. Other image formats have to be converted to xpm or jpg before
 being loaded - e.g. with the netpbm or with the Imagemagick package.
 
+Sunclock is internationalized and currently supports the following 
+localizations:
+  de (German), en (English), es (Spanish), fr (French), it (Italian), 
+  nl (Dutch), no (Norwegian), pl (Polish), se (Swedish), also
+not all translations are up-to-date. Using iso8859-2 encoded fonts
+is required for Polish (other currently supported languages work with 
+iso8859-1 or iso8859-15). Thus, for Polish, a special setting of the
+fonts in Sunclockrc is needed (edit the file by uncommenting the
+appropriate font settings).
+
 Sunclock versions 3.xx are released under the GPL.
+
 
 demailly@fourier.ujf-grenoble.fr
 

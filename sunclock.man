@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "July 27, 2001"
+.TH SUNCLOCK 1 "August 27, 2004"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -26,8 +26,7 @@ where the list of licit options is the following long list
 [-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>] \
 [-title name] [-clockclassname name] [-mapclassname name] \
 [-auxilclassname name] [-classname name] \
-[-menufont fontname] [-coordfont fontname] [-cityfont fontname] \
-[-mapstripfont fontname] [-clockstripfont fontname] \
+[-setfont <field>|<fontsetting>{|<languages>}] \
 [-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
 [-placement (random, fixed, center, NW, NE, SW, SE)] \
 [-placementshift x y] [-extrawidth value] \
@@ -72,10 +71,10 @@ the "map window". The clock window displays a small map of the Earth
 and therefore occupies little space on the screen, while the "map window" 
 displays a large map and offers more advanced functions. The Sunclock
 package includes a resizable and zoomable vector map . External
-Earth maps can also be loaded (as to version 3.30, formats .jpg, 
-.xpm or .xpm.gz, .vmf can be read [.vmf is the specific vector map 
-format of  sunclock]). Some additional formats could be added in the 
-future.
+Earth maps can also be loaded (starting with version 3.51, formats .jpg,
+.gif, .png, .xpm or .xpm.gz, .vmf can be read [.vmf is the specific 
+vector map format of  sunclock]). Some additional formats could 
+be added in the future.
 
 The map window can work in five different modes:
 .PP
@@ -123,8 +122,8 @@ right mouse button the same effect as upper case.
 .PP
 - File Selector window. It can be accessed by clicking on the upper part 
 of the main window with the middle mouse button. It allows to select
-the Earth image file (in formats *.vmf *.xpm, *.xpm.gz, *.jpg) to be 
-loaded.
+the Earth image file (in formats *.vmf *.xpm, *.xpm.gz, *.jpg, *.gif, *.png) 
+to be loaded.
 .PP
 - Zoom window. It can be accessed by clicking on the upper part
 of the main window with the right mouse button. The zoom window
@@ -200,44 +199,30 @@ Style "*Sticky*"     Sticky
 .PP
 to get specify such a behaviour.
 .TP
-.B "\-menufont " name
-Select the menu font, used in the bottom line of the map window, in the 
-menu, file selection, zoom and option windows. Default is 6x13
-.TP
-.B "\-coordfont " name 
-Select the coordinates font, used when writing coordinates on the map 
-window. Default is 6x13.
-.TP
-.B "\-cityfont " name 
-Select the city font, used when writing city names on the map window. 
-Default is 6x10.
-.TP
-.B "\-mapstripfont " name 
-Select the map strip font, used in the bottom line of the map window. 
-Default is 6x13.
-.TP
-.B "\-clockstripfont " name 
-Select the (normally smaller) clock strip font, used in the bottom line of 
-the clock window. Default is 6x10.
+.B "\-setfont " <field>|<fontsetting>{|<languages>}
+Select the font for the given text field (clockstrip, menustrip, city,
+coord, menu). Optionally, one can specify a list of languages for which
+this font setting should apply. If the <languages> option is not specified,
+the font setting applies to all languages.
 .TP
 .B "\-rcfile " filename
-Read a configuration file that is different from the user default 
-~/.sunclockrc (if this option is not set, the user config file defaults to
-~/.sunclockrc). Notice that the app-default config file Sunclockrc is 
-read first, and the file set by the -rcfile option is read afterwards;
-therefore its settings override those set by the system wide config file. 
-Reading further config files is possible at runtime, using the option 
-window. Set -rcfile with a void string "" if you wish to bypass the
-user config file step.
+Read a configuration file that is different from the user 
+default ~/.sunclockrc (if this option is not set, the user config file 
+defaults to ~/.sunclockrc). Notice that the app-default config 
+file Sunclockrc is read first, and the file set by the -rcfile option is 
+read afterwards; therefore its settings override those set by the system 
+wide config file. Reading further config files is possible at runtime, 
+using the option window. Set -rcfile with a void string "" if you wish 
+to bypass the user config file step.
 .TP
 .B "\-sharedir " directory
 Set the directory where system wide shared Earthmaps are located.
 Default is /usr/share/sunclock/earthmaps.
 .TP
-.B "\-mapimage " file.jpg (or file.vmf, file.xpm, file.xpm.gz)
+.B "\-mapimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the map window.
 .TP
-.B "\-clockimage " file.jpg (or file.vmf, file.xpm, file.xpm.gz)
+.B "\-clockimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the clock window. 
 The same maps can be used used for the map and clock windows, but
 in the latter case they will tend to be scaled down.
@@ -315,7 +300,9 @@ bar | is used as a delimiter to indicate successive time formats. There
 can be as many formats as desired, and the actual selection cycles through
 all these formats by clicking on the bottom strip with the mouse. The 
 first string (i.e. the one preceding the first bar) is taken as the 
-default format.
+default format. There are a few other switches, such as %h for hour
+in 12-hour mode, %P fo AM/PM indicator, %G for hour in GMT time,
+%N for minutes in GMT time.
 .TP
 .BI "\-map "
 Start in the map state.  Useful to start right away with advanced 

@@ -19,7 +19,7 @@ XCOMM   define for system V or Solaris
 XCOMM Pick -O or -g
 XCOMM
 
-#ifdef HPArchitecture
+#ifdef HPArchitectureAndHPUX
 XPMLIBDIR=-L/opt/xpm/lib/X11
 XPMINC=-I/opt/xpm/include
 JLIBDIR=-L/opt/jpeg-6/lib
@@ -48,11 +48,11 @@ CCOPTIONS=-O -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
 SRCS=sunclock.c astro.c widgets.c tildepath.c dirlist.c \
-     readvmf.c readxpm.c readjpeg.c
+     readvmf.c readxpm.c readgif.c readjpeg.c readpng.c
 OBJS=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
-     readvmf.o readxpm.o readjpeg.o
+     readvmf.o readxpm.o readgif.o readjpeg.o readpng.o
 LOCAL_LIBRARIES=$(XLIB) $(XPMLIBDIR) -lXpm $(ZLIBDIR) -lz \
-     $(JLIBDIR) -ljpeg -lm
+     $(JLIBDIR) -ljpeg -lpng -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)

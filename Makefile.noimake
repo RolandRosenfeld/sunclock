@@ -34,16 +34,18 @@ MKDIRHIER=mkdir -p
 
 # For Linux
 CFLAGS=-I/usr/include/X11 -O -Wall -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
-LFLAGS=-L/usr/X11/lib -lXpm -ljpeg -lz
+LFLAGS=-L/usr/X11/lib -lXpm -ljpeg -lpng -lz
 
 OFILES=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
-       readjpeg.o readvmf.o readxpm.o
+       readgif.o readjpeg.o readpng.o readvmf.o readxpm.o
 HFILES=bitmaps.h langdef.h sunclock.h version.h
 
 all: sunclock
 
 sunclock.o: $(HFILES)
+readgif.o: $(HFILES)
 readjpeg.o: $(HFILES)
+readpng.o: $(HFILES)
 readvmf.o: $(HFILES)
 readxpm.o: $(HFILES)
 

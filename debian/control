@@ -1,0 +1,21 @@
+Source: sunclock
+Section: x11
+Priority: optional
+Maintainer: Roland Rosenfeld <roland@debian.org>
+Standards-Version: 3.5.8
+Build-Depends: debhelper (>= 4), xlibs-dev (>= 4.0.1-11), xutils, libjpeg62-dev, zlib1g-dev
+
+Package: sunclock
+Architecture: any
+Depends: ${shlibs:Depends}, xterm | x-terminal-emulator
+Suggests: imagemagick
+Description: Fancy clock showing time and geographical data
+ sunclock is an X11 application that displays a map of the Earth and
+ indicates the illuminated portion of the globe by drawing sunlit
+ areas dark on light, night areas as light on dark.  In addition to
+ providing local time for the default timezone, it also displays GMT
+ time, legal and solar time of major cities, their latitude and
+ longitude, and the mutual distances of arbitrary locations on Earth.
+ Sunclock can display meridians, parallels, tropics and arctic
+ circles.  It has builtin functions that accelerate the speed of time
+ and show the evolution of seasons.
