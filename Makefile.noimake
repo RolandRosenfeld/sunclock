@@ -1,0 +1,27 @@
+#
+# Compile options:
+#
+# Set -DSYSV if on System V
+# Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
+#   your struct tm contains a tm_zone field)
+# Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
+# Pick -O or -g
+#
+
+# For HP
+#CFLAGS=-Ae -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\"
+# For SunOS
+CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+# For Solaris
+#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O
+LFLAGS=-L/usr/openwin/lib
+
+OFILES=sunclock.o bitmaps.o astro.o tildepath.o
+
+sunclock: $(OFILES)
+	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
+
+sunclock.tar:
+	tar cvf sunclock.tar *.c *.h Imakefile Makefile.noimake sample.sunclockrc *.man CHANGES README
+	compress sunclock.tar
+

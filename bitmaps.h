@@ -8,7 +8,7 @@
 #define	EXTERN	extern
 #endif
 
-#define icon_map_width 126
+#define icon_map_width 128
 #define icon_map_height 63
 EXTERN char icon_map_bits[]
 #ifdef	DEFINE_BITS

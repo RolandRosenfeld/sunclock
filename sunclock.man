@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1
+.TH SUNCLOCK 1 "Aug 31, 1994"
 .SH NAME
 sunclock \- show illuminated portion of Earth
 .SH SYNOPSIS
@@ -11,7 +11,9 @@ sunclock \- show illuminated portion of Earth
 is an X11 application that displays a map of the Earth and
 indicates the illuminated portion of the globe by drawing
 sunlit areas dark on light, night areas as light on dark.
-It also displays the current date and time.
+It also displays the current date and time. It is possible to define locations
+on the main map that will display a place name. If the user clicks on one of
+these places the time display will change to the timezone of that location.
 .SH OPTIONS
 The program does not use the X Toolkit, and hence only those
 options explicitly enumerated below may be used.  Neither are
@@ -33,6 +35,27 @@ information given is ignored.
 .BI "\-icongeometry " +x+y
 Specify the position of the icon.  Only the position is used; any size
 information given is ignored.
+.RE
+.PP
+Users may keep a file in their home directory called ~/.sunclockrc. This
+file can contain lines of the following format:
+.PP
+[+]name latitude longtitude timezone
+.PP
+where name is the ascii name of the place to be shown on the map. If the
+name starts with a '+' the label will be displayed above the dot instead of
+below. latitude and logtitude are floating point numbers representing the
+geographical location of the place. Western logtitudes and southern latitudes
+should be entered as negative numbers. timezone is the name of the timezone
+that the place is in. This should be the name of a file under /lib/zoneinfo,
+incorrect timezones cause the clock to display GMT. It is also possible to 
+reference a file in a directory relative to /lib/zoneinfo for example
+Canada/Eastern instead of EST5EDT.
+.PP
+The user may click on the dot on the map associated with a place
+defined in the .sunclockrc
+file. When this is done, the time displayed will now be shown in the timezone
+for that location.
 .SH "HOW IT WORKS"
 .I sunclock
 calculates the position of the Sun using the algorithm in chapter 18 of:
@@ -56,3 +79,6 @@ larger because of atmospheric refraction and twilight.
 John Mackin, Basser Department of Computer Science, University of Sydney,
 Sydney, Australia; <john@cs.su.oz.AU>.  Based on a Suntools program
 by John Walker, Autodesk, Inc.; <kelvin@acad.uu.NET>.
+.PP
+Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca;
+added support for interactive map.

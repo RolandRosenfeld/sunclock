@@ -1,0 +1,13 @@
+Version 1.3
+- Timezone now displayed in icon. Suggested by Rich Gonzalez
+    (gonzo@u.washington.edu)
+- Should now work under Linux/XFree86 - Wolfram Gloger
+    (wmglo@Dent.MED.Uni-Muenchen.DE)
+
+Version 1.2
+- Used new icon suppied by Anthony Thyssen (anthony@cit.gu.edu.au). I can't
+  see a difference can you see a differnece.
+- Fixed stuff for HP using NEW_CTIME ifdef as suggested by Richard Lloyd
+  (R.K.Lloyd@csc.liv.ac.uk). Untested by me on HP.
+- Support for Solaris thanks to Dave Yearke (yearke@calspan.com) who also
+  pointed out some other bugs and fixes.

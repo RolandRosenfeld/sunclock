@@ -2,15 +2,23 @@
 # Compile options:
 #
 # Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
-#   your struct tm contains a tm_zone field)
+#   your struct tm contains a tm_zone field), i.e. SunOS 4.1.x. Don't
+#   define for system V or Solaris
 # Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
 # Pick -O or -g
 #
 
-CDEBUGFLAGS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -g
+#ifdef HPArchitecture
+CCOPTIONS = -Ae -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\"
+#else
+# SunOS
+CCOPTIONS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+# Solaris
+#CCOPTIONS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O
+#endif
 
-SRCS=sunclock.c bitmaps.c astro.c
-OBJS=sunclock.o bitmaps.o astro.o
+SRCS=sunclock.c bitmaps.c astro.c tildepath.c
+OBJS=sunclock.o bitmaps.o astro.o tildepath.o
 LOCAL_LIBRARIES=$(XLIB) -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 

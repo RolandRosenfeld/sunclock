@@ -1,4 +1,28 @@
-Sun Clock - X11 Version 1.0
+Sun Clock - X11 Version 1.3, November 16, 1994.
+===============================================
+
+This version should now work under Linux/XFree86. The only additional
+feature is that the timezone is now displayed in the icon.
+
+Version 1.2, October 13, 1994.
+==============================
+
+This version has some bugs fixed and should now support HP and Solaris. No
+new features. See CHANGES for more detail and credits.
+
+Version 1.1, August 31, 1994.
+=============================
+
+This is version 1.1 of sunclock. New in this version is support for an
+interactive map. This allows you to define places on the map in your
+~/.sunclockrc file. These places will show up labelled in the large map,
+(not the icon). Clicking on a place will change the clock readout to the
+timezone of the that place. See the man page for details.
+
+Stephen Martin, smartin@fujitsu.ca - August 31, 1994.
+
+Original README
+===============
 
 X11 version by John Mackin, <john@cs.su.oz.AU>, based on a Suntools program
 by John Walker, <kelvin@acad.uu.NET>.

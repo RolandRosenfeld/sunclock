@@ -44,6 +44,12 @@
        Usenet: {sun,well,uunet}!acad!kelvin
 	   or: kelvin@acad.uu.net
 
+    modified for interactice maps by
+
+	Stephen Martin
+	Fujitsu Systems Business of Canada
+	smartin@fujitsu.ca
+
     This  program is in the public domain: "Do what thou wilt shall be the
     whole of the law".  I'd appreciate  receiving  any  bug  fixes  and/or
     enhancements,  which  I'll  incorporate  in  future  versions  of  the
@@ -55,13 +61,20 @@
 	1.0  12/21/89  Initial version.
 	      8/24/89  Finally got around to submitting.
 
+	1.1   8/31/94  Version with interactive map.
+	1.2  10/12/94  Fixes for HP and Solaris, new icon bitmap
+	1.3  11/01/94  Timezone now shown in icon
+
 */
 
 #define	FAILFONT	"fixed"
 
-#define	VERSION		"1.0"
+#define	VERSION		"1.3"
 
 #include "sunclock.h"
+#include <sys/types.h>
+#include <sys/timeb.h>
+#include <string.h>
 
 struct sunclock {
 	int		s_width;	/* size of pixmap */
@@ -84,6 +97,17 @@ struct sunclock {
 	struct sunclock * s_next;	/* pointer to next clock context */
 };
 
+/* Records to hold cities */
+
+typedef struct City {
+    char *city;		/* Name of the city */
+    double lat, lon;	/* Latitude and longtitude of city */
+    char *tz;		/* Timezone of city */
+    struct City *next;	/* Pointer to next record */
+} City;
+
+City *cities = NULL;
+
 /*
  * bits in s_flags
  */
@@ -93,8 +117,14 @@ struct sunclock {
 #define	S_DIRTY		04		/* pixmap -> window copy required */
 #define	S_ICON		010		/* this is the icon window */
 
+void                            SetIconName();
+char *				strdup();
 char *				strrchr();
+char *				strtok();
 long				time();
+#ifdef NEW_CTIME
+char *				timezone();
+#endif
 
 double				jtime();
 double				gmst();
@@ -128,6 +158,7 @@ GC				GC_store;
 GC				GC_invert;
 GC				GC_bigf;
 GC				GC_smallf;
+GC				GC_xor;
 XFontStruct *			SmallFont;
 XFontStruct *			BigFont;
 Pixmap				Mappix;
@@ -144,7 +175,12 @@ int				argc;
 register char **		argv;
 {
 	char *			p;
+	City *c;		/* Used to process cities */
 
+	/* Read the ~/.sunclockrc file */
+
+	if (readrc())
+	    exit(1);
 	Name = *argv;
 	if (p = strrchr(Name, '/'))
 		Name = ++p;
@@ -152,7 +188,8 @@ register char **		argv;
 
 	dpy = XOpenDisplay(Display_name);
 	if (dpy == (Display *)NULL) {
-		fprintf(stderr, "%s: can't open display `%s'\n", Display_name);
+		fprintf(stderr, "%s: can't open display `%s'\n", Name,
+			Display_name);
 		exit(1);
 	}
 	scr = DefaultScreen(dpy);
@@ -165,7 +202,12 @@ register char **		argv;
 	setAllHints(argc, argv);
 	makeClockContexts();
 
-	XSelectInput(dpy, Clock, ExposureMask);
+	/* Add cities to the map */
+
+	for (c = cities; c; c = c->next)
+	    place_city(c->lat, c->lon, c->city);
+
+	XSelectInput(dpy, Clock, ExposureMask | ButtonPressMask);
 	XSelectInput(dpy, Icon, ExposureMask);
 	XMapWindow(dpy, Clock);
 
@@ -254,6 +296,7 @@ shutDown()
 	XFreeGC(dpy, GC_invert);
 	XFreeGC(dpy, GC_bigf);
 	XFreeGC(dpy, GC_smallf);
+	XFreeGC(dpy, GC_xor);
 	XFreeFont(dpy, BigFont);
 	XFreeFont(dpy, SmallFont);
 	XFreePixmap(dpy, Mappix);
@@ -291,7 +334,7 @@ char **				argv;
 
 	XSetCommand(dpy, Clock, argv, argc);
 
-	XSetIconName(dpy, Clock, Name);
+	SetIconName();
 
 	xsh.flags = PSize | PMinSize | PMaxSize;
 	if (Geom.mask & (XValue | YValue)) {
@@ -366,6 +409,8 @@ register Pixmap			p;
 	GC_bigf = XCreateGC(dpy, w, GCForeground | GCBackground | GCFont, &gcv);
 	gcv.font = SmallFont->fid;
 	GC_smallf = XCreateGC(dpy, w, GCForeground | GCBackground | GCFont, &gcv);
+	gcv.function = GXcopyInverted;
+	GC_xor = XCreateGC(dpy, p, GCForeground | GCBackground | GCFunction, &gcv);
 }
 
 getColors()
@@ -376,14 +421,15 @@ getColors()
 
 	s = XAllocNamedColor(dpy, DefaultColormap(dpy, scr), "Black", &c, &e);
 	if (s != (Status)1) {
-		fprintf(stderr, "%s: warning: can't allocate color `Black'\n");
+		fprintf(stderr, "%s: warning: can't allocate color `Black'\n",
+			Name);
 		Black = BlackPixel(dpy, scr);
 	}
 	else
 		Black = c.pixel;
 	s = XAllocNamedColor(dpy, DefaultColormap(dpy, scr), "White", &c, &e);
 	if (s != (Status)1) {
-		fprintf(stderr, "%s: can't allocate color `White'\n");
+		fprintf(stderr, "%s: can't allocate color `White'\n", Name);
 		White = WhitePixel(dpy, scr);
 	}
 	else
@@ -504,6 +550,12 @@ eventLoop()
 				if (ev.xexpose.count == 0)
 					doExpose(ev.xexpose.window);
 				break;
+
+			/* Set the timezone on a button press */
+
+			case ButtonPress:
+				set_timezone(ev.xbutton.x, ev.xbutton.y);
+				break;
 			}
 		else {
 			sleep(1);
@@ -534,7 +586,7 @@ register Window			w;
 		if (w != Current->s_window) {
 			fprintf(stderr,
 				"%s: expose event for unknown window, id = 0x%08lx\n",
-				w);
+				Name, w);
 			exit(1);
 		}
 		setTimeout(Current);
@@ -863,11 +915,10 @@ salloc(nbytes)
 register int			nbytes;
 {
 	register char *		p;
-	char *			malloc();
 
 	p = malloc((unsigned)nbytes);
 	if (p == (char *)NULL) {
-		fprintf(stderr, "%s: out of memory\n");
+		fprintf(stderr, "%s: out of memory\n", Name);
 		exit(1);
 	}
 	return (p);
@@ -879,15 +930,23 @@ register struct tm *		ltp;
 register struct tm *		gmtp;
 {
 	static char		s[80];
+#ifdef NEW_CTIME
+	struct timeb		tp;
 
+	if (ftime(&tp) == -1) {
+		fprintf(stderr, "%s: ftime failed: ", Name);
+		perror("");
+		exit(1);
+	}
+#endif
 	sprintf(s,
 		"%02d:%02d:%02d %s %s %02d %s %02d     %02d:%02d:%02d UTC %s %02d %s %02d",
 		ltp->tm_hour, ltp->tm_min,
 		ltp->tm_sec,
-#ifdef	NEW_CTIME
+#ifdef NEW_CTIME
 		ltp->tm_zone,
 #else
- 		tzname[ltp->tm_isdst],
+		tzname[ltp->tm_isdst],
 #endif
 		Wdayname[ltp->tm_wday], ltp->tm_mday,
 		Monname[ltp->tm_mon], ltp->tm_year % 100,
@@ -910,4 +969,214 @@ register struct tm *		gmtp;
 		ltp->tm_year % 100);
 
 	return (s);
+}
+
+/*
+ * readrc() - Read the user's ~/.sunclockrc file.
+ */
+
+int readrc()
+{
+    /*
+     * Local Variables
+     */
+
+    char *fname;	/* Path to .sunclockrc file */
+    FILE *rc;		/* File pointer for rc file */
+    char buf[128];	/* Buffer to hold input lines */
+    char *city, *lat, *lon, *tz; /* Information about a place */
+    City *crec;		/* Pointer to new city record */
+
+    /*
+     * External Functions
+     */
+
+    char *tildepath();	/* Returns path to ~/<file> */
+
+    /*
+     * Get the path to the rc file
+     */
+
+    if ((fname = tildepath("~/.sunclockrc")) == NULL) {
+	fprintf(stderr, "Unable to get path to ~/.sunclockrc\n");
+	return(1);
+    }
+
+    /* Open the RC file */
+
+    if ((rc = fopen(fname, "r")) == NULL) {
+	return(0);
+    }
+
+    /* Read and parse lines from the file */
+
+    while (fgets(buf, 128, rc)) {
+
+	/* Get the city name looking for blank lines and comments */
+
+	if (((city = strtok(buf, " 	\n")) == NULL) ||
+	    (city[0] == '#') || (city[0] == '\0'))
+	    continue;
+
+	/* Get the latitude, longitude and timezone */
+
+	if ((lat = strtok(NULL, " 	\n")) == NULL) {
+	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
+	    continue;
+	}
+
+	if ((lon = strtok(NULL, " 	\n")) == NULL) {
+	    fprintf(stderr, "Error in .sunclockrf for city %s\n", city);
+	    continue;
+	}
+
+	if ((tz = strtok(NULL, " 	\n")) == NULL) {
+	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
+	    continue;
+	}
+
+	/* Create the record for the city */
+
+	if ((crec = (City *) calloc(1, sizeof(City))) == NULL) {
+	    fprintf(stderr, "Memory allocation failure\n");
+	    return(1);
+	}
+
+	/* Set up the record */
+
+	crec->city = strdup(city);
+	crec->lat = atof(lat);
+	crec->lon = atof(lon);
+	crec->tz = strdup(tz);
+
+	/* Link it into the list */
+
+	crec->next = cities;
+	cities = crec;
+    }
+
+    /* Done */
+
+    return(0);
+}
+
+/*
+ * place_city() - Put a city on the map.
+ */
+
+place_city(lat, lon, name)
+double lat, lon;		/* Latitude and longtitude of the city */
+char *name;			/* Name of the city */
+{
+    /*
+     * Local Variables
+     */
+
+    int ilat, ilon; 		/* Screen coordinates of the city */
+    int twidth,theight;         /* Width and height of the text */
+    int tx, ty;                 /* Position of the text */
+    int aboveflg = 0;           /* Flag to put text above dot */
+    ilat = large_map_height - (lat + 90) * (large_map_height / 180.0);
+    ilon = (180.0 + lon) * (large_map_width / 360.0);
+ 
+    XDrawArc(dpy, Mappix, GC_xor, ilon-5, ilat-5, 10, 10, 0, 360 * 64);
+    XFillArc(dpy, Mappix, GC_xor, ilon-3, ilat-3, 6, 6, 0, 360 * 64);
+
+    if (name[0] == '+') {
+      aboveflg = 1;
+      name++;
+    }
+    twidth = BigFont->max_bounds.width * strlen(name);
+    if ((tx = ilon - (twidth / 2)) <= 0)
+      tx = 0;
+    else if ((tx + twidth) > large_map_width)
+      tx = large_map_width - (twidth + 2);
+
+    /* Figure out where to put the text */
+
+    if (aboveflg || 
+	((ilat + BigFont->max_bounds.ascent + BigFont->max_bounds.descent) 
+             > large_map_height))
+        ty = ilat - (BigFont->max_bounds.ascent + BigFont->max_bounds.descent);
+    else if (!aboveflg || 
+	     (aboveflg && 
+	      ((ilat - 
+                 (BigFont->max_bounds.ascent + BigFont->max_bounds.descent + 10)) < 0)))
+        ty = ilat + (BigFont->max_bounds.ascent + BigFont->max_bounds.descent + 10);
+    XDrawImageString(dpy, Mappix, GC_xor, tx, ty, name, strlen(name));
+}
+
+/*
+ * set_timezone() - This is kind of a cheesy way to do it but it works. What happens
+ *                  is that when a different city is picked, the TZ environment
+ *                  variable is set to the timezone of the city and then tzset().
+ *                  is called to reset the system.
+ */
+
+set_timezone(x, y)
+int x, y;      /* Screen co-ordinates of mouse */
+{
+    /*
+     * Local Variables
+     */
+
+    City *cptr;    /* Used to search for a city */
+    int cx, cy;    /* Screen coordinates of the city */
+    static char buf[64];  /* Used to set the env variable */
+
+    /* Loop through the cities until on close to the pointer is found */
+
+    for (cptr = cities; cptr; cptr = cptr->next) {
+
+        /* Convert the latitude and longtitude of the cites to integer */
+
+        cx = (180.0 + cptr->lon) * (large_map_width / 360.0);
+	cy = large_map_height - (cptr->lat + 90) * (large_map_height / 180.0);
+
+	/* Check to see if we are close enough */
+
+	if ((((cx - 5) <= x) && ((cx + 5) >= x)) &&
+	    (((cy - 5) <= y) && ((cy + 5) >= y))) {
+
+	    /* We are at this city, lets set the timezone */
+
+            sprintf(buf, "TZ=%s", cptr->tz);
+	    putenv(buf);
+	    tzset();
+	    SetIconName();
+	}
+    }
+}
+
+/*
+ * SetIconName()
+ */
+
+void
+SetIconName()
+{
+  /*
+   * Local Variables
+   */
+
+    char name[128];/* Used to change icon name */
+    long c;        /* Current time on the clock */
+    struct tm *lt; /* Used to get timezone name */
+
+    strcpy(name, Name);
+    strcpy(name, VERSION);
+    strcpy(name, " - ");
+
+    /* Change the timesone displayed in the icon */ 
+
+    time(&c);
+    lt = localtime(&c);
+    sprintf(name, "%s %s (%s)", Name, VERSION,
+#ifdef NEW_CTIME
+           lt->tm_zone);
+#else
+           tzname[lt->tm_isdst]);
+#endif 
+
+    XSetIconName(dpy, Clock, name);
 }
