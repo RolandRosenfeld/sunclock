@@ -1,0 +1,64 @@
+# German
+# Day names
+Son
+Mon
+Die
+Mit
+Don
+Fre
+Sam
+# Months
+Jan
+Feb
+Mär
+Apr
+Mai
+Jun
+Jul
+Aug
+Sep
+Okt
+Nov
+Dez
+# Additional labels
+Position
+GMT Zeit
+Sonnen Zeit
+Gesetzliche Zeit
+Länge des Tages
+Sonnenaufgang
+Sonnenuntergang
+Klicke auf eine Stadt
+Klicke auf eine Position
+Klicke nacheinander auf zwei Positionen
+Taste
+Tastatur/Maus Steuerung
+Abbruch
+Schrittweite =
+Zeitverschiebung =
+Stunden
+Tage
+Drücke A,B,G,Z oder Enter
+# Help
+Verwende Koordinaten-Modus
+Verwende Abstands-Modus
+Verwende Modus für gesetzliche Zeit
+Verwende Sonnenzeit-Modus
+Verschiebe Zeit vorwärts
+Verschiebe Zeit rückwärts
+Ändere Schrittweite für Zeitverschiebung
+Setze Zeitverschiebung auf Null zurück
+Zeichne/Lösche Meridiane
+Zeichne/Lösche Parallelen
+Zeichne/Lösche Tropische/Äquator/Polarkreise
+Lösche/Zeichne Markierungen der Städte
+Zeige die Hilfe und Optionen an
+Iconifiziere das Fenster
+Kartenfenster auffrischen
+Wechsle zwischen Uhr- und Kartenfenster
+Aktiviere Kommando (-cmd Option)
+Beende Programm
+# Short help
+Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick
+oder Tastatur zugegriffen werden kann:
+# End

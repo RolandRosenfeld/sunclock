@@ -1,12 +1,14 @@
 # The format of this file is:
-# [+]city: latitude longitude timezone
+# city: latitude longitude timezone
 #
-# The latitude and longtitude should be signed floating point numbers. 
+# The latitude and longitude should be signed floating point numbers,
+# with -90 < lat <= 90  and  -180 < lon <= 180
 # A negative latitude should be used for places south of the equator
 # and a negative longitude should be used for places west of the prime
 # meridian.
 
 Paris: 48.87 2.33 Europe/Paris
+#Grenoble: 45.36 5.32 Europe/Paris
 London: 51.50 -0.17 Europe/London
 Berlin: 52.52 13.33 Europe/Berlin
 Rome: 41.87 12.62 Europe/Rome

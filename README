@@ -1,44 +1,46 @@
-Sun Clock - X11 Version 2.1, June 6, 2000.
-==========================================
+README for Sunclock version 3.0
+-------------------------------
 
-Version 1.4 -- 2.1, 1999 - 2000.
-================================
+Sunclock is a sophisticated clock for the X Window system.  It is
+based on an earlier version by John Mackin, itself derived from a
+Suntools program by John Walker. Many possibilities of the original
+astronomy routines are now exploited.
 
-Revisions by Jean-Pierre Demailly (demailly@ujf-grenoble.fr)
+Sunclock displays a map of the Earth and shows which portion is illuminated
+by the sun. It can commute between two states, the "clock window" and
+the "map window". The clock window displays a small map of the Earth
+and therefore occupies little space on the screen, while the "map window" 
+displays a large map and offers more advanced functions. 
 
-New color version, with additional features and options. The included
-sample.sunclockrc file (possibly modified and/or augmented) should be
-copied onto /usr/lib/X11/app-defaults/Sunclock.  Each user can write
-his own ~/.sunclockrc to supersede the system wide defaults. The
-included latlong.txt file contains geodesic coordinates
-of many cities in the world, and can be used to adapt the 
-global  app-defaults/Sunclock  or private  ~/.sunclockrc
+The map window can work in five different modes:
+- "Legal time" mode: legal time of default time zone and GMT time are 
+  displayed.
+- "Coordinate" mode: by clicking on a city, users get coordinates 
+(latitude, longitude) of that city, legal time and sunrise/sunset.
+- "Solar" mode: by clicking on a point of the map (either a city or 
+another point), solar time and day length are shown.
+- "Distance" mode: shows distances in km and miles between two arbitrary
+locations.
+- "Progress" mode: allows to speed up the evolution of time, so as to
+observe the evolution of day/night periods and seasons.
 
-Version 1.3, November 16, 1994.
-===============================
+Meridians, Parallels, Equator, Tropics and Arctic circles can also be
+drawn. All these actions are performed through mouse clicks 
+on the map or on the bottom strip, and/or with keyboard shortcuts. 
+There is inline help available by typing 'h' or by clicking on the 
+bottom strip -- so that no further explanation should be needed. 
+Commuting between the clock and map states is obtained by typing 'w' 
+or simply <Space>.
 
-This version should now work under Linux/XFree86. The only additional
-feature is that the timezone is now displayed in the icon. 
+Sunclock version 3.xx is released under the GPL.
 
-Version 1.2, October 13, 1994.
-==============================
+Jean-Pierre Demailly
+demailly@fourier.ujf-grenoble.fr
 
-This version has some bugs fixed and should now support HP and Solaris. 
-No new features. See CHANGES for more detail and credits.
-
-Version 1.1, August 31, 1994.
-=============================
-
-This is version 1.1 of sunclock. New in this version is support for an
-interactive map. This allows you to define places on the map in your
-~/.sunclockrc file. These places will show up labelled in the large map,
-(not the icon). Clicking on a place will change the clock readout to the
-timezone of the that place. See the man page for details.
-
-Stephen Martin, smartin@fujitsu.ca - August 31, 1994.
+==============================================================================
 
 Original README
-===============
+---------------
 
 X11 version by John Mackin, <john@cs.su.oz.AU>, based on a Suntools program
 by John Walker, <kelvin@acad.uu.NET>.

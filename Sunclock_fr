@@ -1,0 +1,64 @@
+# French
+# Week days
+Dim
+Lun
+Mar
+Mer
+Jeu
+Ven
+Sam
+# Months
+Janv
+Févr
+Mars
+Avr
+Mai
+Juin
+Juil
+Août
+Sept
+Oct
+Nov
+Déc
+# Additional labels
+Point
+Heure GMT
+Heure solaire
+Heure légale 
+Durée du jour
+Lever
+Coucher
+Cliquer sur une ville
+Cliquer sur un point
+Cliquer sur deux points
+Touche
+Contrôles Clavier/Souris
+Echap
+Progression =
+Décalage temporel =
+heures
+jours
+Taper A,B,G,Z ou Entrée
+# Help
+Utiliser le mode Coordonnées
+Utiliser le mode Distances
+Utiliser le mode heure Légale
+Utiliser le mode heure Solaire
+Avancer dans le temps
+Reculer dans le temps
+Ajuster la valeur de proGression temporelle
+Remettre à Zéro le décalage temporel
+Montrer/ne pas montrer les Méridiens
+Montrer/ne pas montrer les Parallèles
+Montrer/ne pas montrer les Tropiques/Equateur/Cercles polaires
+Effacer/Montrer les villes
+Afficher l'aide et les options
+Iconifier la fenêtre
+Rafraîchir la fenêtre
+Commuter les fenêtres carte/horloge
+Activer la commande spécifiée par l'option -cmd
+Quitter le programme
+# Short help
+Sunclock dispose d'un certain nombre de fonctions accessibles au
+moyen de la souris ou des touches du clavier:
+# End

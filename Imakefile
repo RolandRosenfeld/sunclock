@@ -9,12 +9,12 @@
 #
 
 #ifdef HPArchitecture
-CCOPTIONS = -Ae -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\"
+CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
 #else
 # SunOS
-#CCOPTIONS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+#CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
 # Solaris, Linux
-CCOPTIONS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O
+CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
 #endif
 
 SRCS=sunclock.c bitmaps.c astro.c tildepath.c
@@ -23,3 +23,5 @@ LOCAL_LIBRARIES=$(XLIB) -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
+InstallAppDefaults(Sunclock)
+	cp -f Sunclock_* $(DESTDIR)$(XAPPLOADDIR)

@@ -1,0 +1,7 @@
+TODO
+====
+
+Replace -- maybe -- the bitmap image by colorful pixmaps of Earth. 
+This would make the program more pretty -- but would also make it
+have a larger memory footprint without substantially increasing
+the functionality...

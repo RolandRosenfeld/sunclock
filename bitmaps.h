@@ -8,21 +8,21 @@
 #define	EXTERN	extern
 #endif
 
-#define icon_map_width 128
-#define icon_map_height 63
-EXTERN char icon_map_bits[]
+#define clock_icon_width 128
+#define clock_icon_height 63
+EXTERN char clock_icon_bits[]
 #ifdef	DEFINE_BITS
-#include "icon.bits.h"
+#include "clock.bits.h"
 #else
 ;
 #endif
 
-#define large_map_width 640
-#define large_map_height 320
-EXTERN char large_map_bits[] 
+#define map_icon_width 640
+#define map_icon_height 320
+EXTERN char map_icon_bits[] 
 
 #ifdef	DEFINE_BITS
-#include "large.bits.h"
+#include "map.bits.h"
 #else
 ;
 #endif

@@ -1,58 +1,112 @@
-Version 2.1
+==============================================================================
+All revisions from version 1.4 to version 3.xx are by
+Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
+==============================================================================
 
-- Updated latlong.txt with a better source (http://www.ecf.toronto.edu/~mao/)
-  06/06/00, Jean-Pierre Demailly (demailly@ujf-grenoble.fr)
+Version 3.02, September 4, 2000.
 
-Version 2.0
+- Corrected segmentation fault problem, occurring when environment variable 
+  LANG was not set
+- Fixed behaviour of window placement, which was somewhat unsatisfactory
+- Slight code change for the sake of Solaris compatibility
+- Improved sunclock.man, Imakefile and Makefile.noimake
+- Added horizontal scroll for bottom text line
+- Merged German app-default file provided by users
+
+Version 3.01, August 31, 2000.
+
+- Added command line options -mapmode and -clockmode
+- A lot of compilation fixes
+- Makefile.noimake improved
+
+Version 3.00, August 26, 2000.
+
+Complete rewrite of the GUI, many bug corrections, improvements and
+new functions, resulting in a much more powerful program.
+
+- Added keyboard and mouse controls
+- Added command line and inline help
+- Added switches: coordinates, distances, legal time, solar time
+- Added marks, equator, tropic & arctic circles
+- Time can be quickly modified forward and backward, so that
+  the evolution of sun illumination and seasons can be observed
+- Improved time management routines
+- Improved and debugged monochrome mode
+
+Version 2.1, June 6, 2000.
+
+- Updated coordinates.txt with a better source 
+  (http://www.ecf.toronto.edu/~mao/)
+
+Version 2.0, April 21, 2000.
 
 - Added XFlush in doTimeout to force update (for LinuxPPC...) 
-  21/04/00, Jean-Pierre Demailly
 
-Version 1.9
+Version 1.9, January 21, 2000.
 
 - Iconic stuff fixed again (didn't work for all WM) 
-  21/01/00, Jean-Pierre Demailly
 
-Version 1.8
+Version 1.8, August 20, 1999.
 
 - Fixed small bug in mono mode 
-  20/08/99, Jean-Pierre Demailly
 
-Version 1.7
+Version 1.7, August 17, 1999.
 
-- Added Calculation of city distances (Jean-Pierre Demailly)
+- Added Calculation of city distances 
 
-Version 1.6
+Version 1.6, March 28, 1999.
 
 - Fixed iconic stuff, which did not seem to work properly (at least on
   my system...)
-  28/03/99, Jean-Pierre Demailly
 
-Version 1.5
+Version 1.5, March 15, 1999.
 
 - Added color support (cities can be shown in various colors, and the
   selected city is shown with a different color)
 - Added further options to support these extensions
-  15/03/99, Jean-Pierre Demailly
 
-Version 1.4
+Version 1.4, March 4, 1999.
 
 - Changed syntax in ~/.sunclockrc, so as to allow spaces in city names
   (syntax is now  name: latitude longtitude timezone)
 - City name and coordinates now displayed in bottom line
-- Enabled exit, through clicking on the bottom line (
-  04/03/99, Jean-Pierre Demailly  demailly@ujf-grenoble.fr
+- Enabled exit, when clicking on the bottom line
 
-Version 1.3
+==============================================================================
+
+Version 1.3, November 16, 1994.
+
 - Timezone now displayed in icon. Suggested by Rich Gonzalez
     (gonzo@u.washington.edu)
 - Should now work under Linux/XFree86 - Wolfram Gloger
     (wmglo@Dent.MED.Uni-Muenchen.DE)
 
-Version 1.2
+Version 1.2, October 13, 1994.
+
 - Used new icon suppied by Anthony Thyssen (anthony@cit.gu.edu.au). I can't
   see a difference can you see a difference.
 - Fixed stuff for HP using NEW_CTIME ifdef as suggested by Richard Lloyd
   (R.K.Lloyd@csc.liv.ac.uk). Untested by me on HP.
 - Support for Solaris thanks to Dave Yearke (yearke@calspan.com) who also
   pointed out some other bugs and fixes.
+
+==============================================================================
+
+Version 1.1, August 31, 1994.
+
+This is version 1.1 of sunclock. New in this version is support for an
+interactive map. This allows you to define places on the map in your
+~/.sunclockrc file. These places will show up labelled in the large map,
+(not the icon). Clicking on a place will change the clock readout to the
+timezone of the that place. See the man page for details.
+
+Stephen Martin, smartin@fujitsu.ca - August 31, 1994.
+
+==============================================================================
+
+Original X11 version, November 1988
+
+Written by John Mackin, <john@cs.su.oz.AU>, based on a 
+Suntools program by John Walker, <kelvin@acad.uu.NET>.
+
+

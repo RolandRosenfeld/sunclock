@@ -2,8 +2,12 @@
  * Sun clock definitions.
  */
 
+#define XK_MISCELLANY
+#define XK_LATIN1
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/keysymdef.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,3 +28,22 @@
 
 #define PROJINT  (60 * 10)	   /* Frequency of seasonal recalculation
 				      in seconds. */
+
+#define	FAILFONT	"fixed"
+#define EARTHRADIUS_KM  6378.125
+#define EARTHRADIUS_ML  3963.180
+
+#define SP		"         "
+
+#define COORDINATES 'c'
+#define DISTANCES 'd'
+#define LEGALTIME 'l'
+#define SOLARTIME 's'
+
+#define TIMECOUNT 25
+#define PRECOUNT  TIMECOUNT-1
+#define TIMESTEP  10000
+
+enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
+
+

@@ -1,3 +1,9 @@
+# Installation options
+#
+DESTDIR=/usr
+XAPPLOADDIR=/lib/X11/app-defaults
+XBINDIR=/bin/X11
+
 #
 # Compile options:
 #
@@ -9,19 +15,37 @@
 #
 
 # For HP
-#CFLAGS=-Ae -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\"
+#CFLAGS=-Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+
 # For SunOS
-CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+
 # For Solaris
-#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O
-LFLAGS=-L/usr/openwin/lib
+#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+#LFLAGS=-L/usr/openwin/lib
+
+# For Linux
+CFLAGS=-I/usr/include/X11 -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+LFLAGS=-L/usr/X11/lib
 
 OFILES=sunclock.o bitmaps.o astro.o tildepath.o
+HFILES=bitmaps.h clock.bits.h map.bits.h langdef.h sunclock.h version.h
 
-sunclock: $(OFILES)
+sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 
-sunclock.tar:
-	tar cvf sunclock.tar *.c *.h Imakefile Makefile.noimake sample.sunclockrc *.man CHANGES README
-	compress sunclock.tar
+install: sunclock
+	install -c -s sunclock $(DESTDIR)/$(XBINDIR)
+	cp -f Sunclock.ad $(DESTDIR)$(XAPPLOADDIR)/Sunclock
+	cp -f Sunclock_* /usr/lib/X11/app-defaults/
+
+clean:
+	rm -f core *.o *~ sunclock
+
+realclean:
+	rm -f core *.o *~ sunclock Makefile
+
+tgz:
+	tar cvf ../sunclock.tar .
+	gzip ../sunclock.tar
 

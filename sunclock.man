@@ -1,7 +1,7 @@
-.TH SUNCLOCK 1 "Aug 18, 1999"
+.TH SUNCLOCK 1 "Aug 26, 2000"
 .SH NAME
-sunclock \- show illuminated portion of Earth, time, latitude and longitude
-of major cities, as well as their mutual distances.
+sunclock \- a fancy clock for the X Window system, providing time and
+geographical data through point and click actions.
 .SH SYNOPSIS
 .B sunclock
 [
@@ -9,83 +9,163 @@ of major cities, as well as their mutual distances.
 ]
 .SH DESCRIPTION
 .I sunclock
-is an X11 application that displays a map of the Earth and
-indicates the illuminated portion of the globe by drawing
-sunlit areas dark on light, night areas as light on dark.
-It also displays the current date and time. It is possible to define locations
-on the main map that will display a place name (e.g. names of major cities). 
-If the user clicks on one of these places the time display will change to 
-the timezone of that location. When clicks are performed consecutively on 
-different locations, the mutual distance of these places is shown during
-a few seconds.
+is an X11 application that displays a map of the Earth and indicates
+the illuminated portion of the globe by drawing sunlit areas dark on
+light, night areas as light on dark.  In addition to providing local
+time for the default timezone, it also displays GMT time, legal and
+solar time of major cities, their latitude and longitude, and the
+mutual distances of arbitrary locations on Earth. Sunclock can display
+meridians, parallels, tropics and arctic circles. It has builtin
+functions that accelerate the speed of time and show the evolution of
+seasons. Sunclock can be internationalized for various western languages.
+It is possible to customize the app-default file and add new entries
+for additional cities. 
+
+It can commute between two states, the "clock window" and
+the "map window". The clock window displays a small map of the Earth
+and therefore occupies little space on the screen, while the "map window" 
+displays a large map and offers more advanced functions. 
+
+The map window can work in five different modes:
+.PP
+- "Legal time" mode: legal time of default time zone and GMT time are 
+displayed.
+.PP
+- "Coordinate" mode: by clicking on a city, users get coordinates 
+(latitude, longitude) of that city, legal time and sunrise/sunset.
+.PP
+- "Solar" mode: by clicking on a point of the map (either a city or 
+another point), solar time and day length are shown.
+.PP
+- "Distance" mode: shows distances in km and miles between two arbitrary
+locations.
+.PP
+- "Progress" mode: allows to speed up the evolution of time, so as to
+observe the evolution of day/night periods and seasons.
+.PP
+Depending on the mode chosen, the bottom line shows a short text
+displaying the required information. The bottom line can be scrolled to
+the right or to the left by pressing the horizontal key arrows.
 .SH OPTIONS
 The program does not use the X Toolkit, and hence only those
-options explicitly enumerated below may be used.  Neither are
-any resources necessary, although users will feel comfortable
-to use the prepackaged Sunclock.ad as an app-default file for
-several city locations and timezones.
+options explicitly enumerated below may be used.  The only
+needed resource is the list of coordinates and timezones of 
+cities to be displayed. Users will possibly have to customize
+the prepackaged app-default file Sunclock.ad.
 .TP
-.B \-version
-Show program version and patch level, and then exit.
+.BI "\-version "
+Show program version and exit.
 .TP
-.BI "\-display " dispname
+.BI "\-help "
+Show brief help and exit.
+.TP
+.B "\-display " dispname
 Give the name of the X server to contact.
 .TP
-.B \-iconic
-Start iconic.  Usually you will want to specify this option.
+.B "\-mono "
+Use monochrome settings (recommended only for monochrome screens!).
 .TP
-.BI "\-mono "
-Start with monochrome settings (only better with monochrome screens!).
+.B \-clock
+Start in the clock state. This is the default and thus need not be
+specified.
 .TP
-.BI "\-geometry " +x+y
-Specify the position of the window.  Only the position is used; any size
-information given is ignored.
+.BI "\-seconds "
+Start the clock in "Seconds" mode. Default is "Day" mode.
 .TP
-.BI "\-icongeom " +x+y
-Specify the position of the icon.  Only the position is used; any size
-information given is ignored.
+.BI "\-map "
+Start in the map state.  Useful to start right away with advanced 
+functionalities.
 .TP
-.BI "\-nocoord "
-Do not display the latitude and longitude of cities.
+.BI "\-mapmode * (single character = c, d, l or s)"
+Start the map functions in mode (C)oordinates, (D)istances, (L)egal time
+or (S)olar time respectively. Any other specification is ignored. Default 
+is legal time mode.
 .TP
-.BI "\-nodist "
-Do not display mutual distances of cities.
+.BI "\-clockgeom " +x+y
+Specify the position of the clock window.  Only the position is used; any 
+size information given is ignored.
+.TP
+.BI "\-mapgeom " +x+y
+Specify the position of the map window.  Only the position is used; any 
+size information given is ignored.
+.TP
+.BI "\-placement " <choice>\ (random, fixed, center, NW, NE, SW, SE)
+Specify whether commuting between clock and map windows should proceed
+with letting the the window centers, respectively, the NW, NE, SW, SE 
+corners fixed, or rather whether it should operate randomly, or through 
+user defined placement. Default is NW placement.
 .TP
 .BI "\-spot " size
 Define size=0 [=no spots] or 1,2,3 to use either thin circles, medium
 size spots or big spots and circles to represent cities. Size=3
 can be useful for monochrome displays on which cities are hardly
 visible, otherwise small color spots of size 1 or 2 are better).
+Default is 2 for color mode and 3 for monochrome mode.
 .TP
-.BI "\-showdelay " duration
-Specify the duration (in seconds), during which mutual distances of cities
-will be displayed (default: 4 seconds).
+.BI "\-shift " number
+Number of seconds by which time should be shifted. Useful to get
+sunclock display information on earlier or later epochs
+(recall that one day = 86400 seconds). 
+.TP
+.BI "\-cmd " command
+Specify an external action or program that will be called by keyboard 
+shortcut 'x'. Default is empty command.
+.TP
+.BI "\-meridians "
+Start sunclock with meridians displayed (by default, they aren't).
+.TP
+.BI "\-parallels "
+Start sunclock with parallels displayed (by default, they aren't).
+.TP
+.BI "\-tropics "
+Start sunclock with tropics and arctic circles displayed (by default, 
+they aren't).
+.TP
+.BI "\-nocities "
+Start sunclock without displaying cities (by default, they are).
 .TP
 .BI "\-bg " color
-Specifies the clock background color.
+Specifies the clock background color. Default is White.
 .TP
 .BI "\-fg " color
-Specifies the clock foreground color.
+Specifies the clock foreground color. Default is Black.
 .TP
 .BI "\-textbg " color
-Specifies the bottom text background color.
+Specifies the bottom text background color. Default is Thistle1.
 .TP
 .BI "\-textfg " color
-Specifies the bottom text foreground color.
+Specifies the bottom text foreground color. Default is Black.
 .TP
-.BI "\-city0 " color
+.BI "\-citycolor0 " color
 Specifies the color of cities (as described in ~/.sunclockrc or in
 the systemwide app-default file), when they have not yet been clicked 
-on with the mouse.
+on with the mouse. Default is Orange.
 .TP
-.BI "\-city1 " color
+.BI "\-citycolor1 " color
 Specifies the color to be applied to the city which has been selected just
 before the last selection, during the process of calculating distances.
+Default is Red.
 .TP
-.BI "\-city2 " color
+.BI "\-citycolor2 " color
 Specifies the color to be applied to the last selected city. The name and
-coordinates of this city are displayed in the bottom line.
+coordinates of this city are displayed in the bottom line. Default is 
+Red3 (darker red).
 .TP
+.BI "\-markcolor1 " color
+Specifies the color to be applied to the first marked position
+(any location on Earth other than one of the cities). Default is Green.
+.TP
+.BI "\-markcolor2 " color
+Specifies the color to be applied to the second marked position.
+Default is Green3.
+.TP
+.BI "\-linecolor " color
+Specifies the color to be applied to meridian and parallel lines.
+Default is Blue.
+.TP
+.BI "\-tropiccolor " color
+Specifies the color to be applied to tropics and arctic circles.
+Default is Purple.
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain lines of the following format:
@@ -124,10 +204,16 @@ WM_ICON_SIZE property of the root window is ignored.
 The illuminated area shown is the area which would be sunlit
 if the Earth had no atmosphere.  The actual illuminated area is
 larger because of atmospheric refraction and twilight.
-.SH AUTHOR
+.SH AUTHORS
 John Mackin, Basser Department of Computer Science, University of Sydney,
 Sydney, Australia; <john@cs.su.oz.AU>.  Based on a Suntools program
 by John Walker, Autodesk, Inc.; <kelvin@acad.uu.NET>.
 .PP
 Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca;
 added support for interactive map.
+.PP
+Jean-Pierre Demailly, Université de Grenoble I, 
+demailly@fourier.ujf-grenoble.fr added support for the numerous options
+and functions in the GUI interface.
+
+

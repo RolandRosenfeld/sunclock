@@ -1,4 +1,4 @@
-/*+
+/*
 T* NAME
  *
  *    tildepath.c - Convert ~name to a path.
@@ -22,18 +22,19 @@ T* RETURNS
 T* AUTHOR
  *
  *    Stephen Martin, March 12, 1991.
--*/
+ */
 
 /*
  * Version
  */
 
-static char SccsId[] = { "@(#) tildepath.c 1.1@(#)" };
+/* static char SccsId[] = { "@(#) tildepath.c 1.1@(#)" }; */
 
 /*
  * Include Files
  */
 
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pwd.h>
@@ -70,7 +71,7 @@ char *path;		/* Path starting with ~ */
      * Functions
      */
 
-    /*    char *strdup();		/* Make a copy of a path */
+    /*    char *strdup();	*/	/* Make a copy of a path */
 
     /*
      * If the path doesn't start with ~ quit right now
@@ -85,7 +86,7 @@ char *path;		/* Path starting with ~ */
 
     if ((username = strdup(++path)) == NULL)
 	return(NULL);
-    if (rest = strchr(username, '/')) {
+    if ((rest = strchr(username, '/'))) {
 	*rest = '\0';
 	rest++;
     }

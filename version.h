@@ -1,6 +1,5 @@
 /*
- * Track version and patch level of sunclock.
+ * Keep track of version and patch level of sunclock.
  */
 
-#define	VERSION		"2.1"
-#define	PATCHLEVEL	0
+#define	VERSION		"3.02"
