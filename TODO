@@ -1,7 +1,7 @@
 TODO
 ====
 
-- Replace the bitmap image by a vector map which will allow the
+- Replace the bitmap images by a runtime vector map which will allow the
   sunclock map to be rescaled in an arbitrary way. This is in my agenda 
   for the forthcoming version 3.20 -- it should be not so hard to do
   as everything is already implemented in xearth and analogues, and

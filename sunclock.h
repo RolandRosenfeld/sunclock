@@ -35,6 +35,7 @@
 #define EARTHRADIUS_KM  6378.125
 #define EARTHRADIUS_ML  3963.180
 #define SUN_APPRADIUS   0.266      /* Sun apparent radius, in degrees */
+#define ATM_CORRECTION  0.150      /* Atmospheric correction */
 
 #define SP		"         "
 

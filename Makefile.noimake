@@ -32,6 +32,15 @@ LFLAGS=-L/usr/X11/lib
 OFILES=sunclock.o astro.o tildepath.o
 HFILES=langdef.h sunclock.h version.h
 
+all: maps sunclock
+
+maps:
+	gcc mapgen.c -o mapgen -lm
+	./mapgen -xbm -mode 0 -width 720 -height 360 -name map_icon \
+	   > map_icon.xbm
+	./mapgen -xbm -mode 3 -width 128 -height 64 -name clock_icon \
+	   > clock_icon.xbm
+
 sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 
@@ -44,9 +53,11 @@ install: sunclock
 
 clean:
 	rm -f core *.o *~ sunclock
+	rm -f mapgen map_icon.xbm clock_icon.xbm
 
 realclean:
 	rm -f core *.o *~ sunclock Makefile
+	rm -f mapgen map_icon.xbm clock_icon.xbm
 
 tgz:
 	tar cvf ../sunclock.tar .

@@ -31,6 +31,7 @@ Coucher
 Cliquer sur une ville
 Cliquer sur un point
 Cliquer sur deux points
+Cliquer 2 fois ou taper * pour ° ' "
 Touche
 Contrôles Clavier/Souris
 Echap
@@ -43,14 +44,15 @@ jour
 jours
 # Help
 Utiliser le mode Coordonnées
+Utiliser le mode heure Solaire
 Utiliser le mode Distances
 Utiliser le mode Extension horaire
 Utiliser le mode heure Légale
-Utiliser le mode heure Solaire
 Avancer dans le temps
 Reculer dans le temps
 Ajuster la progression temporelle
 Remettre à Zéro le décalage temporel
+Montrer/ne pas montrer la zone Nocturne
 Montrer/ne pas montrer le Soleil
 Montrer/ne pas montrer les villes
 Montrer/ne pas montrer les Méridiens
@@ -67,3 +69,5 @@ Sortir du menu
 Sunclock dispose d'un certain nombre de fonctions accessibles au
 moyen de la souris ou des touches du clavier:
 # End
+
+

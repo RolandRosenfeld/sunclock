@@ -34,6 +34,18 @@ bottom strip -- so that no further explanation should be needed.
 Commuting between the clock and map states is obtained by typing 'w' 
 or simply <Space>.
 
+Starting from version 3.13, the sunclock package includes a vector map
+of the Earth (loosely derived from the xearth package by Kirk Lauritz
+Johnson). The clock and map data files are built from there by the
+`mapgen` utility. This allows users to select the respective size of
+the clock and map windows at compile time (not yet at run time :-( but
+should come soon...). Suitable values should be set in the Imakefile,
+before typing `xmkmf -a`. To get a feeling of what nice results the 
+vector map allows to get -- and what the next versions will look like, 
+just type e.g.
+  mapgen -xpm -mode 4 -width 960 -height 600 -name map_icon > map_icon.xpm
+  xv map_icon.xpm
+
 Sunclock version 3.xx is released under the GPL.
 
 Jean-Pierre Demailly

@@ -31,6 +31,7 @@ Puesta de sol
 Marca una ciudad
 Marca un lugar
 Marca dos lugares consecutivos
+Repetir clic o presionar * para ° ' "
 Tecla
 Control Teclado/Ratón
 Escape
@@ -43,14 +44,15 @@ día
 días
 # Help
 Usar modo coordenadas
+Usar modo hora solar
 Usar modo distancia
 Usar modo extensión horaria
 Usar modo hora legal
-Usar modo hora solar
 Modificar hora Adelante
 Modificar hora Atrás
 Ajustar valor de progreso de tiempo
 Poner a cero la diferencia de tiempo
+Dibujar/Borrar noche
 Dibujar/Borrar sol
 Dibujar/Borrar ciudades
 Dibujar/Borrar meridianos

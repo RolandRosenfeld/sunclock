@@ -31,6 +31,7 @@ Sunset
 Click on a city
 Click on a location
 Click consecutively on two locations
+Double click or strike * for ° ' "
 Key
 Key/Mouse controls
 Escape
@@ -43,14 +44,15 @@ day
 days
 # Help
 Use coordinate mode
+Use solar time mode
 Use distance mode
 Use hour extension mode
 Use legal time mode
-Use solar time mode
 Modify time forward
 Modify time backward
 Adjust time progress
 Reset global time shift to Zero
+Draw/Erase Night area
 Draw/Erase Sun
 Draw/Erase cities
 Draw/Erase meridians

@@ -5,9 +5,24 @@ Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 
 Planned Version 3.20, ???
 
-- Implementation of vector maps, using the xearth routines.
+- Implementation of the vector map routine in the runtime program.
 - Resizing routines for map and clock windows.
 
+Version 3.13, October 26, 2000.
+
+- The sunclock package now includes a vector map of the Earth (loosely
+  derived from the xearth package by Kirk Lauritz Johnson). The clock and 
+  map data files are built from there by the `mapgen` utility. This
+  allows users to select the respective size of the clock and map windows 
+  at compile time (not yet at run time :-(  but should come soon...)
+- New "night/no night" options
+- Coordinates can now appear in decimal degrees or degrees, minutes, seconds
+- Various small GUI fixes (window placement again...)
+  
+Version 3.12, October 9, 2000.
+
+- Fix for a bug affecting the configuration of language and color settings 
+  through the config file. 
 Version 3.11, October 8, 2000.
 
 - Italian localization by Alessio Bragadini <alessio@sevenseas.org>

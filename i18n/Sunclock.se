@@ -31,6 +31,7 @@ Solnedgång
 Klicka på en stad
 Klicka på en plats
 Klicka på två platser
+Klick två gånger eller slå * för ° ' "
 Tastatur
 Tastatur/Mus kontroll
 Escape
@@ -43,14 +44,15 @@ dag
 dagar
 # Help
 Använd koordinat mode
+Använd solstånd mode
 Använd distans mode
 Använd timme extension mode
 Använd nationell tidszon mode
-Använd solstånd mode
 Ändra tiden Framåt
 Ändra tiden Bakåt
 Justera tidsvariabel
 Återställ Global tid
+Rita/Radera Natt
 Rita/Radera Sön
 Rita/Radera städer
 Rita/Radera meridianer

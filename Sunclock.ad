@@ -25,80 +25,80 @@
 #tropics
 
 [Cities]
-Paris: 48.87 2.33 Europe/Paris
-#Grenoble: 45.36 5.32 Europe/Paris
-London: 51.50 -0.17 Europe/London
-Berlin: 52.52 13.33 Europe/Berlin
-Rome: 41.87 12.62 Europe/Rome
-Madrid: 40.43 -3.70 Europe/Madrid
-Athens: 38.00 23.73 Europe/Athens
-Budapest: 47.43 19.25 Europe/Budapest
-Sofia: 42.67 23.30 Europe/Sofia
-Reykjavik: 64.15000 -21.90 Europe/Reykjavik
-Oslo: 59.93 10.68 Europe/Oslo
-Stockholm: 59.33 18.08 Europe/Stockholm
-Helsinki: 60.17 24.88 Europe/Helsinki
-Geneva: 46.23 6.06 Europe/Zurich
-#Warsaw: 53.54 14.20 Europe/Warsaw
-Moscow: 55.75 37.70 Europe/Moscow 
-StPetersburg: 59.95 30.33 Europe/Moscow
-Tashkent: 41.33 69.30 Asia/Tashkent
-Alma-Ata: 43.23 76.88 Asia/Alma-Ata
-Irkutsk: 52.2 104.3 Asia/Irkutsk
-Vladivostok: 43.10 +131.78 Asia/Vladivostok
-Baghdad: 33.4 44.4 Asia/Baghdad
-Tehran: 35.75 51.50 Asia/Tehran
-Riyadh: 24.39 46.42 Asia/Riyadh
-New Delhi: 28.63 77.20 Asia/Calcutta
-Bombay: 18.97 72.83 Asia/Calcutta
-Madras: 13.00 80.18 Asia/Calcutta
-Calcutta: 22.5 88.3 Asia/Calcutta
-Bangkok: 13.73 100.50 Asia/Bangkok
-Katmandu: 27.82 85.35 Asia/Katmandu
-Manila: 14.62 +121.00 Asia/Manila
-Kuala Lumpur: 3.13 101.70 Asia/Kuala_Lumpur
-Brunei: 4.95 114.93 Asia/Brunei
-Jakarta: -6.13  106.75 Asia/Jakarta
-Hong Kong: 22.2 114.1 Hongkong
-Casablanca: 33.58 -7.65 Africa/Casablanca
-#Tangier: 35.87 -5.91 Africa/Casablanca
-Alger: 36.77 3.05 Africa/Algiers
-Tunis: 36.78 10.20 Africa/Tunis
-Ndjamena: 12.14 15.04 Africa/Njamena
-Cairo: 31.05 31.25 Africa/Cairo
-Beirut: 33.90 35.47 Asia/Beirut
-Monrovia: 6.30 -10.80 Africa/Monrovia
-Timbuktu: 16.8 -3.0 Africa/Timbuktu
-Nairobi: -1.28 36.83 Africa/Nairobi
-Brazzaville: -4.20 15.30 Africa/Brazzaville
-Djibouti: 11.57 43.00 Africa/Djibouti
-Cape Town: -33.93 18.47 Africa/Johannesburg
-Beijing: 39.92 116.43 Hongkong
-Tokyo: 36.0 139.0 Japan
-Antananarivo: -18.52 48.30 Indian/Antananarivo
-Perth: -32.0 115.9 Australia/Perth
-Darwin: -12.47 130.85 Australia/Darwin
-Sydney: -33.92 151.17 Australia/ACT
-Auckland: -36.88 174.75 Pacific/Auckland
-Tahiti: -17.6  -149.5 Pacific/Tahiti
-#Wellington: -41.28  174.78 Pacific/Auckland
-Toronto: 45.0 -75.0 Canada/Eastern
-Calgary: 51.0 -117.0 MST7MDT
-Anchorage: 61.17 -150.00 America/Anchorage
-Washington: 38.9 -77.0 US/Eastern
-Denver: 39.75 -104.87 America/Denver
-Salt Lake City: 40.76 -111.97 US/Mountain
-Chicago: 41.83  -87.75 America/Chicago
-San Francisco: 37.77 -122.42 US/Pacific
-Honolulu: 21.32 -157.83 Pacific/Honolulu
-Thule: 76.54 -68.70 America/Thule
-Godthab: 64.20 -51.68 America/Godthab
-Mexico City: 19.4   -99.1 America/Mexico_City
-Cayenne: 4.93 -52.45 America/Cayenne
-Bogota: 4.63 -74.10 America/Bogota
-Santiago: -33.43 -70.67 America/Santiago
-Brasilia: -15.87 -47.91 America/Sao_Paulo
-Rio de Janeiro: -22.88 -43.28 America/Sao_Paulo
-Buenos Aires: -34.67 -58.50 America/Buenos_Aires
-Lima: -12.10  -77.05 America/Lima
-Erebus: -77.46 +167.08 Pacific/Auckland
+Paris: 48.850 2.333 Europe/Paris
+#Grenoble: 45.360 5.320 Europe/Paris
+London: 51.500 -0.117 Europe/London
+Berlin: 52.517 13.333 Europe/Berlin
+Rome: 41.867 12.617 Europe/Rome
+Madrid: 40.433 -3.700 Europe/Madrid
+Athens: 38.027 23.733 Europe/Athens
+Budapest: 47.433 19.250 Europe/Budapest
+Sofia: 42.717 23.333 Europe/Sofia
+Reykjavik: 64.150 -21.900 Europe/Reykjavik
+Oslo: 59.933 10.683 Europe/Oslo
+Stockholm: 59.383 18.000 Europe/Stockholm
+Helsinki: 60.167 24.883 Europe/Helsinki
+Geneva: 46.233 6.067 Europe/Zurich
+Warsaw: 52.583 21.083 Europe/Warsaw
+Moscow: 55.750 37.617 Europe/Moscow 
+StPetersburg: 59.950 30.333 Europe/Moscow
+Tashkent: 41.333 69.300 Asia/Tashkent
+Alma-Ata: 43.230 76.880 Asia/Alma-Ata
+Irkutsk: 52.200 104.300 Asia/Irkutsk
+Vladivostok: 43.100 +131.783 Asia/Vladivostok
+Baghdad: 33.233 44.367 Asia/Baghdad
+Tehran: 35.750 51.500 Asia/Tehran
+Riyadh: 24.517 46.783 Asia/Riyadh
+New Delhi: 28.900 77.217 Asia/Calcutta
+Bombay: 18.967 72.833 Asia/Calcutta
+Madras: 13.000 80.183 Asia/Calcutta
+Calcutta: 22.533 88.367 Asia/Calcutta
+Bangkok: 13.833 100.483 Asia/Bangkok
+Katmandu: 27.817 85.350 Asia/Katmandu
+Manila: 14.617 +121.000 Asia/Manila
+Kuala Lumpur: 3.133 101.700 Asia/Kuala_Lumpur
+Brunei: 4.950 114.937 Asia/Brunei
+Jakarta: -6.150  106.850 Asia/Jakarta
+Hong Kong: 21.75 115.000 Hongkong
+Casablanca: 33.533 -7.683 Africa/Casablanca
+#Tangier: 35.867 -5.917 Africa/Casablanca
+Alger: 36.700 3.217 Africa/Algiers
+Tunis: 36.850 10.217 Africa/Tunis
+Ndjamena: 12.140 15.040 Africa/Njamena
+Cairo: 31.000 31.283 Africa/Cairo
+Beirut: 33.883 35.500 Asia/Beirut
+Monrovia: 6.250 -10.350 Africa/Monrovia
+Timbuktu: 16.800 -3.000 Africa/Timbuktu
+Nairobi: -1.283 36.817 Africa/Nairobi
+Brazzaville: -4.200 15.300 Africa/Brazzaville
+Djibouti: 11.567 43.000 Africa/Djibouti
+Cape Town: -33.800 18.467 Africa/Johannesburg
+Beijing: 39.917 116.383 Hongkong
+Tokyo: 35.683 139.733 Japan
+Antananarivo: -18.520 48.300 Indian/Antananarivo
+Perth: -31.833 116.167 Australia/Perth
+Darwin: -12.420 130.837 Australia/Darwin
+Sydney: -33.917 151.283 Australia/ACT
+Auckland: -36.883 174.750 Pacific/Auckland
+Tahiti: -17.550  -149.600 Pacific/Tahiti
+#Wellington: -41.250  174.750 Pacific/Auckland
+Toronto: 43.670 -79.370 Canada/Eastern
+Calgary: 51.050 -114.083 MST7MDT
+Anchorage: 61.167 -149.983 America/Anchorage
+Washington: 38.897 -77.009 US/Eastern
+Denver: 39.749 -104.989 America/Denver
+Salt Lake City: 40.756 -111.891 US/Mountain
+Chicago: 41.874  -87.639 America/Chicago
+San Francisco: 37.778 -122.411 US/Pacific
+Honolulu: 21.306 -157.860 Pacific/Honolulu
+Thule: 76.540 -68.700 America/Thule
+Godthab: 64.200 -51.680 America/Godthab
+Mexico City: 19.467   -99.150 America/Mexico_City
+Cayenne: 4.900 -52.500 America/Cayenne
+Bogota: 4.633 -74.100 America/Bogota
+Santiago: -33.433 -70.667 America/Santiago
+Brasilia: -15.867 -47.917 America/Sao_Paulo
+Rio de Janeiro: -22.450 -42.717 America/Sao_Paulo
+Buenos Aires: -34.333 -58.500 America/Buenos_Aires
+Lima: -12.100  -76.917 America/Lima
+Erebus: -77.457 +167.080 Pacific/Auckland

@@ -31,6 +31,7 @@ Tramonto
 Cliccare su una città
 Cliccare su un punto
 Cliccare su due punti
+Cliccare ancora o premere * per ° ' "
 Tasto
 Tasto/Mouse
 Escape
@@ -43,14 +44,15 @@ giorno
 giorni
 # Help
 Utilizza la modalità coordinate
+Utilizza la modalità ora solare
 Utilizza la modalità distanze
 Utilizza la modalità estensione oraria
 Utilizza la modalità ora legale
-Utilizza la modalità ora solare
 Modificare il tempo in avanti
 Modificare il tempo all'indietro
 Aggiustare la progressione temporale
 Rimettere a zero lo scarto temporale
+Mostrare/non mostrare la notte
 Mostrare/non mostrare il sole
 Mostrare/non mostrare le città
 Mostrare/non mostrare i meridiani

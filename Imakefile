@@ -24,6 +24,19 @@ OBJS=sunclock.o astro.o tildepath.o
 LOCAL_LIBRARIES=$(XLIB) -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
+all::
+	gcc mapgen.c -o mapgen -lm
+	./mapgen -xbm -mode 0 -width 720 -height 360 -name map_icon \
+	   > map_icon.xbm
+	./mapgen -xbm -mode 3 -width 128 -height 64 -name clock_icon \
+	   > clock_icon.xbm
+
+clean::
+	rm -f mapgen map_icon.xbm clock_icon.xbm
+
+realclean:: clean
+	rm -f Makefile
+
 ComplexProgramTarget(sunclock)
 InstallAppDefaults(Sunclock)
 	mkdirhier $(DESTDIR)$(SHAREDIR)

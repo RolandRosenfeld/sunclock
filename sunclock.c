@@ -230,8 +230,12 @@ int		clock_strip_height;
 int		map_strip_height;
 int		clock_height;
 
+int             horiz_shift = 0;
 int             vert_shift = 12;
 int		label_shift = 0;
+
+int             horiz_drift = 0;
+int             vert_drift =  0;
 
 int             time_count = PRECOUNT;
 int		force_proj = 0;
@@ -243,6 +247,7 @@ int             do_map = 0;
 int             do_hint = 0;
 int		do_menu = 1;
 
+int		do_night = 1;
 int		do_sunpos = 1;
 int		do_cities = 1;
 
@@ -252,6 +257,8 @@ int		do_merid = 0;
 int		do_bottom = 0;
 
 int		clock_mode = 0;
+int             deg_mode = 0;
+
 char            map_mode = LEGALTIME;
 char		CityInit[80] = "";
 
@@ -273,17 +280,17 @@ usage()
   	int	i;
 
 	fprintf(stderr, "%s: version %s\nUsage:\n"
-        "%s [-display dispname] [-rcfile file] [-command string]\n"
-        SP"[-language name] [-version] [-help] [-mono] [-menu] [-nomenu]\n"
+        "%s [-help] [-version] [-mono]\n"
+        SP"[-display name] [-rcfile file] [-command string] [-language name]\n"
+        SP"[-menu] [-nomenu] [-horizshift h (map<->menu)] [-vertshift v]\n"
 	SP"[-clock] [-clockgeom +x+y] [-date] [-seconds]\n"
-        SP"[-map] [-mapgeom +x+y] [-mapmode * <C,D,E,L,S>]\n"
+        SP"[-map] [-mapgeom +x+y] [-mapmode * <L,C,S,D,E>]\n"
         SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
-        SP"[-vertshift h (between map & menu)] [-spot size(0,1,2,3)]\n"
         SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
-        SP"[-city name] [-position latitude longitude]\n"
-        SP"[-cities] [-sunpos] [-meridians] [-parallels] [-tropics]\n"
-        SP"[-nocities] [-nosunpos] [-nomeridians] [-noparallels] [-notropics]"
-	  "\n"
+        SP"[-spot size(0,1,2,3)] [-city name] [-position latitude longitude]\n"
+        SP"[-night] [-cities] [-sunpos] [-meridians] [-parallels] [-tropics]\n"
+        SP"[-nonight] [-nocities] [-nosunpos]\n"
+        SP"[-nomeridians] [-noparallels] [-notropics]\n"
         SP"[-bg color] [-fg color] [-textbg color] [-textfg color]\n"
         SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
         SP"[-markcolor1 color] [-markcolor2 color]\n"
@@ -366,7 +373,7 @@ register struct geom *		g;
 }
 
 void
-checkBasicOptions(argc, argv)
+checkRCfile(argc, argv)
 register int			argc;
 register char **		argv;
 {
@@ -403,7 +410,7 @@ register int			cond;
 		} 
                 else if (strcasecmp(*argv, "-rcfile") == 0 && argc>1) {
 			needMore(argc, argv);
-			++argv;  /* already done in checkBasicOptions */
+			++argv;  /* already done in checkRCfile */
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-clockgeom") == 0 && argc>1) {
@@ -538,6 +545,11 @@ register int			cond;
                            placement = SE;
 			--argc;
 		}
+		else if (strcasecmp(*argv, "-horizshift") == 0 && argc>1) {
+			needMore(argc, argv);
+                        horiz_shift = atoi(*++argv);
+			--argc;
+		}
 		else if (strcasecmp(*argv, "-vertshift") == 0 && argc>1) {
 			needMore(argc, argv);
                         vert_shift = atoi(*++argv);
@@ -598,6 +610,12 @@ register int			cond;
 		else if (strcasecmp(*argv, "-cities") == 0) {
 			do_cities = 1;
 		}
+		else if (strcasecmp(*argv, "-night") == 0) {
+			do_night = 1;
+		}
+		else if (strcasecmp(*argv, "-nonight") == 0) {
+			do_night = 0;
+		}
 		else if (strcasecmp(*argv, "-sunpos") == 0) {
 			do_sunpos = 1;
 		}
@@ -640,11 +658,11 @@ register int			cond;
 }
 
 /*
- * readRCFile() - Read the user's ~/.sunclockrc file and app-defaults
+ * readrc() - Read the user's ~/.sunclockrc file and app-defaults
  */
 
 int 
-readRCFile()
+readrc()
 {
     /*
      * Local Variables
@@ -856,6 +874,7 @@ shutDown()
 	XDestroyWindow(dpy, Map);
 	XDestroyWindow(dpy, Clock);
 	XCloseDisplay(dpy);
+	exit(0);
 }
 
 
@@ -865,19 +884,13 @@ shutDown()
  */
 
 void
-setAllHints(argc, argv, num)
-int				argc;
-char **				argv;
+setAllHints(num)
 int				num;
 {
-	XClassHint		xch;
 	XSizeHints		xsh;
 	Window			win = 0;
-	int                     mask;
-        char 			name[80];	/* Used to change icon name */
 
 	xsh.flags = PSize | PMinSize | PMaxSize;
-	mask = ExposureMask | ButtonPressMask | KeyPressMask;
 
         switch(num) {
 	  case 0:
@@ -904,17 +917,44 @@ int				num;
 
 	   case 2:
 		win = Menu;
-		mask |= PointerMotionMask;
-		if (MapGeom.mask & (XValue | YValue)) {
-			xsh.x = MapGeom.x;
-			xsh.y = (placement<=NE)? 
-                            MapGeom.y + map_height + vert_shift : 
-                            MapGeom.y - 2*map_strip_height - vert_shift;
-			xsh.flags |= USPosition;
-		}
+		xsh.x = MapGeom.x + horiz_shift;
+		xsh.y = (placement<=NE)? 
+	           MapGeom.y + map_height + vert_shift : 
+                   MapGeom.y - 2*map_strip_height - vert_shift;
+		xsh.flags |= USPosition;
 		xsh.width = xsh.min_width = xsh.max_width = map_icon_width;
 		xsh.height = xsh.min_height = xsh.max_height =
                               2*map_strip_height;
+		break;
+	}
+
+	if (!win) return;
+	XSetNormalHints(dpy, win, &xsh);
+}
+
+void
+setProtocols(num)
+int				num;
+{
+	XClassHint		xch;
+	Window			win = 0;
+	int                     mask;
+        char 			name[80];	/* Used to change icon name */
+
+	mask = ExposureMask | ButtonPressMask | KeyPressMask;
+
+        switch(num) {
+	   case 0:
+		win = Clock;
+		break;
+
+	   case 1:
+		win = Map;
+		break;
+
+	   case 2:
+		win = Menu;
+		mask |= PointerMotionMask;
 		break;
 	}
 
@@ -927,8 +967,6 @@ int				num;
 	XSetClassHint(dpy, win, &xch);
 	XStoreName(dpy, win, ProgName);
        	XSelectInput(dpy, win, mask);
-	XSetCommand(dpy, win, argv, argc);
-	XSetNormalHints(dpy, win, &xsh);
 	XSetWMProtocols(dpy, win, &wm_delete_window, 1);
 }
 
@@ -937,10 +975,12 @@ int				num;
  */
 
 void
-AdjustGeom()
+AdjustGeom(num)
+int num;
 {
-	Window			root = RootWindow(dpy, scr);
-        Window			win;
+        Window root = RootWindow(dpy, scr);
+        Window win;
+
 	int			dx = 0, dy = 0;
 
         if (placement == CENTER) 
@@ -957,22 +997,34 @@ AdjustGeom()
         }
 
         if (placement) {
-	  if (do_map) {
+	  if (num) {
 	    if (placement >= CENTER) {
-              XTranslateCoordinates(dpy, Map, root, 0, 0, 
-                                       &MapGeom.x, &MapGeom.y, &win);
-	      ClockGeom.x = MapGeom.x + dx;
-	      ClockGeom.y = MapGeom.y + dy;
+      	      XTranslateCoordinates(dpy, Clock, root, 0, 0, 
+                                       &ClockGeom.x, &ClockGeom.y, &win);
+	      MapGeom.x = ClockGeom.x - dx - horiz_drift;
+	      MapGeom.y = ClockGeom.y - dy - vert_drift;
+              MapGeom.mask = XValue | YValue;
 	    }
 	  } else {
 	    if (placement >= CENTER) {
-              XTranslateCoordinates(dpy, Clock, root, 0, 0, 
-                                       &ClockGeom.x, &ClockGeom.y, &win);
-	      MapGeom.x = ClockGeom.x - dx;
-	      MapGeom.y = ClockGeom.y - dy;
+      	      XTranslateCoordinates(dpy, Map, root, 0, 0, 
+                                       &MapGeom.x, &MapGeom.y, &win);
+	      ClockGeom.x = MapGeom.x + dx - horiz_drift;
+	      ClockGeom.y = MapGeom.y + dy - vert_drift;
+              ClockGeom.mask = XValue | YValue;
 	    }
 	  } 
 	}
+}
+
+void
+MoveWindow(num)
+int num;
+{
+        if (num)
+           XMoveWindow(dpy, Map, MapGeom.x, MapGeom.y);
+        else
+           XMoveWindow(dpy, Clock, ClockGeom.x, ClockGeom.y);
 }
 
 void
@@ -1007,7 +1059,7 @@ int num;
 		fixGeometry(&ClockGeom, clock_icon_width, clock_height);
 		Clock = XCreateWindow(dpy, root,
 			     ClockGeom.x, ClockGeom.y,
-			     clock_icon_width, clock_height, 3,
+			     clock_icon_width, clock_height, 0,
 			     CopyFromParent, InputOutput, 
 			     CopyFromParent, mask, &xswa);
 		break;
@@ -1016,16 +1068,17 @@ int num;
 		fixGeometry(&MapGeom, map_icon_width, map_height);
 	        Map = XCreateWindow(dpy, root,
 			     MapGeom.x, MapGeom.y,
-			     map_icon_width, map_height, 3,
-			     CopyFromParent, InputOutput, 
+			     map_icon_width, map_height, 0,
+			     0, InputOutput, 
 			     CopyFromParent, mask, &xswa);
 		break;
 
            case 2:
 	        Menu = XCreateWindow(dpy, root,
-			     MapGeom.x, MapGeom.y + map_height + vert_shift,
-			     map_icon_width, 2*map_strip_height, 3,
-			     CopyFromParent, InputOutput, 
+			     MapGeom.x + horiz_shift, 
+                             MapGeom.y + map_height + vert_shift,
+			     map_icon_width, 2*map_strip_height, 0,
+			     0, InputOutput, 
 			     CopyFromParent, mask, &xswa);
 		break;
 	}
@@ -1040,6 +1093,10 @@ createWindows(argc, argv)
 int				argc;
 register char **		argv;
 {
+	int i;
+	struct geom * WinGeom;
+        Window win;
+
         wm_protocols = XInternAtom(dpy, "WM_PROTOCOLS", False);
         wm_delete_window = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 
@@ -1051,16 +1108,32 @@ register char **		argv;
 	                     SmallFont->max_bounds.descent + 2;
 	clock_height = clock_icon_height + clock_strip_height;
 
-	createWindow(do_map);
-	setAllHints(argc, argv, do_map);
-	XMapWindow(dpy, (do_map)? Map:Clock);
+        for (i=0; i<=2; i++) {
+	   createWindow(i);
+	   setProtocols(i);
+	   XSetCommand(dpy, (i==0)? Clock:((i==1)?Map:Menu), argv, argc);
+	}
+
+        setAllHints(do_map);
+	AdjustGeom(do_map);
+	win = (do_map)? Map:Clock;
+        XMapWindow(dpy, win);
+	if (!placement) return;
 	XFlush(dpy);
-	usleep(20000);
-        AdjustGeom();
-	createWindow(1-do_map);
-	setAllHints(argc, argv, 1-do_map);
-	createWindow(2);
-        setAllHints(argc, argv, 2);
+        usleep(3*TIMESTEP);
+	AdjustGeom(1-do_map);
+	WinGeom = (do_map)? &MapGeom : &ClockGeom;
+	horiz_drift = WinGeom->x;
+	vert_drift = WinGeom->y;
+	XMoveWindow(dpy, win, WinGeom->x, WinGeom->y);
+	XFlush(dpy);
+        usleep(3*TIMESTEP);
+	AdjustGeom(1-do_map);
+	horiz_drift = WinGeom->x - horiz_drift;
+	vert_drift = WinGeom->y - vert_drift;
+        /* Used for debugging this !#@ of window placement */
+	/* printf("Placement: %d Drift %d %d\n", 
+           placement, horiz_drift, vert_drift); */
 }
 
 void
@@ -1287,6 +1360,30 @@ City *city;
 }
 
 char *
+num2str(value, string)
+double value;
+char *string;
+{
+	int eps, d, m, s;
+
+	if (deg_mode) {
+ 	  if (value<0) {
+	    value = -value; 
+	    eps = -1;
+	  } else
+	    eps = 1;
+	  d = (int) value;
+	  value = 60 * (value - d);
+	  m = (int) value;
+	  value = 60 * (value - m);	  
+	  s = (int) value;
+	  sprintf(string, "%d°%02d'%02d\"", eps*d, m, s);
+	} else
+	  sprintf(string, "%.3f", value); 
+	return string;
+}
+
+char *
 bigtprint(gtime)
 time_t gtime;
 {
@@ -1296,7 +1393,8 @@ time_t gtime;
 	time_t                  stime;
  	int			i, l;
 	static char		s[128];
-        static double           dist;
+	char		slat[20], slon[20], slatp[20], slonp[20];
+        double		dist;
 #ifdef NEW_CTIME
 	struct timeb		tp;
 
@@ -1337,8 +1435,9 @@ time_t gtime;
 	   ltp = *localtime(&gtime);
            if ((mark1.city) && mark1.full)
 	   sprintf(s,
-		" %s (%.2f,%.2f)  %02d:%02d:%02d %s %s %02d %s %04d   %s %02d:%02d:%02d   %s %02d:%02d:%02d",
-                mark1.city->name, mark1.city->lat, mark1.city->lon,
+		" %s (%s,%s)  %02d:%02d:%02d %s %s %02d %s %04d   %s %02d:%02d:%02d   %s %02d:%02d:%02d",
+                mark1.city->name, 
+                num2str(mark1.city->lat, slat), num2str(mark1.city->lon, slon),
 		ltp.tm_hour, ltp.tm_min, ltp.tm_sec,
 #ifdef NEW_CTIME
 		ltp.tm_zone,
@@ -1354,8 +1453,9 @@ time_t gtime;
 	        else
            if ((mark1.city) && !mark1.full)
 	   sprintf(s,
-		" %s (%.2f,%.2f)  %02d:%02d:%02d %s %s %02d %s %04d   %s %02d:%02d:%02d",
-                mark1.city->name, mark1.city->lat, mark1.city->lon,
+		" %s (%s,%s)  %02d:%02d:%02d %s %s %02d %s %04d   %s %02d:%02d:%02d",
+                mark1.city->name, 
+                num2str(mark1.city->lat, slat), num2str(mark1.city->lon, slon),
 		ltp.tm_hour, ltp.tm_min, ltp.tm_sec,
 #ifdef NEW_CTIME
 		ltp.tm_zone,
@@ -1375,8 +1475,9 @@ time_t gtime;
 	     double junk;
 	     stime = sunParams(gtime, &junk, &junk, mark1.city);
 	     stp = *gmtime(&stime);
-	     sprintf(s, " %s (%.2f,%.2f)  %s %02d:%02d:%02d   %s %02d %s %04d   %s %02d:%02d:%02d", 
-                  mark1.city->name, mark1.city->lat, mark1.city->lon,
+	     sprintf(s, " %s (%s,%s)  %s %02d:%02d:%02d   %s %02d %s %04d   %s %02d:%02d:%02d", 
+                  mark1.city->name, 
+                  num2str(mark1.city->lat,slat), num2str(mark1.city->lon,slon),
                   Label[L_SOLARTIME],
                   stp.tm_hour, stp.tm_min, stp.tm_sec,
                   Day_name[stp.tm_wday], stp.tm_mday,
@@ -1393,10 +1494,12 @@ time_t gtime;
                     + cos(dtr(mark1.city->lat)) * cos(dtr(mark2.city->lat))
                            * cos(dtr(mark1.city->lon-mark2.city->lon));
              dist = acos(dist);
-             sprintf(s, " %s (%.2f %.2f) --> %s (%.2f %.2f)     "
+             sprintf(s, " %s (%s,%s) --> %s (%s,%s)     "
                       "%d km  =  %d miles", 
-               mark2.city->name, mark2.city->lat, mark2.city->lon, 
-               mark1.city->name, mark1.city->lat, mark1.city->lon,
+               mark2.city->name, 
+               num2str(mark2.city->lat,slatp), num2str(mark2.city->lon, slonp),
+               mark1.city->name, 
+               num2str(mark1.city->lat, slat), num2str(mark1.city->lon, slon),
                (int)(EARTHRADIUS_KM*dist), (int)(EARTHRADIUS_ML*dist));
 	   } else
 	     sprintf(s, " %s", Label[L_CLICK2LOC]);
@@ -1521,32 +1624,16 @@ makeMapContexts()
 void
 SwitchWindows()
 {
-	XSizeHints		xsh;
-
 	time_count = PRECOUNT;
 
-        if (do_map == 0) {
-          AdjustGeom();
-          XUnmapWindow(dpy, Clock);
-          xsh.x = MapGeom.x;
-          xsh.y = MapGeom.y;
-          xsh.flags = USPosition;
-      	  if (placement) XSetNormalHints(dpy, Map, &xsh);
-          XMapWindow(dpy, Map);
-	  if (placement) XMoveWindow(dpy, Map, MapGeom.x, MapGeom.y);
-	  switched = 1;
-	}
-        if (do_map == 1) {
-          AdjustGeom();
-          XUnmapWindow(dpy, Map);
-          xsh.x = ClockGeom.x;
-          xsh.y = ClockGeom.y;
-          xsh.flags = USPosition;
-      	  if (placement) XSetNormalHints(dpy, Clock, &xsh);
-          XMapWindow(dpy, Clock);
-	  if (placement) XMoveWindow(dpy, Clock, ClockGeom.x, ClockGeom.y);
-        }
-        do_map = 1 - do_map;
+        do_map = 1-do_map;
+        AdjustGeom(do_map);
+	XUnmapWindow(dpy,(do_map)?Clock:Map);
+        setAllHints(do_map);
+	MoveWindow(do_map);
+        XMapWindow(dpy, (do_map)?Map:Clock);
+        MoveWindow(do_map);
+	if (do_map) switched = 1;
 }
 
 /*
@@ -1808,8 +1895,14 @@ double dec;
 
 	/* Clear unoccupied cells in width table */
 
-	for (i = 0; i < ydots; i++)
+	if (do_night)
+   	   for (i = 0; i < ydots; i++)
 		wtab[i] = -1;
+	else {
+   	   for (i = 0; i < ydots; i++)
+		wtab[i] = ydots;
+	   return;
+	}
 
 	/* Build transformation for declination */
 
@@ -2118,34 +2211,28 @@ double	lat;
 {
 	double			duration;
 	double			sundec, junk;
-	double                  sinsun, sinpos, num;
+	double                  sinsun, sinpos, sinapp, num;
 
         sinpos = sin(dtr(lat));
 
+        /* Get Sun declination */
         (void) sunParams(gtime, &junk, &sundec, NULL);
-
-        /* Correct sun declination with the sun apparent diameter 
-	   to take into account that diameter and atmospheric diffusion */
-        if (lat>0) 
-           sundec += SUN_APPRADIUS * sinpos;
-	else
-           sundec -= SUN_APPRADIUS * sinpos;
         sinsun = sin(dtr(sundec));
 
-        if (sinsun==0 || sinpos==0)
-	  duration = 12.0 + SUN_APPRADIUS/(7.5 * cos(dtr(lat)));
-	else {
-          num = 1 - sinsun*sinsun - sinpos*sinpos;
-          if (num<=0) {
-	    if (sinsun*sinpos>0) 
-	      duration = 24.0;
-	    else
-	      duration = 0.0;
-	  } else
-	      duration = 12.0 + 24.0*atan(sinsun*sinpos/sqrt(num))/PI
-			      + SUN_APPRADIUS/(7.5 * cos(dtr(lat)));
-	}
-	return duration*3600;
+        /* Correct for the sun apparent diameter and atmospheric diffusion */
+        sinapp = sin(dtr(SUN_APPRADIUS + ATM_CORRECTION));
+
+        num = 1 - sinsun*sinsun - sinpos*sinpos - sinapp*sinapp
+                - 2*sinsun*sinpos*sinapp;
+        if (num<=0) {
+           if (sinsun*sinpos>0) 
+	     duration = 24.0;
+	   else
+	     duration = 0.0;
+        } else
+             duration = 12.0 + 24.0*atan((sinsun*sinpos+sinapp)/sqrt(num))/PI;
+
+        return duration*3600;
 }
 
 void
@@ -2313,10 +2400,8 @@ int	rank, width;
 void
 PopMenu()
 {
-	Window root = RootWindow(dpy, scr);
-	Window win;
-	XSizeHints		xsh;
-
+	int    x, y;
+	
 	if (!do_map) {
 	  do_menu = 0;
 	  return;
@@ -2331,17 +2416,15 @@ PopMenu()
 	  }
 
         last_hint = -1;
-	XTranslateCoordinates(dpy, Map, root, 0, 0, 
-                                       &MapGeom.x, &MapGeom.y, &win);
-	xsh.x = MapGeom.x;
-	xsh.y = (placement<=NE)? MapGeom.y + map_height + vert_shift :
-                MapGeom.y - 2*map_strip_height - vert_shift;
-	xsh.flags = USPosition;
-	  
-	XSetNormalHints(dpy, Menu, &xsh);
-	XMapWindow(dpy, Menu);
-        XMoveWindow(dpy, Menu, xsh.x, xsh.y);
-        XClearArea(dpy, Menu, 0, 0, map_icon_width, 2*map_strip_height, True);
+        AdjustGeom(0);
+        setAllHints(2);
+	x = MapGeom.x + horiz_shift - horiz_drift;
+	y = (placement<=NE)? 
+	    MapGeom.y + map_height + vert_shift: 
+            MapGeom.y - 2*map_strip_height - vert_shift -2*vert_drift;
+        XMoveWindow(dpy, Menu, x, y);
+        XMapWindow(dpy, Menu);
+        XMoveWindow(dpy, Menu, x, y);
 }
 
 void
@@ -2355,6 +2438,8 @@ int num;
         last_hint = num;
         sprintf(hint, " %s", Help[num]); 
         *more = '\0';
+	if (num<=2)
+	    sprintf(more, " (%s)", Label[L_DEGREE]);
 	if (num >=5 && num <=8) {
 	    char prog_str[30];
             if (time_progress == 60) 
@@ -2416,8 +2501,14 @@ char	key;
 	   case '\033':
 	     if (do_menu) PopMenu();
 	     break;
+	   case 'P':
+	     label_shift = 0;
+	     break;
+	   case 'W':
+	     label_shift = 30;
+	     break;
 	   case 'Q': 
-	     if (label_shift<20)
+	     if (label_shift<30)
              ++label_shift;
 	     break;
 	   case 'S': 
@@ -2433,6 +2524,10 @@ char	key;
 	     setDayParams(mark1.city);
 	     break;
 	   case 'c': 
+	     if (map_mode != COORDINATES) 
+	       deg_mode = 0;
+	     else
+	       deg_mode = 1 - deg_mode;
 	     map_mode = COORDINATES;
 	     if (mark1.city == &pos1 || mark2.city == &pos2) updateMap();
              if (mark1.city == &pos1) mark1.city = NULL;
@@ -2442,6 +2537,10 @@ char	key;
              mark2.city = NULL;
 	     break;
 	   case 'd': 
+	     if (map_mode != DISTANCES) 
+	       deg_mode = 0;
+	     else
+	       deg_mode = 1 - deg_mode;
 	     map_mode = DISTANCES;
 	     break;
 	   case 'e': 
@@ -2497,6 +2596,11 @@ char	key;
 	     if (mono) draw_meridians();
 	     if (mono || !do_merid) exposeMap();
 	     break;
+	   case 'n':
+	     do_night = 1 -do_night;
+	     force_proj = 1;
+	     exposeMap();
+	     break;
 	   case 'o':
              do_sunpos = 1 - do_sunpos;
 	     if (mono) draw_sun();
@@ -2510,8 +2614,11 @@ char	key;
 	     break;
 	   case 'q': 
 	     shutDown();
-	     exit(0);
 	   case 's': 
+	     if (map_mode != SOLARTIME) 
+	       deg_mode = 0;
+	     else
+	       deg_mode = 1 - deg_mode;
 	     map_mode = SOLARTIME;
              if (mark2.city == &pos2) exposeMap();
              if (mark2.city) mark2.city->mode = 0;
@@ -2535,9 +2642,16 @@ char	key;
 	   case 'x':
 	     if (Command) system(Command);
 	     break;
+	   case 'y':
+	     AdjustGeom(1-do_map);
+	     setAllHints(1-do_map);
+	     break;
 	   case 'z':
 	     time_jump = 0;
 	     setDayParams(mark1.city);
+	     break;
+	   case '*':
+	     deg_mode = 1 -deg_mode;
 	     break;
            default:
 	     if (!do_map) {
@@ -2752,9 +2866,12 @@ eventLoop()
 				if (ev.xclient.message_type == wm_protocols &&
 				    ev.xclient.format == 32 &&
 				    ev.xclient.data.l[0] == wm_delete_window) {
-					shutDown();
-					exit(0);
+					if (ev.xexpose.window==Menu)
+					   PopMenu();
+					else
+					   shutDown();
 				}
+				break;
 
 			case KeyPress:
                                 key = XKeycodeToKeysym(dpy,ev.xkey.keycode,0);
@@ -2820,8 +2937,8 @@ register char **		argv;
 
 	/* Read the configuation file */
 
-        checkBasicOptions(argc, argv);
-	if (readRCFile()) exit(1);
+        checkRCfile(argc, argv);
+	if (readrc()) exit(1);
 
 	if ((p = strrchr(ProgName, '/'))) ProgName = ++p;
 

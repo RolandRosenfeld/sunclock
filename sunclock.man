@@ -159,6 +159,9 @@ or rc file. The operating mode is set to Coordinates mode.
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
 .TP
+.BI "\-night "
+Start sunclock with the night region displayed (by default, it is).
+.TP
 .BI "\-cities "
 Start sunclock with the cities displayed (by default, they are).
 .TP
@@ -175,7 +178,7 @@ Start sunclock with parallels displayed (by default, they aren't).
 Start sunclock with tropics and arctic circles displayed (by default, 
 they aren't).
 .TP
-.BI "\-nocities \-nosunpos \-nomeridians \-noparallels \-notropics"
+.BI "\-nonight \-nocities \-nosunpos \-nomeridians \-noparallels \-notropics"
 These options just negate the above ones.
 .TP
 .BI "\-bg " color
