@@ -38,27 +38,30 @@ Tids-variabel =
 Global tid variabel =
 minut
 timme
+dag
 dagar
-Klicka på A,B,G,Z / Enter
 # Help
 Använd koordinat mode
 Använd distans mode
+Använd timme extension mode
 Använd nationell tidszon mode
 Använd solstånd mode
 Ändra tiden Framåt
 Ändra tiden Bakåt
 Justera tidsvariabel
 Återställ Global tid
+Rita/Radera Sön
+Rita/Radera städer
 Rita/Radera meridianer
 Rita/Radera breddgrader
 Rita/Radera Tropik/Ekvator/Arktik cirklar
-Utan/Med städer
 Visa hjälp och alternativ
 Ikonifiera fönster
 Förnya kartfönster
 Växla tidszon och kartfönster
 Aktivera kommando (-cmd option)
 Avsluta program
+Escape menu
 # Short help
 Sunclock har ett antal funktioner som kan åtkommas
 genom mus-klick eller tastaturet:

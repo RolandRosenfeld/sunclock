@@ -3,6 +3,14 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
+Version 3.10, October 3, 2000.
+
+- Interface has been improved and should be substantially easier to use
+- Added Sun position functionality
+- Added "hour extension" mode
+- Swedish localization
+- Other small changes, including bug fixes (timezone problems...)
+
 Version 3.04, September 7, 2000.
 
 - Fixed tzset() problems on some systems (Linux-Mandrake...) by always

@@ -24,7 +24,7 @@ Déc
 Point
 Heure GMT
 Heure solaire
-Heure légale 
+Heure légale
 Durée du jour
 Lever
 Coucher
@@ -38,27 +38,30 @@ Progression =
 Décalage temporel =
 minute
 heure
+jour
 jours
-Taper A,B,G,Z ou Entrée
 # Help
 Utiliser le mode Coordonnées
 Utiliser le mode Distances
+Utiliser le mode Extension horaire
 Utiliser le mode heure Légale
 Utiliser le mode heure Solaire
 Avancer dans le temps
 Reculer dans le temps
-Ajuster la valeur de proGression temporelle
+Ajuster la progression temporelle
 Remettre à Zéro le décalage temporel
+Montrer/ne pas montrer le Soleil
+Montrer/ne pas montrer les villes
 Montrer/ne pas montrer les Méridiens
 Montrer/ne pas montrer les Parallèles
 Montrer/ne pas montrer les Tropiques/Equateur/Cercles polaires
-Effacer/Montrer les villes
 Afficher l'aide et les options
 Iconifier la fenêtre
 Rafraîchir la fenêtre
 Commuter les fenêtres carte/horloge
 Activer la commande spécifiée par l'option -cmd
 Quitter le programme
+Sortir du menu
 # Short help
 Sunclock dispose d'un certain nombre de fonctions accessibles au
 moyen de la souris ou des touches du clavier:

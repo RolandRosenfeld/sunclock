@@ -2,4 +2,4 @@
  * Keep track of version and patch level of sunclock.
  */
 
-#define	VERSION		"3.04"
+#define	VERSION		"3.10"

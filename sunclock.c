@@ -187,7 +187,7 @@ char *  Command = NULL;
 
 Color	BgColor, FgColor, TextBgColor, TextFgColor,
 	CityColor0, CityColor1, CityColor2,
-	MarkColor1, MarkColor2, LineColor, TropicColor;
+	MarkColor1, MarkColor2, LineColor, TropicColor, SunColor;
 
 char *		Display_name = "";
 Display *	dpy;
@@ -203,6 +203,7 @@ GC		SmallFont_gc;
 
 Window		Clock;
 Window		Map;
+Window		Menu;
 Pixmap		Clockpix;
 Pixmap		Mappix;
 struct geom	ClockGeom = { 0, 20, 20 };
@@ -210,25 +211,35 @@ struct geom	MapGeom = { 0, 30, 30 };
 
 struct sunclock *	Current;
 
+int             radius[4] = {0, 2, 3, 5};
+
 int             spot_size = 2;
 int		placement = -1;
 int             mono = 0;
 int		map_height;
+int		clock_strip_height;
+int		map_strip_height;
 int		clock_height;
+
+int             vert_shift = 12;
 int		label_shift = 0;
 
 int             time_count = PRECOUNT;
 int		force_proj = 0;
-int		click_pos;
+int             firstime = 1;
 
 int             do_map = 0;
-int		do_help = 0;
+int             do_hint = 0;
+int		do_menu = 0;
+
+int		do_sunpos = 1;
+int		do_cities = 1;
+
 int		do_parall = 0;
 int		do_tropics = 0;
 int		do_merid = 0;
-int		do_nocities = 0;
+int		do_bottom = 0;
 
-int             progress_mode = 0;
 int		clock_mode = 0;
 char            map_mode = LEGALTIME;
 char *		CityInit = NULL;
@@ -236,6 +247,9 @@ char *		CityInit = NULL;
 long		local_shift = 0;
 long		global_shift = 0;
 long		time_progress = 1;
+
+double		sun_long = 0.0;
+double		sun_decl = 200.0;
 
 /* Records to hold extra marks 1 and 2 */
 
@@ -253,14 +267,15 @@ usage()
 	 SP"[-clock] [-clockgeom +x+y] [-seconds]\n"
          SP"[-map] [-mapgeom +x+y] [-mapmode * <c,d,l,s>]\n"
          SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
+         SP"[-vertshift h (between map & menu)]\n"
          SP"[-spot size(0,1,2,3)] [-shift timeshift(sec)]\n"
          SP"[-city name] [-position latitude longitude]\n"
-         SP"[-meridians] [-parallels] [-tropics] [-nocities]\n"
+         SP"[-nocities] [-nosunpos] [-meridians] [-parallels] [-tropics]\n"
          SP"[-bg color] [-fg color] [-textbg color] [-textfg color]\n"
          SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
          SP"[-markcolor1 color] [-markcolor2 color]\n"
-         SP"[-linecolor color] [-tropiccolor color]"
-           "\n\n%s\n", 
+         SP"[-linecolor color] [-tropiccolor color] [-suncolor color]\n"
+           "\n%s\n", 
          ProgName, VERSION, ProgName, ShortHelp);
 
 	for (i=0; i<N_OPTIONS; i++)
@@ -274,7 +289,7 @@ initValues()
 {
 	strcpy(BgColor.name, "White");
 	strcpy(FgColor.name, "Black");
-	strcpy(TextBgColor.name, "Thistle1");
+	strcpy(TextBgColor.name, "Grey92");
 	strcpy(TextFgColor.name, "Black");
 	strcpy(CityColor0.name, "Orange");
 	strcpy(CityColor1.name, "Red");
@@ -283,6 +298,7 @@ initValues()
 	strcpy(MarkColor2.name, "Green3");
 	strcpy(LineColor.name, "Blue");
 	strcpy(TropicColor.name, "Purple");
+	strcpy(SunColor.name, "Gold");
 	mark1.city = NULL;
 	mark1.status = 0;
 	mark2.city = NULL;
@@ -364,7 +380,7 @@ readrc()
 	        if (j<7) { strcpy(Day_name[j], buf); j++; } else
         	if (k<12) { strcpy(Month_name[k], buf); k++; } else
 		if (l<L_END) { strcpy(Label[l], buf); l++; } else 
-		if (m<N_OPTIONS) { strcpy(Help[m], buf); m++; } else 
+		if (m<=N_OPTIONS) { strcpy(Help[m], buf); m++; } else 
                 {
                    if (n==0) *ShortHelp = '\0';
 		   strcat(ShortHelp, buf); 
@@ -602,6 +618,11 @@ register char **		argv;
 			strcpy(TropicColor.name, *++argv);
 			--argc;
 		}
+		else if (strcmp(*argv, "-suncolor") == 0 && argc>1) {
+			needMore(argc, argv);
+			strcpy(SunColor.name, *++argv);
+			--argc;
+		}
 		else if (strcmp(*argv, "-placement") == 0 && argc>1) {
 			needMore(argc, argv);
 			if (strcmp(*++argv, "random")==0)
@@ -621,6 +642,12 @@ register char **		argv;
                            placement = SW;
 			if (strcasecmp(*argv, "se")==0)
                            placement = SE;
+			--argc;
+		}
+		else if (strcmp(*argv, "-vertshift") == 0 && argc>1) {
+			needMore(argc, argv);
+                        vert_shift = atoi(*++argv);
+			if (vert_shift<6) vert_shift = 6;
 			--argc;
 		}
 		else if (strcmp(*argv, "-cmd") == 0 && argc>1) {
@@ -647,15 +674,17 @@ register char **		argv;
 		else if (strcmp(*argv, "-parallels") == 0) {
 			do_parall = 1;
 		}
+		else if (strcmp(*argv, "-nocities") == 0) {
+			do_cities = 0;
+		}
+		else if (strcmp(*argv, "-nosunpos") == 0) {
+			do_sunpos = 0;
+		}
 		else if (strcmp(*argv, "-meridians") == 0) {
 			do_merid = 1;
 		}
 		else if (strcmp(*argv, "-tropics") == 0) {
 			do_tropics = 1;
-		}
-		else if (strcmp(*argv, "-nocities") == 0) {
-			do_nocities = spot_size;
-			spot_size = 0;
 		}
 		else if (strcmp(*argv, "-version") == 0) {
 			fprintf(stderr, "%s: version %s\n",
@@ -686,6 +715,7 @@ shutDown()
 	XFreeGC(dpy, MarkColor2.gc);
 	XFreeGC(dpy, LineColor.gc);
 	XFreeGC(dpy, TropicColor.gc);
+	XFreeGC(dpy, SunColor.gc);
 	XFreeGC(dpy, BigFont_gc);
 	XFreeGC(dpy, SmallFont_gc);
 	XFreeFont(dpy, BigFont);
@@ -712,9 +742,11 @@ int				num;
 	XClassHint		xch;
 	XSizeHints		xsh;
 	Window			win = 0;
+	int                     mask;
         char 			name[80];	/* Used to change icon name */
 
 	xsh.flags = PSize | PMinSize | PMaxSize;
+	mask = ExposureMask | ButtonPressMask | KeyPressMask;
 
         switch(num) {
 	  case 0:
@@ -738,11 +770,24 @@ int				num;
 		xsh.width = xsh.min_width = xsh.max_width = map_icon_width;
 		xsh.height = xsh.min_height = xsh.max_height = map_height;
 		break;
+
+	   case 2:
+		win = Menu;
+		mask |= PointerMotionMask;
+		if (MapGeom.mask & (XValue | YValue)) {
+			xsh.x = MapGeom.x;
+			xsh.y = (placement<=NE)? 
+                            MapGeom.y + map_height + vert_shift : 
+                            MapGeom.y - 2*map_strip_height - vert_shift;
+			xsh.flags |= USPosition;
+		}
+		xsh.width = xsh.min_width = xsh.max_width = map_icon_width;
+		xsh.height = xsh.min_height = xsh.max_height =
+                              2*map_strip_height;
+		break;
 	}
 
 	if (!win) return;
-
-	XSetNormalHints(dpy, win, &xsh);
 
         sprintf(name, "%s %s", ProgName, VERSION);
 	xch.res_name = ProgName;
@@ -750,9 +795,9 @@ int				num;
         XSetIconName(dpy, win, name);
 	XSetClassHint(dpy, win, &xch);
 	XStoreName(dpy, win, ProgName);
+       	XSelectInput(dpy, win, mask);
 	XSetCommand(dpy, win, argv, argc);
-       	XSelectInput(dpy, win, ExposureMask | ButtonPressMask | KeyPressMask);
-
+	XSetNormalHints(dpy, win, &xsh);
 }
 
 /*
@@ -842,6 +887,14 @@ int num;
 			     CopyFromParent, InputOutput, 
 			     CopyFromParent, mask, &xswa);
 		break;
+
+           case 2:
+	        Menu = XCreateWindow(dpy, root,
+			     MapGeom.x, MapGeom.y + map_height + vert_shift,
+			     map_icon_width, 2*map_strip_height, 0,
+			     CopyFromParent, InputOutput, 
+			     CopyFromParent, mask, &xswa);
+		break;
 	}
 }
 
@@ -854,10 +907,13 @@ createWindows(argc, argv)
 int				argc;
 register char **		argv;
 {
-	map_height = map_icon_height + BigFont->max_bounds.ascent +
-	     BigFont->max_bounds.descent +2 ;
-	clock_height = clock_icon_height + SmallFont->max_bounds.ascent +
-	     SmallFont->max_bounds.descent + 2;
+        map_strip_height = BigFont->max_bounds.ascent + 
+                       BigFont->max_bounds.descent + 4;
+	map_height = map_icon_height + map_strip_height;
+
+        clock_strip_height = SmallFont->max_bounds.ascent +
+	                     SmallFont->max_bounds.descent + 2;
+	clock_height = clock_icon_height + clock_strip_height;
 
 	createWindow(do_map);
 	setAllHints(argc, argv, do_map);
@@ -865,6 +921,8 @@ register char **		argv;
         AdjustGeom();
 	createWindow(1-do_map);
 	setAllHints(argc, argv, 1-do_map);
+	createWindow(2);
+	setAllHints(argc, argv, 2);
 }
 
 void
@@ -915,6 +973,11 @@ makeGCs()
 	BigFont_gc = XCreateGC(dpy, Map, GCForeground | GCBackground | GCFont, &gcv);
 	gcv.font = SmallFont->fid;
 	SmallFont_gc = XCreateGC(dpy, Map, GCForeground | GCBackground | GCFont, &gcv);
+
+	gcv.foreground = SunColor.pix;
+	gcv.background = SunColor.pix;
+	gcv.font = BigFont->fid;
+	SunColor.gc = XCreateGC(dpy, Map, GCForeground | GCBackground | GCFont, &gcv);
 }
 
 unsigned long 
@@ -955,6 +1018,7 @@ getColors()
 	MarkColor2.pix = getColor(MarkColor2.name, black);
 	LineColor.pix = getColor(LineColor.name, black);
 	TropicColor.pix = getColor(TropicColor.name, black);
+	SunColor.pix = getColor(SunColor.name, white);
 }
 
 void
@@ -988,9 +1052,10 @@ void
 clearStrip()
 {
         XClearArea(dpy, Map, 0, map_icon_height, 
-                 map_icon_width, map_height-map_icon_height, True);
+                 map_icon_width, map_strip_height, True);
 
 	time_count = PRECOUNT;
+	if (do_bottom) --do_bottom;
 }
 
 void
@@ -1028,41 +1093,11 @@ register struct tm *		gmtp;
 	}
 #endif
 
-	if (progress_mode) {
-	  sprintf(s, " G   %s %ld %s   %s %.3f %s  | %s", 
-		  Label[L_PROGRESS], 
-                  (time_progress>=1440)? time_progress/1440 : 1, 
-                  (time_progress>=1440)? Label[L_DAYS] : 
-                  ((time_progress>=60)? Label[L_HOUR] : Label[L_MIN]),
-                  Label[L_GLOBALSHIFT], global_shift/86400.0,
-		  Label[L_DAYS], Label[L_ENTER]);
-          l = strlen(s);
-	  if (l<98) {
-	    for (i=l; i<98; i++) s[i] = ' ';
-	    s[98] = '\0';
-	  }
-          strcat(s, Label[L_CANCEL]);
-	} else
-	if (do_help == 1)
-	  sprintf(s, "%s   %s", ListOptions, Label[L_CONTROLS]);
-	else
-        if (do_help == 2) {
-          sprintf(s, " %c   %s", 
-              Option[2*click_pos], Help[click_pos]); 
-          l = strlen(s);
-	  if (l<98) {
-	    for (i=l; i<98; i++) s[i] = ' ';
-	    s[98] = '\0';
-	  }
-          strcat(s, Label[L_CANCEL]);
-	}
-	else
-
         switch(map_mode) {
 
 	case LEGALTIME:
 	   sprintf(s,
-		" %s %02d:%02d:%02d %s %s %02d %s %04d    %s %02d:%02d:%02d UTC %s %02d %s %04d",
+		" %s  %02d:%02d:%02d %s %s %02d %s %04d    %s  %02d:%02d:%02d UTC %s %02d %s %04d",
                 Label[L_LEGALTIME], ltp->tm_hour, ltp->tm_min,
 		ltp->tm_sec,
 #ifdef NEW_CTIME
@@ -1143,6 +1178,10 @@ register struct tm *		gmtp;
 	     sprintf(s, " %s", Label[L_CLICK2LOC]);
 	   break;
 
+	case EXTENSION:
+	   return "";
+	   break;
+
 	default:
 	   break;
 	}
@@ -1203,12 +1242,12 @@ makeMapContexts()
 	register struct sunclock * s;
 
 	s = makeMapContext(map_icon_width, map_icon_height, Map, Mappix,
-		     BigFont_gc, bigtprint, 0,
-		     map_icon_height + BigFont->max_bounds.ascent + 1);
+		     BigFont_gc, bigtprint, 4,
+		     map_icon_height + BigFont->max_bounds.ascent + 2);
 	Current = s;
 
 	s = makeMapContext(clock_icon_width, clock_icon_height, 
-		     Clock, Clockpix, SmallFont_gc, smalltprint, 6,
+		     Clock, Clockpix, SmallFont_gc, smalltprint, 4,
 		     clock_icon_height + SmallFont->max_bounds.ascent + 1);
 	Current->s_next = s;
 	s->s_flags |= S_CLOCK;
@@ -1282,32 +1321,6 @@ SwitchWindows()
         do_map = 1 - do_map;
 }
 
-void
-drawSeparator(rank, width)
-int	rank, width;
-{
-	int j;
-
-	for (j=CHWID*rank-width+CHWID-4; j<=CHWID*rank+CHWID-4+width; j++)
-	     XDrawLine(dpy, Map, BigFont_gc, j,map_icon_height, j,map_height);
-}
-
-void
-drawSeparators()
-{
-	int	i;
-        
-	if (do_help == 1) {
- 	  for (i=0; i<N_OPTIONS; i++)
-	      drawSeparator(i, (Option[2*i+1]==';'));
-	}
-
-	if (do_help == 2 || progress_mode) {
- 	  for (i=0; i<=1; i++)
-	      drawSeparator(23*i, i);
-	}
-}
-
 /*
  *  Select Window and GC for monochrome mode
  */ 
@@ -1338,37 +1351,47 @@ double lat, lon;		/* Latitude and longtitude of the city */
      */
 
     int ilat, ilon; 		/* Screen coordinates of the city */
+    int rad;
     GC gc;
     Window w;
 
     if (mode < 0) return;
+    if (!do_cities && mode <= 2) return;
+
     if (mode == 0) { gc = CityColor0.gc; --mode; }
     if (mode == 1)   gc = CityColor1.gc;
     if (mode == 2)   gc = CityColor2.gc;
     if (mode == 3)   gc = MarkColor1.gc;
     if (mode == 4)   gc = MarkColor2.gc;
+    if (mode == 5)   gc = SunColor.gc;
 
     checkMono(&w, &gc);
 
     ilat = map_icon_height - (lat + 90) * (map_icon_height / 180.0);
     ilon = (180.0 + lon) * (map_icon_width / 360.0);
 
+    rad = radius[spot_size];
     if (spot_size == 1)
-       XDrawArc(dpy, w, gc, ilon-2, ilat-2, 4, 4, 0, 360 * 64);
+       XDrawArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);
     if (spot_size == 2)
-       XFillArc(dpy, w, gc, ilon-3, ilat-3, 6, 6, 0, 360 * 64);    
+       XFillArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);    
     if (spot_size == 3)
         {
-        XDrawArc(dpy, w, gc, ilon-5, ilat-5, 10, 10, 0, 360 * 64);
+        XDrawArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);
         XFillArc(dpy, w, gc, ilon-3, ilat-3, 6, 6, 0, 360 * 64);
         }
+    if (mode == 5)
+        {
+        rad = 6 + 2*mono;
+	XDrawLine(dpy, w, gc, ilon, ilat-rad, ilon, ilat+rad);
+	XDrawLine(dpy, w, gc, ilon-rad, ilat, ilon+rad, ilat);
+	}
 }
 
 void
 drawCities()
 {
 City *c;
-        if (spot_size) 
         for (c = cities; c; c = c->next)
 	    placeSpot(c->mode, c->lat, c->lon);
 }
@@ -1451,6 +1474,23 @@ draw_meridians()
 	  draw_meridian(LineColor.gc, i*15.0);
 }
 
+/*
+ * draw_sun() - Draw Sun at position where it stands at zenith
+ */
+
+void
+draw_sun()
+{
+	placeSpot(5, sun_decl, sun_long);
+}
+
+void
+drawSun()
+{
+	if (do_sunpos)
+  	  draw_sun();
+}
+
 void
 drawLines()
 {
@@ -1468,6 +1508,7 @@ drawAll()
         drawLines();
         drawCities();
 	drawMarks();
+	drawSun();
 }
 
 void
@@ -1718,6 +1759,27 @@ Pixmap pixmap;
 	}
 }
 
+/*
+ *  Produce bottom strip of hours
+ */
+
+void
+show_hours()
+{
+	int i;
+	char s[128];
+
+        clearStrip();
+	for (i=0; i<24; i++) {
+	    sprintf(s, "%d", i); 
+   	    XDrawImageString(dpy, Map, BigFont_gc, 
+              ((i*map_icon_width)/24 + 2*map_icon_width - CHWID*strlen(s)/8 +
+               (int)(sun_long*map_icon_width/360.0))%map_icon_width,
+              BigFont->max_bounds.ascent + map_icon_height + 2, 
+              s, strlen(s));
+	}
+}
+
 /* --- */
 /*  UPDIMAGE  --  Update current displayed image.  */
 
@@ -1740,12 +1802,16 @@ register struct sunclock *	s;
 	/* If this is a full repaint of the window, force complete
 	   recalculation. */
 
+        if (mono && firstime) {
+	  drawAll();
+	  firstime = 0;
+	}
+
 	if (s->s_noon < 0) {
 		s->s_projtime = 0;
 		for (i = 0; i < s->s_height; i++) {
 			s->s_wtab1[i] = -1;
 		}
-	    if (mono && do_map) drawAll();
 	}
 
 	if (s->s_flags & S_FAKE) {
@@ -1760,6 +1826,7 @@ register struct sunclock *	s;
 	ct = gmtime(&gtime);
 	jt = jtime(ct);
 	sunpos(jt, False, &sunra, &sundec, &sunrv, &sunlong);
+
 	gt = gmst(jt);
 
 	/* Projecting the illumination curve  for the current seasonal
@@ -1786,9 +1853,16 @@ register struct sunclock *	s;
 	if ((s->s_flags & S_FAKE) || s->s_noon != xl || force_proj) {
 		moveterm(s->s_wtab1, xl, s->s_wtab, s->s_noon, s->s_width,
 			 s->s_height, s->s_pixmap);
+                if (mono && do_sunpos) draw_sun();
+          	sun_long  = sunlong - 180.00;
+		while (sun_long>180.00) sun_long -= 360.00 ;
+		while (sun_long<-180.00) sun_long += 360.00 ;
+		sun_decl = sundec;
 		s->s_noon = xl;
 		s->s_flags |= S_DIRTY;
 		force_proj = 0;
+                if (map_mode == EXTENSION) show_hours();
+                if (mono && do_sunpos) draw_sun();
 	}
 }
 
@@ -1798,7 +1872,6 @@ register struct sunclock *	s;
 {
 	XDrawImageString(dpy, s->s_window, s->s_gc, s->s_textx,
 			 s->s_texty, s->s_text, strlen(s->s_text));
-        drawSeparators();
 }
 
 /*
@@ -1811,11 +1884,22 @@ City	*cptr;
 {
 	char buf[80];
 
-	if (cptr && do_map)
-	        sprintf(buf, "TZ=%s", cptr->tz);
+   	if (cptr && cptr->tz && do_map) {
+	   sprintf(buf, "TZ=%s", cptr->tz);
+ 	   putenv(buf);
+	   } 
 	else
-	        strcpy(buf, "TZ");
-	putenv(buf);
+#ifdef linux
+           unsetenv("TZ");
+#else
+	   {
+	   /* This is supposed to reset timezone to default localzone */
+	   strcpy(buf, "TZ");
+	   /* Another option would be to set LOCALZONE adequately and put:
+              strcpy(buf, "TZ="LOCALZONE); */
+	   putenv(buf);
+	   }
+#endif
 	tzset();
 }
 
@@ -1952,7 +2036,8 @@ City *cptr;
  */
 
 void
-processPoint(x, y)
+processPoint(win, x, y)
+Window win;
 int x, y;      /* Screen co-ordinates of mouse */
 {
     /*
@@ -1989,6 +2074,7 @@ int x, y;      /* Screen co-ordinates of mouse */
     switch(map_mode) {
 
       case COORDINATES:
+      case EXTENSION:
 	if (cptr) {
    	   if (mark1.city) mark1.city->mode = 0;
            mark1.city = cptr;
@@ -2044,50 +2130,90 @@ int x, y;      /* Screen co-ordinates of mouse */
     }
 }
 
+void
+drawSeparator(rank, width)
+int	rank, width;
+{
+	int j;
+
+	for (j=CHWID*rank-width+CHWID; j<=CHWID*rank+CHWID+width; j++)
+	     XDrawLine(dpy, Menu, BigFont_gc, j, 0, j, map_strip_height);
+}
+
+void
+PopMenu()
+{
+	Window root = RootWindow(dpy, scr);
+	Window win;
+
+	do_menu = 1 - do_menu;
+
+        if (!do_menu) 
+	  {
+	  XUnmapWindow(dpy, Menu);
+	  return;
+	  }
+
+	XTranslateCoordinates(dpy, Map, root, 0, 0, 
+                                       &MapGeom.x, &MapGeom.y, &win);
+	XMapWindow(dpy, Menu);
+        XMoveWindow(dpy, Menu, MapGeom.x, 
+           (placement<=NE)? MapGeom.y + map_height + vert_shift : 
+           MapGeom.y - 2*map_strip_height - vert_shift);
+        XClearArea(dpy, Menu, 0, 0, map_icon_width, 2*map_strip_height, True);
+}
+
+void
+showMenuHint(num)
+int num;
+{
+	char s[128], ss[128];
+	int i,l;
+
+        sprintf(s, " %s", Help[num]); 
+	if (num >=5 && num <=8) {
+            sprintf(ss, " ( %s %c%ld %s   %s %.3f %s )", 
+		  Label[L_PROGRESS], 
+		  (num==5)? '-':'+',
+                  (time_progress>=1440)? time_progress/1440 : 1, 
+                  (time_progress>=10080)? Label[L_DAYS] : 
+                  (time_progress>=1440)? Label[L_DAY] : 
+                  ((time_progress>=60)? Label[L_HOUR] : Label[L_MIN]),
+                  Label[L_GLOBALSHIFT], global_shift/86400.0,
+		  Label[L_DAYS]);
+            strcat(s, ss);
+	}
+	if (Option[2*num] == 'X') {
+	    sprintf(ss, " : %s", Command);
+	    strncat(s, ss, 120 - strlen(s));
+	}
+        l = strlen(s);
+	if (l<120) {
+	    for (i=l; i<120; i++) s[i] = ' ';
+	    s[120] = '\0';
+	}
+	XDrawImageString(dpy, Menu, BigFont_gc, 4, 
+              BigFont->max_bounds.ascent + map_strip_height + 2, 
+              s, strlen(s));
+}
+
 /*
  *  Process key events in eventLoop
  */
 
 void
-processKey(key)
+processKey(win, key)
+Window  win;
 char	key;
 {
 	int i;
 
         time_count = PRECOUNT;
 
-        if (progress_mode) {
-           if (key == '\015' || key == '\033') {
-	     clearStrip();
-	     progress_mode = 0;
-	     return;
-	   }
-           if (key != 'g' && key !='a' && key != 'b' && key != 'z') return;
-	}
-
-        if (do_help) {
-	   clearStrip();
-	   ++do_help;
-           i = 0;
-           while (i<N_OPTIONS && Option[2*i] != key-32) ++i;
-           if (i < N_OPTIONS) {
-              if (do_help == 2) {
-		click_pos = i;
-	        return;
-	      }
-              if (do_help == 3 && click_pos!= i) {
-		do_help = 0;
-	        return;
-	      }
-	      do_help = 0;
-	   }
-	   else {
-	      do_help = 0;
-	      return;
-	   }
-	}
-
         switch(key) {
+	   case '\033':
+	     if (do_menu) PopMenu();
+	     break;
 	   case 'Q': 
 	     if (label_shift<20)
              ++label_shift;
@@ -2117,41 +2243,37 @@ char	key;
 	   case 'd': 
 	     map_mode = DISTANCES;
 	     break;
+	   case 'e': 
+	     map_mode = EXTENSION;
+	     show_hours();
+	     break;
 	   case 'g': 
 	     if (!do_map) break;
-	     if (progress_mode) {
-		     if (time_progress == 1) time_progress = 60;
-		       else
-		     if (time_progress == 60) time_progress = 1440;
-		       else
-		     if (time_progress == 1440) time_progress = 10080;
-		       else
-		     if (time_progress == 10080) time_progress = 43200;
-	       	       else
-		     if (time_progress == 43200) time_progress = 1;
-	     } else {
-		     progress_mode = 1;
-	     	     do_help = 0;
+	     if (!do_menu) 
+	       PopMenu();
+             else {
+	       if (time_progress == 1) time_progress = 60;
+	         else
+	       if (time_progress == 60) time_progress = 1440;
+	         else
+	       if (time_progress == 1440) time_progress = 10080;
+	         else
+	       if (time_progress == 10080) time_progress = 43200;
+       	         else
+	       if (time_progress == 43200) time_progress = 1;
 	     }
 	     break;
 	   case 'h': 
-             ++do_help;
+	     if (!do_menu) PopMenu();
 	     break;
 	   case 'i': 
+	     if (do_map && do_menu) PopMenu();
              XIconifyWindow(dpy, (do_map)? Map:Clock, scr);
 	     break;
 	   case 'u':
-	     if (mono)
-	       drawCities();
-	     else {
-               if (do_nocities) {
-	         spot_size = do_nocities;
-	         do_nocities = 0;
-	       } else {
-	         do_nocities = spot_size;
-	         spot_size = 0;
-	       }
-	     }
+	     if (mono && do_cities) drawCities();
+	     do_cities = 1 - do_cities;
+	     if (mono && do_cities) drawCities();
              updateMap();
 	   case 'l':
 	     map_mode = LEGALTIME;
@@ -2167,6 +2289,11 @@ char	key;
 	     if (mono) draw_meridians();
 	     exposeMap();
 	     break;
+	   case 'o':
+             do_sunpos = 1 - do_sunpos;
+	     if (mono) draw_sun();
+             exposeMap();
+             break;
 	   case 'p':
              do_parall = 1 - do_parall;
 	     if (mono) draw_parallels();
@@ -2193,8 +2320,10 @@ char	key;
 	     break;
 	   case ' ':
 	   case 'w':
+	     if (do_map && do_menu) PopMenu();
 	     SwitchWindows();
 	   case 'r':
+	     clearStrip();
 	     updateMap();
 	     break;
 	   case 'x':
@@ -2204,12 +2333,17 @@ char	key;
 	     global_shift = 0;
 	     setDayParams(mark1.city);
 	     break;
-        default:
+           default:
 	     if (!do_map) {
 	       clock_mode = 1-clock_mode;
 	       updateMap();
 	     }
 	     break ;
+	}
+
+	if (do_menu) {
+          for (i=0; i<N_OPTIONS; i++)
+	      if (key == Option[2*i]+32) showMenuHint(i);
 	}
 }
 
@@ -2217,13 +2351,33 @@ char	key;
  *  Process mouse events in eventLoop
  */
 
+/*
+ *  Process mouse motion events in eventLoop
+ */
+
 void
-processMouse(x, y)
+processMotion(win, x, y)
+Window  win;
+int	x, y;
+{
+int	click_pos;
+
+	if (win != Menu) return;
+	if (y>map_strip_height) return;
+        click_pos = x/CHWID;
+	if (click_pos >= N_OPTIONS) click_pos = N_OPTIONS;
+        showMenuHint(click_pos);
+}
+
+void
+processClick(win, x, y)
+Window  win;
 int	x, y;
 {
 char	key;
+int	click_pos;
 
-	if (do_map == 0) {
+	if (win == Clock) {
 	   /* Show help on click */
 	   if (y <= clock_icon_height)
 	        SwitchWindows();
@@ -2238,39 +2392,37 @@ char	key;
         time_count = PRECOUNT;
 
         /* Click on bottom strip of map */
-        if (do_map == 1 && y > map_icon_height) {
-	   if (progress_mode) {
-              clearStrip();
-	      if (x <= 24*CHWID -4) {
-		processKey('g');
-	        return;
-	      }
-	      progress_mode = 0;
-	      return;
-	   }
-	   ++do_help;
-	   if (do_help == 2) {
-	      click_pos = (x+3)/CHWID;
-	      clearStrip();
-	      if (click_pos>=N_OPTIONS) {
-		 do_help = 0;
-	      } else
-		usleep(20*TIMESTEP);
-	   } else
-	   if (do_help == 3) {
-	      do_help = 0;
-	      clearStrip();
-	      if (x <= 24*CHWID - 4) {
-	         key = Option[2*click_pos]+32;
-		 processKey(key);
-	      }
-	   }
-           return;
+        if (win == Map) {
+          if(y > map_icon_height) {
+	    PopMenu();
+            return;
+	  }
+
+          /* Erase bottom strip to clean-up spots overlapping bottom strip */
+	  if (do_bottom) clearStrip();
+
+          /* Set the timezone, marks, etc, on a button press */
+          processPoint(win, x, y);
+
+          /* if spot overlaps bottom strip, set flag */
+ 	  if (y >= map_icon_height - radius[spot_size]) {
+	    if (map_mode == SOLARTIME)
+              do_bottom = 1;
+	    if (map_mode == DISTANCES)
+              do_bottom = 2;
+	  }
 	}
 
-	/* Set the timezone, marks, etc, on a button press */
-
-        if (do_map && !do_help) processPoint(x, y);
+        if (win == Menu) {
+	   if (y>map_strip_height) return;
+           click_pos = x/CHWID;
+	   if (click_pos >= N_OPTIONS) {
+	      PopMenu();
+	      return;
+	   }
+           key = Option[2*click_pos]+32;
+	   processKey(win, key);
+	}
 }
 
 void
@@ -2313,6 +2465,24 @@ void
 doExpose(w)
 register Window			w;
 {
+	char s[128];
+	int i;
+
+        if (w == Menu) 
+          {
+          sprintf(s, "%s        %s", ListOptions, Label[L_ESCAPE]);
+	  XDrawImageString(dpy, Menu, BigFont_gc, 4, 
+              BigFont->max_bounds.ascent + 2, s, strlen(s));
+          sprintf(s, " %s", Label[L_CONTROLS]);
+	  XDrawImageString(dpy, Menu, BigFont_gc, 4, 
+              BigFont->max_bounds.ascent + map_strip_height+ 2, s, strlen(s));
+	  for (i=0; i<N_OPTIONS; i++)
+	      drawSeparator(i, (Option[2*i+1]==';'));
+          XDrawLine(dpy, Menu, BigFont_gc, 0, map_strip_height, 
+                                         map_icon_width, map_strip_height);
+	  return;
+	  }
+
 	if (w != Current->s_window) {
 		Current = Current->s_next;
 		if (w != Current->s_window) {
@@ -2368,12 +2538,18 @@ eventLoop()
 
 			case KeyPress:
                                 key = XKeycodeToKeysym(dpy,ev.xkey.keycode,0);
-				processKey(key & 255);
+				processKey(ev.xexpose.window, key & 255);
                                 break;
 
 			case ButtonPress:
-			        processMouse(ev.xbutton.x, ev.xbutton.y);
+			        processClick(ev.xexpose.window, 
+                                             ev.xbutton.x, ev.xbutton.y);
 				break;
+
+			case MotionNotify:
+			        processMotion(ev.xexpose.window, 
+                                              ev.xbutton.x, ev.xbutton.y);
+			        break;
 
 			} else {
  		        usleep(TIMESTEP);

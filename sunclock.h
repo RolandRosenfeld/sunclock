@@ -38,6 +38,7 @@
 
 #define COORDINATES 'c'
 #define DISTANCES 'd'
+#define EXTENSION 'e'
 #define LEGALTIME 'l'
 #define SOLARTIME 's'
 

@@ -95,6 +95,11 @@ with letting the the window centers, respectively, the NW, NE, SW, SE
 corners fixed, or rather whether it should operate randomly, or through 
 user defined placement. Default is NW placement.
 .TP
+.BI "\-vertshift " h
+Specify number of pixels which should separate the map and menu windows.
+The default is 12 and may need to be adjusted according to the window
+manager used.
+.TP
 .BI "\-spot " size
 Define size=0 [=no spots] or 1,2,3 to use either thin circles, medium
 size spots or big spots and circles to represent cities. Size=3
@@ -120,6 +125,12 @@ or rc file. The operating mode is set to Coordinates mode.
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
 .TP
+.BI "\-nocities "
+Start sunclock without displaying cities (by default, they are).
+.TP
+.BI "\-nosunpos "
+Start sunclock without displaying the sun position (by default, it is).
+.TP
 .BI "\-meridians "
 Start sunclock with meridians displayed (by default, they aren't).
 .TP
@@ -129,9 +140,6 @@ Start sunclock with parallels displayed (by default, they aren't).
 .BI "\-tropics "
 Start sunclock with tropics and arctic circles displayed (by default, 
 they aren't).
-.TP
-.BI "\-nocities "
-Start sunclock without displaying cities (by default, they are).
 .TP
 .BI "\-bg " color
 Specifies the clock background color. Default is White.
@@ -175,6 +183,10 @@ Default is Blue.
 .BI "\-tropiccolor " color
 Specifies the color to be applied to tropics and arctic circles.
 Default is Purple.
+.TP
+.BI "\-suncolor " color
+Specifies the color to be applied to Sun.
+Default is Gold.
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain lines of the following format:

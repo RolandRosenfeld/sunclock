@@ -38,27 +38,30 @@ Progress value =
 Global time shift =
 minute
 hour
+day
 days
-Type A,B,G,Z or Enter
 # Help
 Use coordinate mode
 Use distance mode
+Use hour extension mode
 Use legal time mode
 Use solar time mode
-Modify time forwArd
-Modify time Backward
-Adjust time proGress value
+Modify time forward
+Modify time backward
+Adjust time progress
 Reset global time shift to Zero
+Draw/Erase Sun
+Draw/Erase cities
 Draw/Erase meridians
 Draw/Erase parallels
 Draw/Erase Tropics/Equator/Arctic circles
-Unmark/Draw cities
 Show help and options
 Iconify window
 Refresh map window
 Switch clock and map windows
 Activate command (-cmd option)
 Quit program
+Escape menu
 # Short help
 Sunclock has a number of internal procedures which can be accessed
 through mouse clicks or key controls:
