@@ -567,6 +567,7 @@ register char **		argv;
 		}
 		else if (strcasecmp(*argv, "-position") == 0) {
 			needMore(argc, argv);
+			CityInit = NULL;
 			position.lat = atof(*++argv);
 			if (fabs(position.lat)>90.0) position.lat = 100.0;
 	                --argc;
@@ -838,7 +839,9 @@ readrc()
 
         /* Look for blank lines or comments */
 
-        if ((buf[0] == '#') || (buf[0] == '\0')) continue;
+        j=0;
+	while (j<128 && isspace(buf[j]) && buf[j] != '0') ++j; 
+        if ((buf[j] == '#') || (buf[j] == '\0')) continue;
 
         if (strstr(buf, "[Cities]")) {
            first_step = 0;
@@ -3979,7 +3982,6 @@ City *c;
 		Context->mark1.city = c;
 		if (mono) Context->mark1.status = -1;
 		c->mode = 1;
-	        doExpose(Context->win);
 		return;
             }
 
@@ -3987,7 +3989,6 @@ City *c;
 		Context->flags.map_mode = SOLARTIME;
 		Context->mark1.city = NULL;
 		setTZ(NULL);
-		doTimeout(Context);
 		Context->mark1.city = &Context->pos1;
                 if (mono) pulseMarks(Context);
 		Context->pos1.name = Label[L_POINT];
