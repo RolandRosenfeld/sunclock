@@ -1,0 +1,17 @@
+#
+# Compile options:
+#
+# Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
+#   your struct tm contains a tm_zone field)
+# Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
+# Pick -O or -g
+#
+
+CDEBUGFLAGS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -g
+
+SRCS=sunclock.c bitmaps.c astro.c
+OBJS=sunclock.o bitmaps.o astro.o
+LOCAL_LIBRARIES=$(XLIB) -lm
+DEPLIBS=		# I don't know what I'm doing, and I hate imake!
+
+ComplexProgramTarget(sunclock)

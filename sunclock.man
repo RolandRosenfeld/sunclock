@@ -1,0 +1,58 @@
+.TH SUNCLOCK 1
+.SH NAME
+sunclock \- show illuminated portion of Earth
+.SH SYNOPSIS
+.B sunclock
+[
+.I options
+]
+.SH DESCRIPTION
+.I sunclock
+is an X11 application that displays a map of the Earth and
+indicates the illuminated portion of the globe by drawing
+sunlit areas dark on light, night areas as light on dark.
+It also displays the current date and time.
+.SH OPTIONS
+The program does not use the X Toolkit, and hence only those
+options explicitly enumerated below may be used.  Neither are
+any resources used.
+.TP
+.B \-version
+Show program version and patch level, and then exit.
+.TP
+.BI "\-display " dispname
+Give the name of the X server to contact.
+.TP
+.B \-iconic
+Start iconic.  Usually you will want to specify this option.
+.TP
+.BI "\-geometry " +x+y
+Specify the position of the window.  Only the position is used; any size
+information given is ignored.
+.TP
+.BI "\-icongeometry " +x+y
+Specify the position of the icon.  Only the position is used; any size
+information given is ignored.
+.SH "HOW IT WORKS"
+.I sunclock
+calculates the position of the Sun using the algorithm in chapter 18 of:
+.PP
+.I "Astronomical Formulae for Calculators"
+by Jean Meeus, Third Edition, Richmond: Willmann-Bell, 1985.
+.PP
+and Mercator projects the illuminated area onto map image.  The
+Sun's position is calculated to better than one arc-second
+in accuracy.
+.SH BUGS
+The maps are not rescaled if you resize the open window or icon.  (I don't want
+to have to store a vector database for the map.)  The program contravenes
+section 4.1.9 of the ICCCM in that its icon window is a fixed size, and any
+WM_ICON_SIZE property of the root window is ignored.
+.PP
+The illuminated area shown is the area which would be sunlit
+if the Earth had no atmosphere.  The actual illuminated area is
+larger because of atmospheric refraction and twilight.
+.SH AUTHOR
+John Mackin, Basser Department of Computer Science, University of Sydney,
+Sydney, Australia; <john@cs.su.oz.AU>.  Based on a Suntools program
+by John Walker, Autodesk, Inc.; <kelvin@acad.uu.NET>.

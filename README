@@ -1,28 +1,38 @@
+Sun Clock - X11 Version 1.0
 
-Sunclock is a SunView program  that  displays  a  map  of  the  Earth,
-showing  the  portion  illuminated  by  the  Sun  at the current time,
-properly corrected for the season.  The  program  initially  comes  up
-iconic  (126x63)  and can be opened into a larger (640x320) pixel map.
+X11 version by John Mackin, <john@cs.su.oz.AU>, based on a Suntools program
+by John Walker, <kelvin@acad.uu.NET>.
 
-A SunView menu allows animated displays that show the passage  of  day
-and  night, the changes in the seasons, and even the precession of the
-equinoxes as year follows year.
+This program is a clock that shows which portion of the Earth's surface is
+illuminated by the Sun.  It is designed to be usually iconic, but can be
+opened for a larger display with the time updated every second and both the
+local timezone and UTC displayed.  The Suntools version had a menu that
+allowed you to speed up time, show different dates, etc., but I have
+never implemented any of that in the X version; there is some support
+for it in the code, however.
 
-I saw a program like this running under NeWS, and couldn't sleep until
-I had one for my SunView screen.  It seems to work on Sun  3,  4,  and
-386i  architectures,  on any SunView later than 3.5.  It's been tested
-most recently on a Sun 3/260 running SunOS 4.0.3.
+The program should have been written using Xt rather than raw Xlib, and I
+tried that at first.  I couldn't get the icon window to work, though, so I
+abandoned that version.  Hence, the program does _not_ accept most Xt-style
+command line options; valid options are given in the manual page.
 
-Enjoy!
+The program has been tested on a number of different clients (MIPS, Sun,
+VAX) and servers (MIPS colour console, Sun MIT mono, NCD-16/19), under X11R3
+and R4.  If you find bugs, please report them to me, john@cs.su.oz.AU.
 
-Author:
+To build the program, decide whether you want to use imake or not.  If you
+don't, link Makefile.dist to Makefile, and edit it, otherwise edit the
+Imakefile and use xmkmf.  The program uses two fonts, one for the icon
+display and one for the large window display.  The names of these fonts
+are compiled in.  The font names comes from -DBIGFONT and -DSMALLFONT
+in the Makefile.  If you are not using imake, you will need to supply
+a -DSYSV option if you are System V.  You should supply -DNEW_CTIME if
+you are using the table-driven ctime and a "struct tm" contains
+a tm_zone field.  If neither of the ways of getting the local timezone
+name works on your system, please let me know.
 
-    John Walker
-    Autodesk, Inc.
-    2320 Marinship Way
-    Sausalito, CA  94965
-    USA
-    {sun,well,uunet}!acad!kelvin
-or: kelvin@acad.uu.net
-    Fax:   (415) 389-9418
-    Voice: (415) 332-2344 Ext. 2829
+The original Suntools program, in case you want it, was posted as Volume 1,
+Issue 79 of comp.sources.sun.
+
+This program is public domain and may be freely copied as long as the
+notices at the top of sunclock.c remain intact.
