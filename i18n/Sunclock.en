@@ -45,8 +45,8 @@ day
 days
 # Help
 Load Earth map file (F or mouse button 2)
-Zoom +
-Zoom -
+Zoom
+Synchronize windows - or not
 Back to previous window size
 Use coordinate mode
 Use solar time mode

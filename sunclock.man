@@ -122,10 +122,10 @@ With this option, sunclock locks the size of the first launched window,
 if this is a (small) clock. Also, this window cannot be closed unless
 all other windows are closed as well.
 .TP
-.B "\-updateall "
+.B "\-synchronize "
 With this option, sunclock updates all windows simultaneously. This, of 
 course, requires more CPU time and may slow down sunclock's operation 
-if too many windows are left open. The default is to update only the 
+if too many windows have been opened. The default is to update only the 
 active window. 
 .TP
 .B "\-title "
@@ -137,11 +137,24 @@ so that the title bars can appear. Many window managers do it anyway
 Start in the clock state. This is the default and thus need not be
 specified.
 .TP
-.BI "\-date "
-Start the clock in "Date" mode. This is the default.
-.TP
-.BI "\-seconds "
-Start the clock in "Seconds" mode (default is "date" mode).
+.BI "\-dateformat string1|string2|..."
+Set the format(s) used in the text output in the bottom strip of the clock. 
+The default date format consists of 3 strings:
+.PP
+  %H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52
+.PP
+Here %H,%M,%S stand for hour, minutes, seconds, %a for dayname, 
+%b for monthname, %d for monthday number, %j for yearday number,
+%m for month number, %y for year last two digits, %Y for year number,
+%t for number of days in year (365 or 366), %Z for timezone, %U for week
+number (week #1 is the week with the first thursday of the year); all
+other characters are reproduced as such, except %_ which stands for a 
+blank space, %% which stands for % and %| which stands for |. The vertical 
+bar | is used as a delimiter to indicate successive time formats. There 
+can be as many formats as desired, and the actual selection cycles through
+all these formats by clicking on the bottom strip with the mouse. The 
+first string (i.e. the one preceding the first bar) is taken as the 
+default format.
 .TP
 .BI "\-map "
 Start in the map state.  Useful to start right away with advanced 

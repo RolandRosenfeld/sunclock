@@ -45,8 +45,8 @@ jour
 jours
 # Help
 Charger une carte de la Terre (F ou souris, bouton 2)
-Zoom +
-Zoom -
+Zoom
+Synchroniser les fenêtres - ou non
 Retour à la taille de fenêtre précédente
 Utiliser le mode Coordonnées
 Utiliser le mode heure Solaire

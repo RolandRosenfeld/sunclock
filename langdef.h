@@ -1,3 +1,5 @@
+#define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
+
 char  	Day_name[7][10] = {
         "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
 };
@@ -35,13 +37,13 @@ char	Label[L_END][60] = {
 
 #define N_OPTIONS 27
 char    Option[2*N_OPTIONS] = 
-"F,+,-,<;C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T; ,W,K,I,R;H,X,Q;";
+"F,+,!,<;C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T; ,W,K,I,R;H,X,Q;";
 char	ListOptions[4*N_OPTIONS+2];
 
 char	Help[N_OPTIONS+1][80] = {
 "Load Earth map file",
-"Zoom +",
-"Zoom -",
+"Zoom menu",
+"Synchronize windows - or not",
 "Back to previous window size",
 "Use coordinate mode",
 "Use solar time mode",

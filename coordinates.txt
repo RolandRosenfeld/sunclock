@@ -1689,7 +1689,7 @@ R
             "Redding,CA"        +40.60000       -122.41700      4RXP PR00
       "Redondo_Beach,CA"        +33.82670       -118.38700      540Z NM40
        "Redwood_City,CA"        +37.46670       -122.25000      4SC7 P7B0
-    "Regensburg,Germany"        +49.12000        +49.02700      M2K0 R5L0
+    "Regensburg,Germany"        +49.01900        +12.10000      M2K0 R5L0
              "Regina,SK"        +50.50000       -104.50000      68QH RDH0
           "Reims,France"        +49.26670         +4.00000      HB00 R6B0
          "Rennes,France"        +48.11670         -1.03320      GWDH R0KH

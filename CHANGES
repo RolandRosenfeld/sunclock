@@ -12,6 +12,27 @@ Planned versions 3.30, 3.40... (features to appear in some order)
 - Possibility of loading external vector maps (?)
 - Spherical representation of Earth (?)
 
+Version 3.28, January 15, 2001
+
+- Patch in setTZ routine for HP-UX systems (should use putenv(strdup(buf))
+  instead of putenv(buf)). Suggested by Henry Verdonschot <henry@procura.nl>
+- The text output in the bottom strip of the clock is now customizable via
+  a format string; idea based on a suggestion by Henry Verdonschot
+- Dutch localization (Henry Verdonschot again)
+- Norwegian localization; made by Johnny Ljunggren <johnny@navtek.no>
+- Synchronize (don't synchronize) switch via "!" at runtime.
+
+Version 3.27, December 29, 2000
+
+- New options -dock (initial clock window cannot be resized or closed), 
+  and -updateall (all windows are updated, which, of course, requires 
+  more CPU)
+- Fixes multiple window bug found by François Massonneau <fmas@celtes.com>
+
+Version 3.26, December 22, 2000
+
+- Fixes segfault bug mentioned by François Massonneau <fmas@celtes.com>
+
 Version 3.25, December 21, 2000
 
 - Simultaneous windows (in arbitrary number...)

@@ -160,5 +160,12 @@ typedef struct Color {
 	GC		gc;
 } Color;
 
+/* Which OS are we using ? */
+
+#if defined(linux) || defined(__linux) || defined(__linux__)
+#define _OS_LINUX_
+#elif defined(hpux) || defined(__hpux) || defined(__hpux__)
+#define _OS_HPUX_
+#endif
 
 

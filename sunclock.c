@@ -141,14 +141,17 @@ char *SmallFont_name = SMALLFONT;
 char *BigFont_name = BIGFONT;
 
 char **dirtable;
-/* char * freq_filter = ".xpm"; */
 char * freq_filter = "";
 
 char language[4] = "";
 
+char *  rc_file = NULL;
 char *	ProgName;
 char *  Command = NULL;
-char *  rc_file = NULL;
+
+char    StdFormats[] = STDFORMATS;
+char *  ListFormats = StdFormats;
+char ** DateFormat;
 
 struct Sundata *Seed, *MenuCaller, *SelCaller;
 
@@ -202,6 +205,7 @@ int		placement = -1;
 int             mono = 0;
 int             invert = 0;
 int             color_depth;
+int             num_formats;
 int             leave;
 int      	chwidth;
 int		num_lines;
@@ -221,7 +225,7 @@ int             do_hint = 0;
 int		do_menu = 0;
 int             do_private = 0;
 int             do_dock = 0;
-int             do_updateall = 0;
+int             do_sync = 0;
 int             do_title = 0;
 
 int             time_jump = 0;
@@ -247,7 +251,7 @@ usage()
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
      SP"[-rcfile file] [-sharedir directory]\n"
      SP"[-mapimage file.xpm(.gz)] [-clockimage file.xpm(.gz)]\n"
-     SP"[-clock] [-date] [-seconds] [-command string]\n"
+     SP"[-clock] [-dateformat string1|string2|...] [-command string]\n"
      SP"[-map] [-mapgeom +x+y] [-mapmode * <L,C,S,D,E>] [-decimal] [-dms]\n"
      SP"[-city name] [-position latitude longitude]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
@@ -354,6 +358,38 @@ register struct Geometry *	g;
 	g->mask = mask;
 	if ( placement<=RANDOM && (mask & ( XValue | YValue)) ) 
 	   placement = FIXED;
+}
+
+void
+parseFormats(char * format)
+{
+        int i, j, l;
+	
+	l = strlen(format);
+
+	j = 1;
+	while (j>0) {
+	   j = 0;
+	   if (format[0]=='|') { ++format; --l; j = 1;}
+	   if (l>=2 && format[l-1]=='|' && format[l-2]!= '%') 
+                               { format[l-1]='\0'; --l; j = 1; }
+	}
+
+	num_formats = 1;
+	for (i=1; i<l-1; i++) 
+            if (format[i]=='|' && format[i-1]!='%') ++num_formats;
+
+        DateFormat = (char **) salloc(num_formats*sizeof(char *));
+
+	DateFormat[0] = format;
+        j = 0;
+
+	for (i=1; i<l-1; i++) 
+          if (format[i]=='|' && format[i-1]!='%') {
+	    ++j;
+	    format[i] = '\0';
+	    DateFormat[j] = format+i+1;
+	  }
 }
 
 void
@@ -616,7 +652,12 @@ register char **		argv;
 		}
 		else if (strcasecmp(*argv, "-command") == 0) {
 			needMore(argc, argv);
-			Command = *++argv;
+			Command = RCAlloc(*++argv);
+			--argc;
+		}
+		else if (strcasecmp(*argv, "-dateformat") == 0) {
+			needMore(argc, argv);
+			ListFormats = RCAlloc(*++argv);
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-shading") == 0) {
@@ -665,8 +706,8 @@ register char **		argv;
 		        do_private = 1;
 		else if (strcasecmp(*argv, "-dock") == 0)
 		        do_dock = 1;
-		else if (strcasecmp(*argv, "-updateall") == 0)
-		        do_updateall = 1;
+		else if (strcasecmp(*argv, "-synchronize") == 0)
+		        do_sync = 1;
 		else if (strcasecmp(*argv, "-title") == 0)
 		        do_title = 1;
 		else if (strcasecmp(*argv, "-clock") == 0)
@@ -687,10 +728,6 @@ register char **		argv;
 		        dotted = 0;
 		else if (strcasecmp(*argv, "-plainlines") == 0)
 		        dotted = 1;
-		else if (strcasecmp(*argv, "-date") == 0)
-                        gflags.clock_mode = 0;
-		else if (strcasecmp(*argv, "-seconds") == 0)
-                        gflags.clock_mode = 1;
 		else if (strcasecmp(*argv, "-decimal") == 0)
                         gflags.dms = 0;
 		else if (strcasecmp(*argv, "-dms") == 0)
@@ -930,7 +967,7 @@ readrc()
        
     if (!*language && getenv("LANG"))
        strncpy(language, getenv("LANG"), 2);
-    if (!*language)
+    if (!(language[0] && language[1]))
        strcpy (language,"en");
 
     for (j=0; j<=1; j++) share_i18n[i+j-2] = tolower(language[j]);
@@ -1567,27 +1604,33 @@ struct Sundata * Context;
 }
 
 /*
- *  Set the timezone of selected location
+ *  Set the timezone of selected location.
+ *  This is definitely the most tricky point in the whole sunclock stuff
+ *  because of the incompatible Unix implementations !
  */
 
 void
 setTZ(cptr)
 City	*cptr;
 {
-#ifndef linux
+#ifndef _OS_LINUX_
 	char buf[80];
 #endif
 
    	if (cptr && cptr->tz) {
-#ifdef linux
+#ifdef _OS_LINUX_
            setenv("TZ", cptr->tz, 1);
 #else
 	   sprintf(buf, "TZ=%s", cptr->tz);
+#ifdef _OS_HPUX_
+           putenv(strdup(buf));
+#else
  	   putenv(buf);
+#endif
 #endif
 	   } 
 	else
-#ifdef linux
+#ifdef _OS_LINUX_
            unsetenv("TZ");
 #else
 	   {
@@ -1595,7 +1638,11 @@ City	*cptr;
 	   strcpy(buf, "TZ");
 	   /* Another option would be to set LOCALZONE adequately and put:
            strcpy(buf, "TZ="LOCALZONE); */
-	   putenv(buf);
+#ifdef _OS_HPUX_
+           putenv(strdup(buf));
+#else
+ 	   putenv(buf);
+#endif
 	   }
 #endif
 	tzset();
@@ -1800,29 +1847,86 @@ time_t gtime;
 #endif
 
 	if (!Context->wintype) {
+		char num[80];
 		setTZ(NULL);
 		ltp = *localtime(&gtime);
-
-		if (Context->flags.clock_mode)
-		   sprintf(s, "%02d:%02d:%02d %s", 
-                	ltp.tm_hour, ltp.tm_min, ltp.tm_sec,
+                l = strlen(DateFormat[Context->flags.clock_mode]);
+		*s = '\0';
+		for (i=0; i<l; i++) {
+		   char c = DateFormat[Context->flags.clock_mode][i];
+		   if (c != '%') { 
+		      num[0] = c;
+                      num[1] = '\0'; 
+		   }
+                   if (c == '%' && i<l-1) {
+		      ++i; 
+		      c = DateFormat[Context->flags.clock_mode][i];
+                      switch(c) {
+		        case 'H': sprintf(num, "%02d", ltp.tm_hour); break;
+		        case 'M': sprintf(num, "%02d", ltp.tm_min); break;
+		        case 'S': sprintf(num, "%02d", ltp.tm_sec); break;
 #ifdef NEW_CTIME
-			ltp.tm_zone);
+			case 'Z': strcpy(num, ltp.tm_zone); break;
 #else
-			tzname[ltp.tm_isdst]);
+			case 'Z': strcpy(num, tzname[ltp.tm_isdst]); break;
 #endif
-        	else
-		   sprintf(s, "%02d:%02d %s %02d %s %02d", ltp.tm_hour, ltp.tm_min,
-			Day_name[ltp.tm_wday], ltp.tm_mday, Month_name[ltp.tm_mon],
-			ltp.tm_year % 100);
-
+                        case 'a': strcpy(num, Day_name[ltp.tm_wday]); break;
+		        case 'd': sprintf(num, "%02d", ltp.tm_mday); break;
+		        case 'j': sprintf(num, "%02d", 1+ltp.tm_yday); break;
+		        case 'b': strcpy(num, Month_name[ltp.tm_mon]); break;
+		        case 'm': sprintf(num, "%02d", 1+ltp.tm_mon); break;
+		        case 't': {
+			   int w = ltp.tm_year+1900;
+			   if (w % 4==0 && (w % 100!=0 || w % 400 == 0))
+			     w = 366;
+			   else
+			     w = 365;
+			   sprintf(num, "%d", w);
+			   break;
+			   }
+		        case 'y': sprintf(num, "%02d", ltp.tm_year%100); break;
+		        case 'Y': sprintf(num, "%d", ltp.tm_year+1900); break;
+		        case 'U': {
+	                   struct tm ftm;
+	                   time_t ftime;
+	                   int w;
+		           /*
+                            * define weeknumber
+                            * week #1 = week with the first thursday
+                            */
+		           /* set reference date to 1st of january, 12:00:00 */
+                           (void) memset(&ftm, 0, sizeof(struct tm));
+                           ftm.tm_isdst = -1;
+                           ftm.tm_mon = 0;
+                           ftm.tm_mday = 1;
+                           ftm.tm_year = ltp.tm_year;
+                           ftm.tm_hour = 12;
+                           ftm.tm_min = 0;
+                           ftm.tm_sec = 0;
+                           ftime = mktime(&ftm);
+                           ftm = *localtime(&ftime);
+		           /* get first sunday (start of week) */
+                           if (ftm.tm_wday < 5)
+                              w = 1 - ftm.tm_wday;
+		           else
+		              w = 8 - ftm.tm_wday;
+		           /* get weeknumber */
+		           sprintf(num, "%02d", 
+                                ((ltp.tm_yday+1-ltp.tm_wday-w)/7)+1);
+                           break; 
+			   }
+		        case '_': c = ' ';
+		        default: num[0] = c; num[1] = '\0'; break;
+		      }
+		   }
+		   strcat(s, num);
+		}
 	        l = strlen(s);
 		if (l<72) {
 		  for (i=l; i<72; i++) s[i] = ' ';
 		  s[72] = '\0';
 		  l = 72;
 		}
-
                 goto draw;
         }
 
@@ -3372,6 +3476,9 @@ char	key;
 	     if (label_shift<50)
 	       ++label_shift;
 	     break;
+	   case '!':
+	     do_sync = 1 - do_sync;
+	     break;
 	   case ' ':
 	     if (Context==Seed && do_dock) return;
              if (do_menu) PopMenu(Context);
@@ -3566,7 +3673,8 @@ char	key;
 	     break;
            default:
 	     if (!Context->wintype) {
-	       Context->flags.clock_mode = 1-Context->flags.clock_mode;
+	       Context->flags.clock_mode = 
+                   (1+Context->flags.clock_mode) % num_formats;
 	       updateMap(Context);
 	     }
 	     break ;
@@ -3656,7 +3764,7 @@ int b;
 	      bool=0;
 	      freeImageFiles(Context, &bool);
 	      if (bool) {
-                 if (do_menu) PopMenu(Context);
+		 if (do_menu) PopMenu(Context);
 		 adjustGeom(Context, 0);
 	         shutDown(Context, 0);
 	         buildMap(Context, Context->wintype, 0);
@@ -3782,7 +3890,8 @@ struct Sundata * Context = (struct Sundata *) NULL;
 	} else {
 	  if (button==1) {
 	     if (y>Context->geom.height) {
-	        Context->flags.clock_mode = 1-Context->flags.clock_mode;
+	        Context->flags.clock_mode = 
+                     (Context->flags.clock_mode+1) % num_formats;
 	        updateMap(Context);
 	     } else
 		processKey(win, 'x');
@@ -3987,7 +4096,7 @@ eventLoop()
 			        usleep(TIMESTEP);
 				for (Context=Seed; Context; 
                                                    Context=Context->next)
-				if (do_updateall || Context == Which ||
+				if (do_sync || Context == Which ||
                                     (do_dock && Context == Seed))
 				   doTimeout(Context);
 			}
@@ -4059,6 +4168,7 @@ register char **		argv;
 	if (placement<0) placement = NW;
 	if (invert && (gflags.shading>=2)) gflags.shading = 1;
 	if (color_depth>8) do_private = 0;
+	parseFormats(ListFormats);
 
 	cmap0 = newColormap();
 	getColors(cmap0);

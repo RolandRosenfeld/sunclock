@@ -1,4 +1,4 @@
-# English
+# Spanish
 # Day names
 Dom
 Lun
@@ -45,8 +45,8 @@ día
 días
 # Help
 Encargar carta de la Tierra (F o ratón, botone 2)
-Zoom + (funcione solamente con la carta vectorial)
-Zoom -
+Zoom (funcione solamente con la carta vectorial)
+Sincronizar las ventanas - o no
 Retornar a dimensiónes anteriores de la carta
 Usar modo coordenadas
 Usar modo hora solar
