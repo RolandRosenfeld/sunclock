@@ -11,9 +11,9 @@
 # For HP
 #CFLAGS=-Ae -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\"
 # For SunOS
-#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
 # For Solaris
-CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DUSE_PUTENV
+#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O
 LFLAGS=-L/usr/openwin/lib
 
 OFILES=sunclock.o bitmaps.o astro.o tildepath.o
@@ -21,10 +21,7 @@ OFILES=sunclock.o bitmaps.o astro.o tildepath.o
 sunclock: $(OFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 
-dist:
-	PWD=`pwd`; \
-	N=`basename $${PWD}`; \
-	cd ..; \
-	tar cvf - $$N/*.c $$N/*.h $$N/Imakefile $$N/Makefile.noimake \
-	$$N/sample.sunclockrc $$N/*.man $$N/CHANGES $$N/README \
-	| gzip -9 > $$N.tar.gz
+sunclock.tar:
+	tar cvf sunclock.tar *.c *.h Imakefile Makefile.noimake sample.sunclockrc *.man CHANGES README
+	compress sunclock.tar
+

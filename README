@@ -1,26 +1,41 @@
-Sun Clock - X11 Version 1.5, Apr 07, 1999.
+Sun Clock - X11 Version 2.1, June 6, 2000.
 ==========================================
 
-This version has settable foreground and background colours (with `-fg
-Color' and `-bg Color' options) thanks to Michael Richmond
-(mar@mri.mq.edu.au).  Also, the last remaining problems with updates
-of the main and icon windows are hopefully fixed.  See the CHANGES
-file in the distribution for more details and a brief history of the
-released versions.
+Version 1.4 -- 2.1, 1999 - 2000.
+================================
 
-To compile, test and install, use
+Revisions by Jean-Pierre Demailly (demailly@ujf-grenoble.fr)
 
-% cd sunclock-1.5
-% xmkmf
-% make
-% ./sunclock &
-% make install
-% make install.man
+New color version, with additional features and options. The included
+sample.sunclockrc file (possibly modified and/or augmented) should be
+copied onto /usr/lib/X11/app-defaults/Sunclock.  Each user can write
+his own ~/.sunclockrc to supersede the system wide defaults. The
+included latlong.txt file contains geodesic coordinates
+of many cities in the world, and can be used to adapt the 
+global  app-defaults/Sunclock  or private  ~/.sunclockrc
 
-or use the supplied `Makefile.noimake' if you really can't use imake.
+Version 1.3, November 16, 1994.
+===============================
 
-Wolfram Gloger, wmglo@dent.med.uni-muenchen.de
+This version should now work under Linux/XFree86. The only additional
+feature is that the timezone is now displayed in the icon. 
 
+Version 1.2, October 13, 1994.
+==============================
+
+This version has some bugs fixed and should now support HP and Solaris. 
+No new features. See CHANGES for more detail and credits.
+
+Version 1.1, August 31, 1994.
+=============================
+
+This is version 1.1 of sunclock. New in this version is support for an
+interactive map. This allows you to define places on the map in your
+~/.sunclockrc file. These places will show up labelled in the large map,
+(not the icon). Clicking on a place will change the clock readout to the
+timezone of the that place. See the man page for details.
+
+Stephen Martin, smartin@fujitsu.ca - August 31, 1994.
 
 Original README
 ===============

@@ -1,6 +1,7 @@
-.TH SUNCLOCK 1 "Apr 07, 1999"
+.TH SUNCLOCK 1 "Aug 18, 1999"
 .SH NAME
-sunclock \- show illuminated portion of Earth
+sunclock \- show illuminated portion of Earth, time, latitude and longitude
+of major cities, as well as their mutual distances.
 .SH SYNOPSIS
 .B sunclock
 [
@@ -12,12 +13,17 @@ is an X11 application that displays a map of the Earth and
 indicates the illuminated portion of the globe by drawing
 sunlit areas dark on light, night areas as light on dark.
 It also displays the current date and time. It is possible to define locations
-on the main map that will display a place name. If the user clicks on one of
-these places the time display will change to the timezone of that location.
+on the main map that will display a place name (e.g. names of major cities). 
+If the user clicks on one of these places the time display will change to 
+the timezone of that location. When clicks are performed consecutively on 
+different locations, the mutual distance of these places is shown during
+a few seconds.
 .SH OPTIONS
 The program does not use the X Toolkit, and hence only those
 options explicitly enumerated below may be used.  Neither are
-any resources used.
+any resources necessary, although users will feel comfortable
+to use the prepackaged Sunclock.ad as an app-default file for
+several city locations and timezones.
 .TP
 .B \-version
 Show program version and patch level, and then exit.
@@ -28,51 +34,77 @@ Give the name of the X server to contact.
 .B \-iconic
 Start iconic.  Usually you will want to specify this option.
 .TP
+.BI "\-mono "
+Start with monochrome settings (only better with monochrome screens!).
+.TP
 .BI "\-geometry " +x+y
 Specify the position of the window.  Only the position is used; any size
 information given is ignored.
 .TP
-.BI "\-icongeometry " +x+y
+.BI "\-icongeom " +x+y
 Specify the position of the icon.  Only the position is used; any size
 information given is ignored.
 .TP
-.BI "\-animateicon"
+.BI "\-nocoord "
+Do not display the latitude and longitude of cities.
 .TP
-.BI "\-a"
-Animate the icon by continuous scrolling.  Many window managers permit
-only a fixed icon size of 64x64 pixels.  This option makes the whole
-icon map visible over time.
+.BI "\-nodist "
+Do not display mutual distances of cities.
 .TP
-.BI "\-fg " Colour
-Set the foreground colour to 'Colour'.  This is the colour which is used
-to draw the map outline in the daylight areas.
+.BI "\-spot " size
+Define size=0 [=no spots] or 1,2,3 to use either thin circles, medium
+size spots or big spots and circles to represent cities. Size=3
+can be useful for monochrome displays on which cities are hardly
+visible, otherwise small color spots of size 1 or 2 are better).
 .TP
-.BI "\-bg " Colour
-Set the background colour to 'Colour'. This is the colour which is used
-for the background in the daylight areas.  Night areas are shown with
-foreground and background colours reversed.
-.RE
+.BI "\-showdelay " duration
+Specify the duration (in seconds), during which mutual distances of cities
+will be displayed (default: 4 seconds).
+.TP
+.BI "\-bg " color
+Specifies the clock background color.
+.TP
+.BI "\-fg " color
+Specifies the clock foreground color.
+.TP
+.BI "\-textbg " color
+Specifies the bottom text background color.
+.TP
+.BI "\-textfg " color
+Specifies the bottom text foreground color.
+.TP
+.BI "\-city0 " color
+Specifies the color of cities (as described in ~/.sunclockrc or in
+the systemwide app-default file), when they have not yet been clicked 
+on with the mouse.
+.TP
+.BI "\-city1 " color
+Specifies the color to be applied to the city which has been selected just
+before the last selection, during the process of calculating distances.
+.TP
+.BI "\-city2 " color
+Specifies the color to be applied to the last selected city. The name and
+coordinates of this city are displayed in the bottom line.
+.TP
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain lines of the following format:
 .PP
-[+]name latitude longitude timezone
+name: latitude longtitude timezone
 .PP
-where name is the ascii name of the place to be shown on the map. If
-the name starts with a '+', the label will be displayed above the dot
-instead of below. latitude and longitude are floating point numbers
-representing the geographical location of the place. Western
-longitudes and southern latitudes should be entered as negative
-numbers. timezone is the name of the timezone that the place is
-in. This should be the name of a file under /usr/share/zoneinfo;
-incorrect timezones cause the clock to display GMT. It is also
-possible to reference a file in a directory relative to
-/usr/share/zoneinfo, for example Canada/Eastern instead of EST5EDT.
+where name is the ascii name of the place to be shown on the map. 
+Latitude and longitude are floating point numbers representing the
+geographical location of the place. Western longitudes and southern latitudes
+should be entered as negative numbers. timezone is the name of the timezone
+that the place is in. This should be the name of a file under /lib/zoneinfo,
+incorrect timezones cause the clock to display GMT. It is also possible to 
+reference a file in a directory relative to /lib/zoneinfo for example
+Canada/Eastern instead of EST5EDT.
 .PP
 The user may click on the dot on the map associated with a place
 defined in the .sunclockrc
-file. When this is done, the time displayed will now be shown in the timezone
-for that location.
+file. When this is done, the city name and its corresponding local time 
+and time zone will be displayed in the bottomline.
 .SH "HOW IT WORKS"
 .I sunclock
 calculates the position of the Sun using the algorithm in chapter 18 of:
@@ -99,6 +131,3 @@ by John Walker, Autodesk, Inc.; <kelvin@acad.uu.NET>.
 .PP
 Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca;
 added support for interactive map.
-.PP
-Wolfram Gloger, wmglo@dent.med.uni-muenchen.de;
-added animation of icon, miscellaneous minor fixes.

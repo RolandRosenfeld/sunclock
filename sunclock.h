@@ -1,5 +1,4 @@
 /*
- * $Id: sunclock.h,v 1.2 1999/04/07 14:00:57 wg Exp $
  * Sun clock definitions.
  */
 
@@ -10,14 +9,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-
-#include "patchlevel.h"
+#include "version.h"
 #include "bitmaps.h"
 
 #define abs(x) ((x) < 0 ? (-(x)) : x)			  /* Absolute value */
 #define sgn(x) (((x) < 0) ? -1 : ((x) > 0 ? 1 : 0))	  /* Extract sign */
 #define dtr(x) ((x) * (PI / 180.0))			  /* Degree->Radian */
-#define rtd(x) ((x) * (180.0 / PI))			  /* Radian->Degree */
+#define rtd(x) ((x) / (PI / 180.0))			  /* Radian->Degree */
 #define fixangle(a) ((a) - 360.0 * (floor((a) / 360.0)))  /* Fix angle	  */
 
 #define PI 3.14159265358979323846

@@ -1,20 +1,47 @@
-Version 1.5
-- Updates of the main window and the icon should now work with
-  all window managers (e.g. WindowMaker's `shading' caused problems
-  before)
-- Uploaded by Wolfram Gloger (wmglo@Dent.MED.Uni-Muenchen.DE)
+Version 2.1
 
-Version 1.4-colour
-- Added options for user to specify the colours used to draw the 
-  map. Updated man page. - Michael Richmond
-    (mar@mri.mq.edu.au)
+- Updated latlong.txt with a better source (http://www.ecf.toronto.edu/~mao/)
+  06/06/00, Jean-Pierre Demailly (demailly@ujf-grenoble.fr)
+
+Version 2.0
+
+- Added XFlush in doTimeout to force update (for LinuxPPC...) 
+  21/04/00, Jean-Pierre Demailly
+
+Version 1.9
+
+- Iconic stuff fixed again (didn't work for all WM) 
+  21/01/00, Jean-Pierre Demailly
+
+Version 1.8
+
+- Fixed small bug in mono mode 
+  20/08/99, Jean-Pierre Demailly
+
+Version 1.7
+
+- Added Calculation of city distances (Jean-Pierre Demailly)
+
+Version 1.6
+
+- Fixed iconic stuff, which did not seem to work properly (at least on
+  my system...)
+  28/03/99, Jean-Pierre Demailly
+
+Version 1.5
+
+- Added color support (cities can be shown in various colors, and the
+  selected city is shown with a different color)
+- Added further options to support these extensions
+  15/03/99, Jean-Pierre Demailly
 
 Version 1.4
-- Packaged files into subdirectory
-- Fixed timeout handling for modern window managers (e.g. WindowMaker)
-- Fixed city drawing; use small font for cities
-- Added -animateicon / -a option to animate icon
-- Uploaded by Wolfram Gloger (wmglo@Dent.MED.Uni-Muenchen.DE)
+
+- Changed syntax in ~/.sunclockrc, so as to allow spaces in city names
+  (syntax is now  name: latitude longtitude timezone)
+- City name and coordinates now displayed in bottom line
+- Enabled exit, through clicking on the bottom line (
+  04/03/99, Jean-Pierre Demailly  demailly@ujf-grenoble.fr
 
 Version 1.3
 - Timezone now displayed in icon. Suggested by Rich Gonzalez
@@ -24,7 +51,7 @@ Version 1.3
 
 Version 1.2
 - Used new icon suppied by Anthony Thyssen (anthony@cit.gu.edu.au). I can't
-  see a difference can you see a differnece.
+  see a difference can you see a difference.
 - Fixed stuff for HP using NEW_CTIME ifdef as suggested by Richard Lloyd
   (R.K.Lloyd@csc.liv.ac.uk). Untested by me on HP.
 - Support for Solaris thanks to Dave Yearke (yearke@calspan.com) who also

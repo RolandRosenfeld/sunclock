@@ -5,21 +5,21 @@
 #   your struct tm contains a tm_zone field), i.e. SunOS 4.1.x. Don't
 #   define for system V or Solaris
 # Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
+# Pick -O or -g
 #
 
 #ifdef HPArchitecture
 CCOPTIONS = -Ae -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\"
 #else
-# gcc
-CCOPTIONS = -DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -Wall
+# SunOS
+#CCOPTIONS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+# Solaris, Linux
+CCOPTIONS=-DBIGFONT=\"9x15\" -DSMALLFONT=\"6x10\" -O
 #endif
 
 SRCS=sunclock.c bitmaps.c astro.c tildepath.c
 OBJS=sunclock.o bitmaps.o astro.o tildepath.o
-
-# may have to replace XONLYLIB with XLIB for old imake
-LOCAL_LIBRARIES=$(XONLYLIB) -lm
-
-#DEPLIBS=		# I don't know what I'm doing, and I hate imake!
+LOCAL_LIBRARIES=$(XLIB) -lm
+DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)

@@ -1,16 +1,84 @@
 # The format of this file is:
-# [+]city latitude longtitude timezone
+# [+]city: latitude longitude timezone
 #
-# Putting a '+' at the start of the city name causes the label to be displayed
-# above the city. The latitude and longtitude should be signed floating
-# point numbers. A negative latitude should be used for places south of the
-# equator and a negative longtitude should be used for places west of the
-# prime meridian.
+# The latitude and longtitude should be signed floating point numbers. 
+# A negative latitude should be used for places south of the equator
+# and a negative longitude should be used for places west of the prime
+# meridian.
 
-Toronto 45.0 -75.0 Canada/Eastern
-#+Vancouver 49.0 -123.0 PST8PDT
-+Calgary 51.0 -117.0 MST7MDT
-Tokyo 36.0 139.0 Japan
-SanFrancisco 37.77 -122.42 US/Pacific
-Munich 48.1 11.5 Europe/Berlin
-Melbourne -37.8 145.0 Australia/Victoria
+Paris: 48.87 2.33 Europe/Paris
+London: 51.50 -0.17 Europe/London
+Berlin: 52.52 13.33 Europe/Berlin
+Rome: 41.87 12.62 Europe/Rome
+Madrid: 40.43 -3.70 Europe/Madrid
+Athens: 38.00 23.73 Europe/Athens
+Budapest: 47.43 19.25 Europe/Budapest
+Sofia: 42.67 23.30 Europe/Sofia
+Reykjavik: 64.15000 -21.90 Europe/Reykjavik
+Oslo: 59.93 10.68 Europe/Oslo
+Stockholm: 59.33 18.08 Europe/Stockholm
+Helsinki: 60.17 24.88 Europe/Helsinki
+Geneva: 46.23 6.06 Europe/Zurich
+#Warsaw: 53.54 14.20 Europe/Warsaw
+Moscow: 55.75 37.70 Europe/Moscow 
+StPetersburg: 59.95 30.33 Europe/Moscow
+Tashkent: 41.33 69.30 Asia/Tashkent
+Alma-Ata: 43.23 76.88 Asia/Alma-Ata
+Irkutsk: 52.2 104.3 Asia/Irkutsk
+Vladivostok: 43.10 +131.78 Asia/Vladivostok
+Baghdad: 33.4 44.4 Asia/Baghdad
+Tehran: 35.75 51.50 Asia/Tehran
+Riyadh: 24.39 46.42 Asia/Riyadh
+New Delhi: 28.63 77.20 Asia/Calcutta
+Bombay: 18.97 72.83 Asia/Calcutta
+Madras: 13.00 80.18 Asia/Calcutta
+Calcutta: 22.5 88.3 Asia/Calcutta
+Bangkok: 13.73 100.50 Asia/Bangkok
+Katmandu: 27.82 85.35 Asia/Katmandu
+Manila: 14.62 +121.00 Asia/Manila
+Kuala Lumpur: 3.13 101.70 Asia/Kuala_Lumpur
+Brunei: 4.95 114.93 Asia/Brunei
+Jakarta: -6.13  106.75 Asia/Jakarta
+Hong Kong: 22.2 114.1 Hongkong
+Casablanca: 33.58 -7.65 Africa/Casablanca
+#Tangier: 35.87 -5.91 Africa/Casablanca
+Alger: 36.77 3.05 Africa/Algiers
+Tunis: 36.78 10.20 Africa/Tunis
+Ndjamena: 12.14 15.04 Africa/Njamena
+Cairo: 31.05 31.25 Africa/Cairo
+Beirut: 33.90 35.47 Asia/Beirut
+Monrovia: 6.30 -10.80 Africa/Monrovia
+Timbuktu: 16.8 -3.0 Africa/Timbuktu
+Nairobi: -1.28 36.83 Africa/Nairobi
+Brazzaville: -4.20 15.30 Africa/Brazzaville
+Djibouti: 11.57 43.00 Africa/Djibouti
+Cape Town: -33.93 18.47 Africa/Johannesburg
+Beijing: 39.92 116.43 Hongkong
+Tokyo: 36.0 139.0 Japan
+Antananarivo: -18.52 48.30 Indian/Antananarivo
+Perth: -32.0 115.9 Australia/Perth
+Darwin: -12.47 130.85 Australia/Darwin
+Sydney: -33.92 151.17 Australia/ACT
+Auckland: -36.88 174.75 Pacific/Auckland
+Tahiti: -17.6  -149.5 Pacific/Tahiti
+#Wellington: -41.28  174.78 Pacific/Auckland
+Toronto: 45.0 -75.0 Canada/Eastern
+Calgary: 51.0 -117.0 MST7MDT
+Anchorage: 61.17 -150.00 America/Anchorage
+Washington: 38.9 -77.0 US/Eastern
+Denver: 39.75 -104.87 America/Denver
+Salt Lake City: 40.76 -111.97 US/Mountain
+Chicago: 41.83  -87.75 America/Chicago
+San Francisco: 37.77 -122.42 US/Pacific
+Honolulu: 21.32 -157.83 Pacific/Honolulu
+Thule: 76.54 -68.70 America/Thule
+Godthab: 64.20 -51.68 America/Godthab
+Mexico City: 19.4   -99.1 America/Mexico_City
+Cayenne: 4.93 -52.45 America/Cayenne
+Bogota: 4.63 -74.10 America/Bogota
+Santiago: -33.43 -70.67 America/Santiago
+Brasilia: -15.87 -47.91 America/Sao_Paulo
+Rio de Janeiro: -22.88 -43.28 America/Sao_Paulo
+Buenos Aires: -34.67 -58.50 America/Buenos_Aires
+Lima: -12.10  -77.05 America/Lima
+Erebus: -77.46 +167.08 Pacific/Auckland
