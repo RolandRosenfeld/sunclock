@@ -28,17 +28,18 @@ Lokale tijd
 Daglengte
 Zonsopkomst
 Zonsondergang
+#
+seconden
+minuut
+uur
+dag
+dagen
+#
 Klik op een plaats
 Klik op een locatie
 Klik achtereenvolgens op 2 locaties
 Dubbelklik of gebruik Tab voor ° ' "
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable.
-Sunclock heeft een aantal interne procedures welke met de muis of toetsen geactiveerd kunnen worden:
+#
 Toets
 Toets/muis controls
 Escape
@@ -47,12 +48,16 @@ Unknown key binding !!
 Synchro
 Stapgrootte =
 Tijdverschuiving =
-seconden
-minuut
-uur
-dag
-dagen
-# Help
+#
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable
+Calculating new image...
+Sunclock heeft een aantal interne procedures welke met de muis of toetsen geactiveerd kunnen worden:
+# General help
 Toon help en opties (H of muisknop 1)
 Laad aardkaart (F of muisknop 2)
 Zoom (Z of muisknop 3)
@@ -67,7 +72,7 @@ Verander tijd achterwaarts
 Verander tijdverschuiving
 Reset tijd verschuiving naar nul
 Teken/Wis nacht
-Teken/Wis zon
+Teken/Wis zon en maan
 Teken/Wis steden
 Teken/Wis meridianen
 Teken/Wis parallelen

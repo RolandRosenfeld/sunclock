@@ -53,6 +53,10 @@ DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
 
+install.man::
+	if [ -r $(DESTDIR)$(MANDIR)/sunclock.1x.gz ] ; \
+	   then gzip -f $(DESTDIR)$(MANDIR)/sunclock.1x ; fi
+
 install:: install.man
 	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)

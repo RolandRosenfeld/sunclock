@@ -59,6 +59,8 @@ install: install.man sunclock
 
 install.man:
 	cp -f sunclock.man $(DESTDIR)$(MANDIR)/sunclock.1x
+	if [ -r $(DESTDIR)$(MANDIR)/sunclock.1x.gz ] ; \
+	   then gzip -f $(DESTDIR)$(MANDIR)/sunclock.1x ; fi
 
 clean:
 	rm -f core *.bak *.o *~ sunclock

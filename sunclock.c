@@ -93,8 +93,8 @@
        3.10  10/03/00  Menu window and a lot of new improvements as well.
        3.13  10/26/00  Final bug fix release of 3.1x
        3.20  11/20/00  Drastic GUI and features improvements (color maps,
-                       loadable xpm maps,...), now hopefully sunclock looks 
-                       nice!
+                       loadable xpm maps,...), hopefully sunclock now 
+                       looks nice!
        3.21  12/04/00  Final bug fix release of 3.2x x<5
        3.25  12/21/00  Dockable, multi-window version
        3.28  01/15/01  Final bug fix release of 3.2x x>=5
@@ -102,6 +102,7 @@
        3.32  03/19/01  Implementation of the zoom widget
        3.34  03/28/01  Vast improvements in the zoom widget
        3.38  04/17/01  Substantial improvements in option handling
+       3.41  05/19/01  The Moon is now also shown on the map!
 */
 
 #include <unistd.h>
@@ -126,8 +127,9 @@ extern char *   timezone();
 
 extern double   jtime();
 extern double   gmst();
-extern void     sunpos();
 extern long     jdate();
+extern void     sunpos();
+extern double   phase();
 
 extern char *   salloc();
 extern int      readVMF();
@@ -255,6 +257,7 @@ int             textheight = 0;
 int             textwidth = 0;
 int             coordvalheight;
 int             coordvalwidth;
+int             extra_width = 10;
 
 int             runtime = 0;
 int             button_pressed = 0;
@@ -295,8 +298,6 @@ struct Geometry MenuGeom   = { 0,  0,  30, 792,  40, 700,  40 };
 struct Geometry SelGeom    = { 0,  0,  30, 600, 180, 450,  80 };
 struct Geometry ZoomGeom   = { 0,  0,  30, 500, 320, 360, 250 };
 struct Geometry OptionGeom = { 0,  0,  30, 630,  80, 630,  80 };
-
-int             radius[5] = {2, 2, 3, 4, 5};
 
 int             win_type = 0;
 int             placement = -1;
@@ -413,7 +414,7 @@ Usage()
      "%s: version %s, %s\n\nUsage:  %s [-options ...]\n\n%s\n\n"
      SP"[-help] [-listmenu] [-version]\n"
      SP"[-display name] [-rcfile file] [-sharedir directory]\n"
-     SP"[-clock] [-map] [-dock]\n"
+     SP"[-clock] [-map] [-dock] [-undock]\n"
      SP"[-menu] [-nomenu] [-selector] [-noselector]\n"
      SP"[-zoom] [-nozoom] [-option] [-nooption]\n"
 "**" SP"[-language name] [-dateformat string1|string2|...]\n"
@@ -429,7 +430,7 @@ Usage()
      SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
      SP"[-fullcolors] [-invertcolors] [-monochrome] [-aspect mode]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
-     SP"[-placementshift x, y]\n"
+     SP"[-placementshift x, y] [-extrawidth value]\n"
      SP"[-decimal] [-dms] [-city name] [-position latitude longitude]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
      SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
@@ -437,10 +438,12 @@ Usage()
      SP"[-nonight] [-darkness value<=1.0] [-colorscale number>=1]\n"
      SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
      SP"[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value]\n"
-     SP"[-tropics] [-notropics] [-sun] [-nosun] [-citymode mode=0,1,2]\n"
+     SP"[-citymode mode=0,1,2,3] [-spotsize size(0,1,2,3,4,5)]\n"
      SP"[-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3]\n"
      SP"[-meridianspacing value] [-parallelspacing value]\n"
-     SP"[-spotsize size(0,1,2,3,4,5)] [-dottedlines] [-plainlines]\n"
+     SP"[-tropics] [-notropics]\n"
+     SP"[-dottedlines] [-plainlines] [-bottomline] [-nobottomline]\n"
+     SP"[-objectmode mode=0,1,2] [-sun] [-nosun] [-moon] [-nomoon]\n"
      SP"[-clockbgcolor color] [-clockfgcolor color]\n"
      SP"[-clockstripbgcolor color] [-clockstripfgcolor color]\n"
      SP"[-mapbgcolor color] [-mapfgcolor color]\n"
@@ -480,7 +483,7 @@ initValues()
         gflags.spotsize = 3;
         gflags.colorscale = 16;
 
-        gflags.update = -1;
+        gflags.update = 4;
         gflags.progress = 0;
         gflags.bottom = 0;
         gflags.map_mode = LEGALTIME;
@@ -489,7 +492,8 @@ initValues()
         gflags.dms = 0;
         gflags.shading = 2;
         gflags.citymode = 1;
-        gflags.sunpos = 1;
+        gflags.objectmode = 1;
+        gflags.objects = 3;
         gflags.meridian = 0;
         gflags.parallel = 0;
 
@@ -947,9 +951,16 @@ register char **                argv;
                         needMore(argc, argv);
                         gflags.citymode = atoi(*++argv);
                         if (gflags.citymode<0) gflags.citymode = 0;
-                        if (gflags.citymode>2) gflags.citymode = 2;
+                        if (gflags.citymode>3) gflags.citymode = 3;
                         --argc;
                 } 
+		else if (strcasecmp(*argv, "-objectmode") == 0) {
+                        needMore(argc, argv);
+                        gflags.objectmode = atoi(*++argv);
+                        if (gflags.objectmode<0) gflags.objectmode = 0;
+                        if (gflags.objectmode>=2) gflags.objectmode = 2;
+                        --argc;
+		}
                 else if (strcasecmp(*argv, "-spotsize") == 0) {
                         needMore(argc, argv);
                         gflags.spotsize = atoi(*++argv);
@@ -1191,6 +1202,11 @@ register char **                argv;
                            placement = SE;
                         --argc;
                 }
+                else if (strcasecmp(*argv, "-extrawidth") == 0) {
+                        needMore(argc, argv);
+			extra_width = atol(*++argv);
+			--argc;
+		}
                 else if (strcasecmp(*argv, "-placementshift") == 0) {
 		        option_changes |= 2;
                         needMore(argc, argv);
@@ -1299,6 +1315,10 @@ register char **                argv;
                         gflags.dotted = 0;
                 else if (strcasecmp(*argv, "-plainlines") == 0)
                         gflags.dotted = 1;
+                else if (strcasecmp(*argv, "-bottomline") == 0)
+                        gflags.bottom = 1;
+                else if (strcasecmp(*argv, "-nobottomline") == 0)
+                        gflags.bottom = 0;
                 else if (strcasecmp(*argv, "-decimal") == 0)
                         gflags.dms = 0;
                 else if (strcasecmp(*argv, "-dms") == 0)
@@ -1320,9 +1340,17 @@ register char **                argv;
                 else if (strcasecmp(*argv, "-notropics") == 0)
                         gflags.parallel &= 3;
                 else if (strcasecmp(*argv, "-sun") == 0)
-                        gflags.sunpos = 1;
+                        gflags.objects |= 1;
                 else if (strcasecmp(*argv, "-nosun") == 0)
-                        gflags.sunpos = 0;
+                        gflags.objects &= ~1;
+                else if (strcasecmp(*argv, "-moon") == 0)
+                        gflags.objects |= 2;
+		else if (strcasecmp(*argv, "-nomoon") == 0)
+                        gflags.objects &= ~2;
+                else if (strcasecmp(*argv, "-dock") == 0)
+                        do_dock = 1;
+                else if (strcasecmp(*argv, "-undock") == 0)
+                        do_dock = 0;
                 else if (runtime) {
                    fprintf(stderr, 
                       "Option %s : incorrect or not available at runtime !!\n",
@@ -1330,8 +1358,6 @@ register char **                argv;
                    runtime = -1;
                    return(0);
                 } 
-                else if (strcasecmp(*argv, "-dock") == 0)
-                        do_dock = 1;
                 else if (strcasecmp(*argv, "-clock") == 0)
                         win_type = 0;
                 else if (strcasecmp(*argv, "-map") == 0)
@@ -2082,7 +2108,6 @@ struct Sundata * Context;
                  Context->geom.width, (Context->wintype)? 
                  Context->gdata->mapstrip-1 : Context->gdata->clockstrip-1, 
                  False);
-        if (Context->flags.bottom) --Context->flags.bottom;
 }
 
 /*
@@ -2146,17 +2171,17 @@ City *city;
         struct tm               ctp, stp;
         time_t                  stime;
         double                  jt, gt;
-        double                  sunra, sunrv;
+        double                  sunra, sunrv, junk;
         long                    diff;
 
         ctp = *gmtime(&gtime);
         jt = jtime(&ctp);
-        sunpos(jt, False, &sunra, sundec, &sunrv, sunlong);
+        sunpos(jt, False, &sunra, sundec, &sunrv, &junk);
         gt = gmst(jt);
         *sunlong = fixangle(180.0 + (sunra - (gt * 15))); 
         
         if (city) {
-           stime = (long) ((city->lon - *sunlong)*240.0);
+           stime = (long) ((city->lon - *sunlong) * 240.0);
            stp = *gmtime(&stime);
            diff = stp.tm_sec-ctp.tm_sec
                   +60*(stp.tm_min-ctp.tm_min)+3600*(stp.tm_hour-ctp.tm_hour);
@@ -2180,14 +2205,14 @@ double  lat;
         double                  sundec, junk;
         double                  sinsun, sinpos, sinapp, num;
 
-        sinpos = sin(dtr(lat));
+        sinpos = sin(torad(lat));
 
         /* Get Sun declination */
         (void) sunParams(gtime, &junk, &sundec, NULL);
-        sinsun = sin(dtr(sundec));
+        sinsun = sin(torad(sundec));
 
         /* Correct for the sun apparent diameter and atmospheric diffusion */
-        sinapp = sin(dtr(SUN_APPRADIUS + atm_refraction));
+        sinapp = sin(torad(SUN_APPRADIUS + atm_refraction));
 
         num = 1 - sinsun*sinsun - sinpos*sinpos - sinapp*sinapp
                 - 2*sinsun*sinpos*sinapp;
@@ -2310,6 +2335,23 @@ struct Sundata * Context;
         Context->flags.hours_shown = 1;
 }
 
+
+void
+drawTextStrip(Context, s, l)
+struct Sundata * Context;
+char *s;
+int l;
+{
+      XDrawImageString(dpy, Context->win, 
+           (Context->wintype)? 
+               Context->gdata->gclist.mapstripfont:
+               Context->gdata->gclist.clockstripfont, 
+           2+2*Context->wintype, Context->geom.height + ((Context->wintype)?
+             Context->gdata->mapstripfont->max_bounds.ascent + 4 :
+             Context->gdata->clockstripfont->max_bounds.ascent + 3), 
+           s+label_shift, l-label_shift);
+}
+
 void
 writeStrip(Context)
 struct Sundata * Context;
@@ -2417,7 +2459,8 @@ struct Sundata * Context;
                   s[72] = '\0';
                   l = 72;
                 }
-                goto drawtext;
+                drawTextStrip(Context, s, l);
+		return;
         }
 
         switch(Context->flags.map_mode) {
@@ -2512,9 +2555,9 @@ struct Sundata * Context;
 
         case DISTANCES:
            if(Context->mark1.city && Context->mark2.city) {
-             dist = sin(dtr(Context->mark1.city->lat)) * sin(dtr(Context->mark2.city->lat))
-                    + cos(dtr(Context->mark1.city->lat)) * cos(dtr(Context->mark2.city->lat))
-                           * cos(dtr(Context->mark1.city->lon-Context->mark2.city->lon));
+             dist = sin(torad(Context->mark1.city->lat)) * sin(torad(Context->mark2.city->lat))
+                    + cos(torad(Context->mark1.city->lat)) * cos(torad(Context->mark2.city->lat))
+                           * cos(torad(Context->mark1.city->lon-Context->mark2.city->lon));
              if (dist >= 1.0) 
                 dist = 0.0;
              else
@@ -2550,15 +2593,7 @@ struct Sundata * Context;
           l = 125;
         }
 
-      drawtext:
-        XDrawImageString(dpy, Context->win, 
-           (Context->wintype)? 
-               Context->gdata->gclist.mapstripfont:
-               Context->gdata->gclist.clockstripfont, 
-           4, Context->geom.height + ((Context->wintype)?
-             Context->gdata->mapstripfont->max_bounds.ascent + 4 :
-             Context->gdata->clockstripfont->max_bounds.ascent + 3), 
-           s+label_shift, l-label_shift);
+      drawTextStrip(Context, s, l);
 }
 
 void 
@@ -2662,7 +2697,7 @@ int build;
 	}
 
         Context->bits = 0;
-        Context->flags.update = -1;
+        Context->flags.update = 4;
         Context->time = 0L;
         Context->projtime = -1L;
         Context->daywave = (double *) salloc( 
@@ -2848,12 +2883,14 @@ int l, mode;
     XDrawImageString(dpy, textpix, gc, 0, dy, s, l);
     xim = XGetImage(dpy, textpix, 0, 0, w, h, 1, XYPixmap);
     test = (bigendian)? 128 : 1;
-    for (j=0; j<h; ++j)
+    for (j=0; j<h; ++j) {
+       if (y-dy+j >= (int)Context->geom.height) break;
        for (i=0; i<w; ++i) {
 	  if ((i&7) == 0) u = xim->data[j*xim->bytes_per_line+i/8];
           if (u&test) SetPixelLight(Context, x+i+1, y-dy+j, pixel);
 	  u = (bigendian)? u<<1 : u>>1;
        }
+    }
     XDestroyImage(xim);
 }
 
@@ -2876,6 +2913,7 @@ char *name;
     int ilon, ilat;             /* Screen coordinates of the city */
     int i, j, dx, dy, u;
     unsigned short * bits;
+    char slat[20], slon[20];
     Window w = 0;
     GC *pgc = NULL;
     Pixel pixel = 0;
@@ -2907,6 +2945,7 @@ char *name;
           pgc = &Context->gdata->gclist.invert;
        }
        for (j=0; j<bits[1]; j++) {
+	  if (ilat-dy+j >= (int) Context->geom.height) break;
           u = bits[j+2];
           for (i=0; i<bits[0]; i++) {
 	     if (u&1) XDrawPoint(dpy, w, *pgc, ilon-dx+i, ilat-dy+j);
@@ -2916,6 +2955,7 @@ char *name;
     } else {
        pixel = *(&Context->gdata->pixlist.citycolor0 + color);
        for (j=0; j<bits[1]; j++) {
+	  if (ilat-dy+j >= (int) Context->geom.height) break;
           u = bits[j+2];
           for (i=0; i<bits[0]; i++) {
              if (u&1) SetPixelLight(Context, ilon-dx+i, ilat-dy+j, pixel);
@@ -2927,11 +2967,28 @@ char *name;
     if (Context->flags.citymode==2 && name) {
        if (Context->flags.mono)
           XDrawString(dpy, w, Context->gdata->gclist.cityfont,
-                    ilon+1, ilat-4, name, strlen(name));
+                    ilon+3, ilat-4, name, strlen(name));
        else
           XPutStringImage(Context, ilon+2, ilat-1, name, strlen(name), 2);
     }
 
+    if (!Context->wintype) return;
+    if ((Context->flags.citymode==3 && mode<=5) ||
+        (mode>=7 && mode<=8 && Context->flags.objectmode==2)) {
+       dy = Context->gdata->mapstrip/2;
+       (void) num2str(lat, slat, Context->flags.dms);
+       (void) num2str(lon, slon, Context->flags.dms);
+       if (Context->flags.mono) {
+          XDrawString(dpy, w, Context->gdata->gclist.cityfont,
+                    ilon + 5, ilat-1, slat, strlen(slat));
+          XDrawString(dpy, w, Context->gdata->gclist.cityfont,
+                    ilon + 5, ilat-1+dy, slon, strlen(slon));
+       } else {
+	  if (mode>=7) dx = 5; else dx = 3;
+          XPutStringImage(Context, ilon+dx, ilat-1, slat, strlen(slat), 2);
+          XPutStringImage(Context, ilon+dx, ilat-1+dy, slon, strlen(slon), 2);
+       }
+    }
 }
 
 void
@@ -2998,9 +3055,9 @@ int mode;   /* 0=parallel 1=meridian spacing */
  */
 
 void
-drawParallel(Context, gc, lat, step, thickness, text, numdigits)
+drawParallel(Context, pixel, lat, step, thickness, text, numdigits)
 struct Sundata * Context;
-GC gc;
+Pixel pixel;
 double lat;
 int step;
 int thickness;
@@ -3008,6 +3065,7 @@ int text;
 int numdigits;
 {
         Window w;
+        GC gc = 0;
         int ilat, i0, i1, i, j, jp, k, min, max, doit;
 	char s[10], format[10];
 
@@ -3076,8 +3134,7 @@ int numdigits;
              XDrawLine(dpy, w, gc, j, ilat, jp, ilat);
 	  else {
 	     for (k=j; k<=jp; k++)
-                SetPixelLight(Context, k, ilat, 
-                              Context->gdata->pixlist.meridiancolor);
+                SetPixelLight(Context, k, ilat, pixel);
 	  }
 	}
 }
@@ -3110,14 +3167,13 @@ struct Sundata * Context;
 	numdigits = (spacing<1.0);
 	if (parmode)
         for (i=b1; i<=b2; i++) if (i!=0 || Context->flags.parallel <=3)
-          drawParallel(Context, Context->gdata->gclist.parallelcolor, 
-              i*spacing, 3, 
-              Context->flags.dotted, parmode, numdigits);
+          drawParallel(Context, Context->gdata->pixlist.parallelcolor,
+             i*spacing, 3, Context->flags.dotted, parmode, numdigits);
 
 	if (Context->flags.parallel & 8) {
           for (i=0; i<5; i++)
-            drawParallel(Context, Context->gdata->gclist.tropiccolor, 
-               val[i], 3, 1, -parmode, numdigits);
+           drawParallel(Context, Context->gdata->pixlist.tropiccolor,
+             val[i], 3, 1, -parmode, numdigits);
 	}
 }
 
@@ -3239,24 +3295,39 @@ Sundata * Context;
 }
 
 /*
- * drawSun() - Draw Sun at position where it stands at zenith
+ * drawSunAndMoon() - Draw Sun and Moon at position where they stand at zenith
  */
 
 void
-drawSun(Context)
+drawSunAndMoon(Context)
 struct Sundata * Context;
 {
-    if (Context->flags.sunpos)
-        drawObject(Context, Context->sunlon, Context->sundec, 7, 5, NULL);
+    if (Context->flags.objectmode) {
+       if (Context->flags.objects & 1)
+          drawObject(Context, Context->sunlon, Context->sundec, 7, 5, NULL);
+       if (Context->flags.objects & 2)
+          drawObject(Context, Context->moonlon, Context->moondec, 8, 6, NULL);
+    }
 }
 
 void
 drawBottomline(Context)
 struct Sundata * Context;
 {
-        XDrawLine(dpy, Context->win, Context->gdata->gclist.menufont, 
+    if (Context->flags.bottom & 2) return;
+    if (Context->flags.bottom & 1)
+       XDrawLine(dpy, Context->win, Context->gdata->gclist.menufont, 
                    0, Context->geom.height, 
                    Context->geom.width-1, Context->geom.height);
+    else {
+       XSetWindowBackground(dpy, Context->win, 
+		 (Context->wintype)?
+		    Context->gdata->pixlist.mapstripbgcolor :
+                    Context->gdata->pixlist.clockstripbgcolor);
+       XClearArea(dpy, Context->win, 0, Context->geom.height, 
+                 Context->geom.width, 1, False);
+    }
+    Context->flags.bottom |= 2;
 }
 
 void
@@ -3275,9 +3346,14 @@ struct Sundata * Context;
 }
 
 void
-showImage(Context)
+showMapImage(Context)
 struct Sundata * Context;
 {
+
+        if (button_pressed) return;
+
+        if (Context->flags.update>=2) {
+           if (Context->flags.mono==0) drawAll(Context);
            if (Context->flags.mono)
                XCopyPlane(dpy, Context->mappix, Context->win, 
                     (Context->wintype)?
@@ -3288,18 +3364,6 @@ struct Sundata * Context;
                XPutImage(dpy, Context->win, Context->gdata->gclist.menufont, 
                     Context->xim, 0, 0, 0, 0,
                     Context->geom.width, Context->geom.height);
-}
-
-void
-showEarth(Context)
-struct Sundata * Context;
-{
-
-        if (button_pressed) return;
-
-        if (Context->flags.update>=2) {
-           if (Context->flags.mono==0) drawAll(Context);
-	   showImage(Context);
         }
 
         if (Context->flags.update) {
@@ -3377,7 +3441,7 @@ int     done = 0;
         }
         if (done) {
            Context->flags.update = 2;
-           showEarth(Context);
+           showMapImage(Context);
         }
 }
 
@@ -3422,7 +3486,7 @@ struct Sundata * Context;
 
       shift = f1 * (double)Context->zoom.dy;
       shiftp = 0.5*(Context->zoom.height+1) - (double) Context->zoom.dy;
-      quot = dtr(Context->sundec);
+      quot = torad(Context->sundec);
       cd = cos(quot);
       sd = sin(quot);
       if (quot>0) south = 0; else south = -1;
@@ -3660,6 +3724,7 @@ struct Sundata * Context;
 {
         int                     noon;
         double                  fnoon;
+	double junk;
 
         /* If this is a full repaint of the window, force complete
            recalculation. */
@@ -3669,11 +3734,17 @@ struct Sundata * Context;
         time(&Context->time);
 
 	erase_obj = 1;
-        drawSun(Context);
+        drawSunAndMoon(Context);
         erase_obj = 0;
 
         (void) sunParams(Context->time + Context->jump, 
               &Context->sunlon, &Context->sundec, NULL);
+
+        (void) phase(Context->time + Context->jump, 
+              &Context->moondec, &Context->moonlon, 
+              &junk,  &junk, &junk, &junk, &junk, &junk );
+	Context->moonlon = fixangle(Context->moonlon+180.0) - 180.0;
+
         fnoon = Context->sunlon * (Context->zoom.width / 360.0) 
                          - (double) Context->zoom.dx;
         noon = (int) fnoon;
@@ -3687,7 +3758,7 @@ struct Sundata * Context;
 
         if (Context->projtime < 0 || 
             (Context->time - Context->projtime) > PROJINT ||
-            Context->noon != noon || Context->flags.update<0) {
+            Context->noon != noon || Context->flags.update>=4) {
                 Context->flags.update = 2;
                 Context->projtime = Context->time;
                 Context->noon = noon;
@@ -3698,7 +3769,7 @@ struct Sundata * Context;
 		   drawCities(Context);
 		}
         }
-        drawSun(Context);
+        drawSunAndMoon(Context);
 }
 
 void setPosition1(Context, x, y)
@@ -3820,7 +3891,7 @@ int x, y;      /* Screen co-ordinates of mouse */
       if (Context->mark2.city) Context->mark2.flags = -1;
     } else {
       drawAll(Context);
-      showEarth(Context);
+      showMapImage(Context);
       Context->flags.update = 2;
     }
 }
@@ -4175,6 +4246,15 @@ struct Sundata * Context;
    }
 }
 
+void
+warningNew(Context)
+struct Sundata * Context;
+{ 
+   clearStrip(Context);
+   drawTextStrip(Context, Label[L_NEWIMAGE], strlen(Label[L_NEWIMAGE]));
+   XFlush(dpy);
+}
+
 void 
 buildMap(Context, wintype, build)
 struct Sundata * Context;
@@ -4280,8 +4360,8 @@ int wintype, build;
       XSetWindowColormap(dpy, Context->win, Context->gdata->cmap);
    runtime = 0;
    option_changes = 0;
-   Context->flags.update = -1;
-   doTimeout(Context);
+   Context->flags.update = 4;
+   do_sync |= 2;
 }
 
 /*
@@ -4441,7 +4521,14 @@ KeySym  keysym;
      general:
         switch(key) {
            case XK_Tab:
+	     erase_obj = 1;
+             if (Context->flags.objectmode == 2) drawSunAndMoon(Context);
+             if (Context->flags.mono != 1) drawCities(Context);
              Context->flags.dms = 1 -Context->flags.dms;
+	     erase_obj = 0;
+             if (Context->flags.objectmode == 2) drawSunAndMoon(Context);
+             if (Context->flags.mono == 2) drawCities(Context);
+	     Context->flags.update = 2;
              return;
            case XK_Escape:
              if (do_menu) PopMenu(Context);
@@ -4473,7 +4560,10 @@ KeySym  keysym;
                ++label_shift;
              return;
            case XK_equal:
-             do_sync = 1 - do_sync;
+	     if (do_sync & 1)
+                do_sync = do_sync & 2;
+	     else
+                do_sync |= 1;
 	     menu_lasthint = '\0';
 	     option_lasthint = '\0';
 	     option_newhint = keysym;
@@ -4510,11 +4600,14 @@ KeySym  keysym;
            case XK_greater:
              if (do_dock && Context==Seed) break;
              Context->prevgeom = Context->geom;
-             Context->geom.width = DisplayWidth(dpy, scr) - 10;
+	     i = DisplayWidth(dpy, scr);
+             Context->geom.width = i - extra_width;
+	     if (Context->geom.width<i/2) Context->geom.width = i/2;
+	     if (Context->geom.width>i) Context->geom.width = i;
            case XK_KP_Divide:
-             key = XK_slash;
+             if (key == XK_KP_Divide) key = XK_slash;
            case XK_colon:
-             key = XK_slash;
+             if (key == XK_colon) key = XK_slash;
            case XK_slash:
              if (do_dock && Context==Seed) break;
              i = Context->zoom.mode;
@@ -4529,7 +4622,7 @@ KeySym  keysym;
              if (setWindowAspect(Context, &Context->zoom)) {
                 if (key == XK_greater) {
                    adjustGeom(Context, 0);
-                   Context->geom.x = 5;
+                   Context->geom.x = extra_width/2;
                    XMoveWindow(dpy, Context->win, 
                       Context->geom.x, Context->geom.y);
                 }
@@ -4573,19 +4666,16 @@ KeySym  keysym;
              else
                 Context->geom = ClockGeom;
              adjustGeom(Context, 1);
-	     XSelectInput(dpy, Context->win, 0);
-	     /*
-	     XResizeWindow(dpy, Context->win, 1, 1);
-             XMoveWindow(dpy, Context->win, Context->geom.x, Context->geom.y);
-             XUnmapWindow(dpy, Context->win);
-             XFlush(dpy);
-	     */
+     	     XSelectInput(dpy, Context->win, 0);
+             setSizeHints(Context, Context->wintype);
+             setClassHints(Context->win, Context->wintype);
              XMoveResizeWindow(dpy, Context->win, 
                  Context->geom.x, Context->geom.y, 
                  Context->geom.width, 
                  Context->geom.height+((Context->wintype)?
                      Context->gdata->mapstrip:Context->gdata->clockstrip));
 	     XSync(dpy, True);
+             warningNew(Context);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
              return;
@@ -4630,12 +4720,12 @@ KeySym  keysym;
              break;
            case XK_a: 
              Context->jump += progress_value[Context->flags.progress];
-             Context->flags.update = -1;
+             Context->flags.update = 4;
              menu_lasthint = ' ';
              break;
            case XK_b: 
              Context->jump -= progress_value[Context->flags.progress];
-             Context->flags.update = -1;
+             Context->flags.update = 4;
              menu_lasthint = ' ';
              break;
            case XK_c: 
@@ -4730,10 +4820,11 @@ KeySym  keysym;
              break;
            case XK_j:
              Context->jump = 0;
-             Context->flags.update = -1;
+             Context->flags.update = 4;
              menu_lasthint = ' ';
              break;
            case XK_k:
+	     if (Context==Seed && do_dock) return;
              if (do_menu) PopMenu(Context);
              if (do_selector) PopSelector(Context);
              if (Context==Seed && Seed->next==NULL)
@@ -4786,7 +4877,7 @@ KeySym  keysym;
                    Context->flags.shading = (Context->flags.shading + 5) % 6;
              }
              drawShadedArea(Context);
-             Context->flags.update = -1;
+             Context->flags.update = 4;
              break;
            case XK_o:
              if (!do_option)
@@ -4815,7 +4906,8 @@ KeySym  keysym;
              Context->flags.update = 2;
              break;
            case XK_q: 
-             shutDown(Context, -1);
+	     if (!do_dock)
+                shutDown(Context, -1);
              break;
            case XK_s: 
              if (Context->flags.map_mode != SOLARTIME) 
@@ -4855,9 +4947,9 @@ KeySym  keysym;
                 erase_obj = 0;
 	     }
              if (keysym == XK_U)
-                Context->flags.citymode = (Context->flags.citymode + 2) % 3;
+                Context->flags.citymode = (Context->flags.citymode + 3) % 4;
 	     else
-                Context->flags.citymode = (Context->flags.citymode + 1) % 3;
+                Context->flags.citymode = (Context->flags.citymode + 1) % 4;
              if (Context->flags.mono==2) drawCities(Context);
              Context->flags.update = 2;
              break;
@@ -4872,17 +4964,20 @@ KeySym  keysym;
              break;
            case XK_r:
              clearStrip(Context);
-             Context->flags.update = -1;             
+             Context->flags.update = 4;             
              break;
            case XK_x:
              if (ExternAction) system(ExternAction);
              break;
            case XK_y:
 	     erase_obj = 1;
-             drawSun(Context);
+             drawSunAndMoon(Context);
              erase_obj = 0;
-             Context->flags.sunpos = 1 - Context->flags.sunpos;
-             drawSun(Context);
+             if (keysym==XK_y) 
+                Context->flags.objectmode = (Context->flags.objectmode+1) % 3;
+             if (keysym==XK_Y) 
+                Context->flags.objectmode = (Context->flags.objectmode+2) % 3; 
+             drawSunAndMoon(Context);
              Context->flags.update = 2;
              break;
            case XK_z:
@@ -5024,19 +5119,8 @@ struct Sundata * Context = (struct Sundata *) NULL;
         /* Otherwise, user wants to get info on a city or a location */
         Context->flags.update = 1;
 
-        /* Erase bottom strip to clean-up spots overlapping bottom strip */
-        if (Context->flags.bottom) clearStrip(Context);
-
         /* Set the timezone, marks, etc, on a button press */
         processPoint(Context, x, y);
-
-        /* if spot overlaps bottom strip, set flag */
-        if (y >= Context->geom.height - radius[Context->flags.spotsize]) {
-           if (Context->flags.map_mode == SOLARTIME)
-              Context->flags.bottom = 1;
-           if (Context->flags.map_mode == DISTANCES)
-              Context->flags.bottom = 2;
-        }
 }
 
 void 
@@ -5050,14 +5134,17 @@ Window win;
            if (win == Menu) return;
 
            if (win == Selector) {
+	      if (!do_selector) return;
               Geom = &SelGeom;
               num = 3;
            }
            if (win == Zoom) {
+	      if (!do_zoom) return;
               Geom = &ZoomGeom;
               num = 4;
            }
            if (win == Option) {
+	      if (!do_option) return;
               Geom = &OptionGeom;
               num = 5;
            }
@@ -5076,7 +5163,7 @@ Window win;
               XSelectInput(dpy, win, 0);
               XFlush(dpy);
               XResizeWindow(dpy, win, w, h);
-              XFlush(dpy);
+              XSync(dpy, True);
               usleep(2*TIMESTEP);
               setSizeHints(NULL, num);
               setProtocols(NULL, num);
@@ -5104,6 +5191,7 @@ Window win;
            if (getPlacement(win, &x, &y, &w, &h)) return;
            h -= Context->hstrip;
            if (w==Context->geom.width && h==Context->geom.height) return;
+	   clearStrip(Context);
            Context->prevgeom = Context->geom;
            if (w<Context->geom.w_mini) w = Context->geom.w_mini;
            if (h<Context->geom.h_mini) h = Context->geom.h_mini;
@@ -5117,8 +5205,7 @@ Window win;
               ClockGeom.height = h;
            }
            adjustGeom(Context, 0);
-	   Context->flags.update = 2;
-	   if (!Context->flags.mono) showImage(Context);
+	   warningNew(Context);
            shutDown(Context, 0);
            (void)setZoomAspect(Context, 3);
            buildMap(Context, Context->wintype, 2);
@@ -5135,7 +5222,7 @@ struct Sundata * Context;
 {
         if (!Context) return;
 
-        if (QLength(dpy) && Context->flags.update>=0)
+        if (QLength(dpy) && Context->flags.update <= 2)
                 return;         /* ensure events processed first */
 
         if (Context->flags.update)
@@ -5145,7 +5232,7 @@ struct Sundata * Context;
 
         if (Context->count==0) {
            updateImage(Context);
-           showEarth(Context);
+           showMapImage(Context);
            writeStrip(Context);
            if (Context->flags.mono==2) pulseMarks(Context);
 	   XFlush(dpy);
@@ -5171,6 +5258,7 @@ Window w;
         }
 
         if (w == Zoom) {
+	   do_zoom = 1;
            zoom_lasthint = ' ';
            setupZoom(-1);
            return;
@@ -5186,8 +5274,10 @@ Window w;
         if (!Context) return;
 
         Context->flags.update = 2;
+	Context->flags.bottom &= 1;
 
-        showEarth(Context);
+        showMapImage(Context);
+	drawBottomline(Context);
         writeStrip(Context);
 }
 
@@ -5226,7 +5316,12 @@ eventLoop()
         for (;;) {
 	   if (XCheckIfEvent(dpy, &ev, evpred, (XPointer)0)) {
 
-	      /* printf("%d %d\n", ev.type, ev.xexpose.window); */
+	      /*
+              fprintf(stderr, "Event %d, Window %d \n"
+                   "  (Main %d, Menu %d, Sel %d, Zoom %d, Option %d)\n", 
+                   ev.type, ev.xexpose.window, 
+                   Seed->win, Menu, Selector, Zoom, Option);
+	      */
               switch(ev.type) {
 
                  case FocusChangeMask:
@@ -5252,8 +5347,11 @@ eventLoop()
                                else
                              if (ev.xexpose.window == Option)
                                    PopOption(OptionCaller);
-                               else
-                             shutDown(getContext(ev.xexpose.window), 1);
+			       else {
+			         Context = getContext(ev.xexpose.window);
+				 if (Context!=Seed || !do_dock)
+                                    shutDown(Context, 1);
+				 }
 		      }
                       break;
 
@@ -5269,7 +5367,7 @@ eventLoop()
                       break;
 
                  case ButtonPress:
-                 case ButtonRelease:
+		 case ButtonRelease:
                  case MotionNotify:
                       if (ev.type==ButtonPress) button_pressed = ev.xbutton.button;
                       if (ev.type==ButtonRelease) button_pressed = 0;
@@ -5294,8 +5392,12 @@ eventLoop()
               if (Which == NULL) Which = Seed;
   
               for (Context = Seed; Context; Context = Context->next)
-                 if (do_sync || Context == Which || (do_dock && Context == Seed))
+                 if (do_sync || Context == Which || 
+                     (do_dock && Context == Seed)) {
+		    if (do_sync & 2) Context->flags.update = 2;
                     doTimeout(Context);
+		 }
+	      do_sync &= 1;
 	   }
         }
 }

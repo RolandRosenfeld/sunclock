@@ -35,9 +35,12 @@
 
 #define abs(x) ((x) < 0 ? (-(x)) : x)			  /* Absolute value */
 #define sgn(x) (((x) < 0) ? -1 : ((x) > 0 ? 1 : 0))	  /* Extract sign */
-#define dtr(x) ((x) * (PI / 180.0))			  /* Degree->Radian */
-#define rtd(x) ((x) / (PI / 180.0))			  /* Radian->Degree */
 #define fixangle(a) ((a) - 360.0 * (floor((a) / 360.0)))  /* Fix angle	  */
+#define torad(d) ((d) * (PI / 180.0))                     /* Deg->Rad     */
+#define todeg(d) ((d) * (180.0 / PI))                     /* Rad->Deg     */
+#define dsin(x) (sin(torad((x))))                         /* Sin from deg */
+#define dcos(x) (cos(torad((x))))                         /* Cos from deg */
+
 
 #define PI 3.14159265358979323846
 #define ZFACT 1.2
@@ -51,8 +54,8 @@
 
 #define RECOVER         "Trying to recover.\n"
 
-#define EARTHRADIUS_KM  6378.125
-#define EARTHRADIUS_ML  3963.180
+#define EARTHRADIUS_KM  6378.160
+#define EARTHRADIUS_ML  3963.202
 #define SUN_APPRADIUS   0.266      /* Sun apparent radius, in degrees */
 #define ATM_REFRACTION  0.100      /* Atmospheric refraction, in degrees */
 #define ATM_DIFFUSION   3.0        /* Atmospheric diffusion, in degrees */
@@ -94,7 +97,8 @@ typedef struct Flags {
         short progress;                 /* special progress time ?*/
         short shading;                  /* shading mode */
         short dms;                      /* degree, minute, second mode */
-        short sunpos;                   /* is Sun to be shown ? */
+        short objectmode;               /* mode for showing Moon/Sun */
+        short objects;                  /* are Moon/Sun to be shown ? */
         short citymode;                 /* cities mode */
         short meridian;                 /* meridians mode */
         short parallel;                 /* parallels/tropics mode */
@@ -274,6 +278,8 @@ typedef struct Sundata {
         long            jump;           /* time jump (in sec) */
         double          sundec;         /* Sun declination */
         double          sunlon;         /* Sun longitude */
+        double          moondec;        /* Moon declination */
+        double          moonlon;        /* Moon longitude */
         double          shadefactor;    /* shading factor */
         double          shadescale;     /* shading rescale factor */
         double          fnoon;          /* position of noon, double float */

@@ -28,17 +28,18 @@ Hora Legal
 Duración Día
 Salida de sol
 Puesta de sol
+#
+segundos
+minuto
+hora
+día
+días
+#
 Marca una ciudad
 Marca un lugar
 Marca dos lugares consecutivos
 Repetir clic o presionar Tab para ° ' "
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable.
-Sunclock tiene varios procedimientos internos a los que se puede acceder usando el ratón o el teclado:
+#
 Tecla
 Control Teclado/Ratón
 Escape
@@ -47,12 +48,16 @@ Unknown key binding !!
 Synchro
 Progreso =
 Diferencia de tiempo =
-segundos
-minuto
-hora
-día
-días
-# Help
+#
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable.
+Calculating new image...
+Sunclock tiene varios procedimientos internos a los que se puede acceder usando el ratón o el teclado:
+# General help
 Mostrar ayuda y opciones (H o ratón, botone 1)
 Encargar carta de la Tierra (F o ratón, botone 2)
 Zoom (Z o ratón, botone 3)
@@ -67,7 +72,7 @@ Modificar hora Atrás
 Ajustar valor de progreso de tiempo
 Poner a cero la diferencia de tiempo
 Dibujar/Borrar noche
-Dibujar/Borrar sol
+Dibujar/Borrar sol y luna
 Dibujar/Borrar ciudades
 Dibujar/Borrar meridianos
 Dibujar/Borrar paralelos

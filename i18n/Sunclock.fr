@@ -28,17 +28,18 @@ Heure légale
 Durée du jour
 Lever
 Coucher
+#
+secondes
+minute
+heure
+jour
+jours
+#
 Cliquer sur une ville
 Cliquer sur un point
 Cliquer sur deux points
 Cliquer 2 fois ou taper Tab pour ° ' "
-Option
-Activation de l'option sélectionnée...
-Option incorrecte ou non disponible en exécution !!
-Options: taper <Ctrl><Espace> pour un blanc situé dans une chaîne
-avec la liste d'options assez longue suivante :
-A partir de **, les options sont configurables pendant l'exécution.
-Sunclock dispose d'un certain nombre de fonctions accessibles au moyen de la souris ou des touches du clavier :
+#
 Touche
 Contrôles Clavier/Souris
 Echap
@@ -47,12 +48,16 @@ Touche non liée à une fonction !!
 Synchro
 Progression =
 Décalage temporel =
-secondes
-minute
-heure
-jour
-jours
-# Menu window help
+#
+Option
+Activation de l'option sélectionnée...
+Option incorrecte ou non disponible en exécution !!
+Options: taper <Ctrl><Espace> pour un blanc situé dans une chaîne
+avec la liste d'options assez longue suivante :
+A partir de **, les options sont configurables pendant l'exécution.
+Calcul de la nouvelle image...
+Sunclock dispose d'un certain nombre de fonctions accessibles au moyen de la souris ou des touches du clavier :
+# General help
 Afficher l'aide et les options (H ou clic sur la bande du bas)
 Charger une carte de la Terre (F ou souris, bouton 2)
 Zoom (Z ou souris, bouton 3)
@@ -67,7 +72,7 @@ Reculer dans le temps
 Ajuster la progression temporelle
 Remettre à zéro le décalage temporel
 Montrer/ne pas montrer la zone Nocturne
-Montrer/ne pas montrer le Soleil
+Montrer/ne pas montrer le Soleil et la Lune
 Montrer/ne pas montrer les villes
 Montrer/ne pas montrer les Méridiens
 Montrer/ne pas montrer les Parallèles

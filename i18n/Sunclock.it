@@ -28,17 +28,18 @@ Ora legale
 Durata del giorno
 Alba
 Tramonto
+#
+secondi
+minuto
+ora
+giorno
+giorni
+#
 Cliccare su una città
 Cliccare su un punto
 Cliccare su due punti
 Cliccare ancora o premere Tab per ° ' "
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable.
-Sunclock dispone di un certo numero di funzioni accessibili per mezzo del mouse o della tastiera:
+#
 Tasto
 Tasto/Mouse
 Escape
@@ -47,12 +48,16 @@ Unknown key binding !!
 Synchro
 Progressione =
 Scarto temporale =
-secondi
-minuto
-ora
-giorno
-giorni
-# Help
+#
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable.
+Calculating new image...
+Sunclock dispone di un certo numero di funzioni accessibili per mezzo del mouse o della tastiera:
+# General help
 Mostrare aiuto ed opzioni (H o mouse, bottone 1)
 Caricare carta della Terra (F o mouse, bottone 2)
 Zoom (Z o mouse, bottone 3)
@@ -67,7 +72,7 @@ Modificare il tempo all'indietro
 Aggiustare la progressione temporale
 Rimettere a zero lo scarto temporale
 Mostrare/non mostrare la notte
-Mostrare/non mostrare il sole
+Mostrare/non mostrare il sole e la luna
 Mostrare/non mostrare le città
 Mostrare/non mostrare i meridiani
 Mostrare/non mostrare i paralleli

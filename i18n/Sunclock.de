@@ -28,17 +28,18 @@ Gesetzliche Zeit
 Länge des Tages
 Sonnenaufgang
 Sonnenuntergang
+#
+Sekunden
+Minute
+Stunde
+Tag
+Tage
+#
 Klicke auf eine Stadt
 Klicke auf eine Position
 Klicke nacheinander auf zwei Positionen
 Doppel Klicke oder Betätige Tab für ° ' "
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable
-Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick oder Tastatur zugegriffen werden kann:
+#
 Taste
 Tastatur/Maus Steuerung
 Abbruch
@@ -47,12 +48,16 @@ Unknown key binding !!
 Synchro
 Schrittweite =
 Zeitverschiebung =
-Sekunden
-Minute
-Stunde
-Tag
-Tage
-# Help
+#
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable
+Calculating new image...
+Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick oder Tastatur zugegriffen werden kann:
+# General help
 Zeige die Hilfe und Optionen an (H oder Mausknopf 1)
 Eingabe Erde kartendatei (F oder Mausknopf 2)
 Zoom (Z oder Mausknopf 3)
@@ -67,7 +72,7 @@ Verschiebe Zeit rückwärts
 Ändere Zeitverschiebung
 Setze Zeitverschiebung auf Null zurück
 Zeichne/Lösche Nacht
-Zeichne/Lösche Sonne
+Zeichne/Lösche Sonne und Mond
 Zeichne/Lösche Markierungen der Städte
 Zeichne/Lösche Meridiane
 Zeichne/Lösche Parallelen

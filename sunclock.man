@@ -14,7 +14,7 @@ where the list of licit options is the following long list
 .PP
 [-help] [-listmenu] [-version] \
 [-display name] [-rcfile file] [-sharedir directory] \
-[-clock] [-map] [-dock] \
+[-clock] [-map] [-dock] [-undock] \
 [-menu] [-nomenu] [-selector] [-noselector] \
 [-zoom] [-nozoom] [-option] [-nooption]
 .PP
@@ -31,7 +31,7 @@ where the list of licit options is the following long list
 [-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
 [-fullcolors] [-invertcolors] [-monochrome] [-aspect mode] \
 [-placement (random, fixed, center, NW, NE, SW, SE)] \
-[-placementshift x y] \
+[-placementshift x y] [-extrawidth value] \
 [-decimal] [-dms] [-city name] [-position latitude longitude] \
 [-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]] \
 [-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
@@ -39,10 +39,12 @@ where the list of licit options is the following long list
 [-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
 [-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2] \
 [-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
-[-tropics] [-notropics] [-sun] [-nosun] [-citymode mode=0,1,2] \
+[-citymode mode=0,1,2,3] [-spotsize size(0,1,2,3,4,5)] \
 [-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3] \
 [-meridianspacing value] [-parallelspacing value] \
-[-spotsize size(0,1,2,3,4,5)] [-dottedlines] [-plainlines] \
+[-tropics] [-notropics] \
+[-dottedlines] [-plainlines] [-bottomline] [-nobottomline] \
+[-objectmode mode=0,1,2] [-sun] [-nosun] [-moon] [-nomoon] \
 [-clockbgcolor color] [-clockfgcolor color] \
 [-clockstripbgcolor color] [-clockstripfgcolor color] \
 [-mapbgcolor color] [-mapfgcolor color] \
@@ -248,9 +250,27 @@ slower machines. The option can also be useful if you want to produce
 Earth maps in which only the coast lines of continents and lands.
 .TP
 .B "\-dock "
-With this option, sunclock locks the size of the first launched window,
-if this is a (small) clock. Also, this window cannot be closed unless
-all other windows are closed as well.
+This option is meant to give sunclock the ability to be docked in the
+window manager buttons or menu bar, providing that the WM offers this
+possibility without requiring special hints (fvwm2 or windowmaker or
+afterstep will work perfectly well for that purpose, KDE or Gnome
+won't...) Under the -dock option, sunclock locks the size of the first
+launched window, which is necessarily a small clock. Also, that
+initial window can no longer be closed by typing 'K' or 'Q'. (The only
+way to exit the application, then, is to kill it with xkill, or to
+undock it first with the -undock option from the Option window).
+The user might want to customize the size and suitable options so
+that sunclock fits with the size of the dockable applets. As an example,
+sunclock could be invoked as follows:
+.TP
+.B " "
+sunclock -language fr -nobottomline -dock -clockgeom 63x42+2+190
+-dateformat "%H:%M:%S|%a%_%d%_%b|%b%_%Y|%j%_%U/52" -command "xdiary"
+.TP
+.B "\-undock "
+Undocks sunclock. This option has no other effect than reallowing the
+use of options that were "frozen" under -dock. It can be used e.g. to 
+exit the application when sunclock has been started in dock mode.
 .TP
 .B "\-synchro "
 With this option, sunclock updates all windows simultaneously. This, of 
@@ -353,11 +373,18 @@ with letting the the window centers, respectively, the NW, NE, SW, SE
 corners fixed, or rather whether it should operate randomly, or through 
 user defined placement. Default is NW placement.
 .TP
-.BI "\-placementshift " x y
+.BI "\-placementshift " x\ y
 Relative displacement <clock window> --> <map window>, to apply with
 respect to the -placement specification. If placement is NW, then
 the NW window corner will move by (x,y) pixels. Defaut is (0,0), i.e.
 no modification to apply to the -placement specification.
+.TP
+.BI "\-extrawidth " value
+When using the 'enlarge window' command specified by key '>', the width
+of the full X display is used, minus some default width equal to 10 pixels.
+This is enough the accomodate the width of window borders of most window
+managers. In case it is not, -extrawidth <value> can be used to change
+this setting.
 .TP
 .BI "\-clockgeom " (width)x(height)+(x coord)+(y coord)
 Specify the geometry of the clock window, i.e. its size and position
@@ -451,6 +478,13 @@ Use dotted lines to represent meridians and parallels.
 .TP
 .BI "\-plainlines "
 Use plain lines to represent meridians and parallels.
+.TP
+.BI "\-bottomline "
+Draw a line at the bottom of the map, to separate the map from the text 
+strip showing time and coordinates. 
+.TP
+.BI "\-nobottomline "
+Don't draw the bottom line. This is the default.
 .TP
 .BI "\-command " string
 Specify an external action or program that will be called through keyboard 
@@ -552,10 +586,19 @@ mode=0 : no parallels, mode=1 : parallels drawn, mode=2 : parallels drawn
 with labels at the left hand side, mode=3 : parallels drawn with labels 
 at the right hand side. The default mode is 0 (no parallels).
 .TP
-.BI "\-citymode mode=0,1,2"
+.BI "\-meridianspacing value (degree)"
+Specify how many degrees (or fractions of degree) should separate
+meridians drawn on the map.
+.TP
+.BI "\-parallelspacing value (degree)"
+Specify how many degrees (or fractions of degree) should separate
+parallels drawn on the map.
+.TP
+.BI "\-citymode mode=0,1,2,3"
 Start sunclock with cities displayed or not, according to the mode,
 mode=0 : no cities, mode=1 : cities drawn, mode=2 : cities drawn
-with their names. The default mode is 1 (cities shown without names).
+with their names, mode=3 : cities drawn with their coordinates. 
+The default mode is 1 (cities shown without names or coordinates).
 .TP
 .BI "\-tropics "
 Start sunclock with tropics and arctic circles displayed (by default, 
@@ -564,8 +607,17 @@ they aren't).
 .BI "\-sun "
 Start sunclock with the Sun position displayed (by default, it is).
 .TP
-.BI "\-notropics \-nosun "
+.BI "\-moon "
+Start sunclock with the Moon position displayed (by default, it is).
+.TP
+.BI "\-notropics \-nosun \-nomoon"
 These options just negate the above ones.
+.TP
+.BI "\-objectmode " mode=0,1,2
+Mode=0 stands for no objects (Sun, Moon) at all, mode=1 for objects just
+drawn by their symbol, mode=2 for objects drawn with their symbol
+and coordinates in decimal degrees (or degrees, minutes, seconds, using
+the Tab switch).
 .TP
 .BI "\-menubgcolor " color
 Specifies the various menus text background color. Default is Grey92.

@@ -3,7 +3,7 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
-Planned versions 3.3x, 3.40... (features to appear in some order)
+Planned versions 3.4x, 3.5x... (features to appear in some order)
 
 - Larger data base of cities/coordinates, with level of size
 - Searching cities
@@ -12,9 +12,26 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
+Version 3.41, May 31, 2001
+
+- New fixes for X BadAccess bug with enlightenment (again!) 
+- New options -bottomline, -nobottomline. By default, no bottom line
+  appears in the newer version (looks nicer to me!)
+- Improvement of the -dock mode; new -undock option. Fixes for the
+  enlarge '>' command; new related -extrawidth option.
+- Synchronization fixes in multi-window context
+- Minor bugs corrected: parallel/tropic color setting now works, readvmf
+  should no longer produce artefacts on the left border when the 
+  magnification factor is larger than 1; speed slightly improved as well.
+- The Moon is now shown on the map (although not astronomically very 
+  accurate, probably a few minutes of arc of error...)
+  Related new options -moon, -nomoon, -objectmode x.
+- Sun and Moon coordinates can be shown on the map by typing 'y' once more
+
 Version 3.40, May 14, 2001
 
 - City names and coordinate values can now be shown on the map
+  by typing 'u' once more
 - Bitmaps of city/mark spots are now obtained from explicit data
   in bitmaps.h rater than calls to X routines (slower and more rigid)
 - Menu options which can take more than 2 values (e.g. 'N') can get

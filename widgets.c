@@ -25,7 +25,7 @@ extern void             createGData();
 extern void             createGCs();
 extern void             clearNightArea();
 extern void             drawCities();
-extern void             drawSun();
+extern void             drawSunAndMoon();
 
 extern Display *	dpy;
 extern int		scr;
@@ -376,7 +376,7 @@ int				num;
 
 	   case 4:
 	        win = Zoom;
-		mask |= PointerMotionMask | ResizeRedirectMask;
+		mask |= PointerMotionMask | StructureNotifyMask;
 		break;
 
 	   case 5:
@@ -538,11 +538,24 @@ void
 setupMenu()
 {
 	char s[2];
-	char which[] = "CDEMPSTU";
+	char which[] = "CDEMPSTUK><!Q";
 	int i, j, j0, b, d;
 	GC gc;
 
 	if (!do_menu) return;
+
+        if (MenuCaller->wintype) {
+	   if (do_dock)
+              strcpy(which, "Q");
+           else 
+              which[0] = '\0';
+	} else {
+	   if (do_dock) {
+	      if (MenuCaller != Seed) 
+	         which[strlen(which)-1] = '\0';
+	   } else
+	         which[strlen(which)-5] = '\0';
+	}
 
         XSetWindowColormap(dpy, Menu, MenuCaller->gdata->cmap);
         XSetWindowBackground(dpy, Menu, MenuCaller->gdata->pixlist.menubgcolor);
@@ -557,7 +570,7 @@ setupMenu()
 	          XDrawLine(dpy, Menu, MenuCaller->gdata->gclist.menufont, 
                       j, 0, j, MenuCaller->gdata->menustrip);
 	      s[0]=MenuKey[2*i];
-	      if (!MenuCaller->wintype && index(which,s[0])) 
+	      if (index(which,s[0])) 
                  gc = MenuCaller->gdata->gclist.imagefont;
 	      else
                  gc = MenuCaller->gdata->gclist.menufont;
@@ -1222,7 +1235,7 @@ int mode;
           zoomh = (areah*ZoomCaller->geom.height)/ZoomCaller->newzoom.height;
           zoomx = (areaw*ZoomCaller->newzoom.dx)/ZoomCaller->newzoom.width;
           zoomy = (areah*ZoomCaller->newzoom.dy)/ZoomCaller->newzoom.height;
-	  if (ZoomCaller->flags.mono)
+	  if (ZoomCaller->flags.mono==2)
 	  for (j=0; j<=zoomh; j++)
 	    for (i=0; i<=zoomw; i++) {
                k = zoomx+i; 
@@ -1287,13 +1300,12 @@ struct Sundata * Context;
 	else
 	    do_zoom = 1;
 
-        if (!do_zoom) 
-	  {
+        if (!do_zoom) {
 	  XUnmapWindow(dpy, Zoom);
 	  ZoomCaller = NULL;
 	  zoom_active = 1;
 	  return;
-	  }
+	}
 
         Context->newzoom = Context->zoom;
         XSelectInput(dpy, Zoom, 0);
@@ -1363,21 +1375,22 @@ int x, y, button, evtype;
 
 	   if (y>=areah+64 && y<=areah+64+Context->gdata->menustrip) {
 	      click_pos = x/Context->gdata->charspace;
-	      if (click_pos>=N_ZOOM) 
+	      if (click_pos>=N_ZOOM)
 		 zoom_newhint = '\033';
 	      else
 		 zoom_newhint = ZoomKey[2*click_pos];
-	      if (evtype==MotionNotify) {
+	      if (evtype==MotionNotify)
 		 showZoomHint();
-	      }
+	      else
 	      if (evtype==ButtonRelease) {
-		 if (zoom_newhint=='W') do_zoom = -1;
-		 if (click_pos<N_ZOOM) {
-		    processKey(Context->win, tolower(zoom_newhint));
-		    showZoomHint();
-		    zoom_mode = 0;
-		 } else
-	            PopZoom(Context);
+		 if (zoom_newhint == '\033') {
+		    PopZoom(Context);
+		    return;
+		 }
+		 if (zoom_newhint == 'W') do_zoom = -1;
+		 processKey(Context->win, tolower(zoom_newhint));
+		 showZoomHint();
+		 zoom_mode = 0;
 	      }
 	      return;
 	   }
@@ -1667,7 +1680,7 @@ activateOption()
               clearNightArea(Context);
 	      if (gflags.mono==2) {
 	         drawCities(Context);
-	         drawSun(Context);
+	         drawSunAndMoon(Context);
 	      }
 	   } else {
   	      size = Context->xim->bytes_per_line*Context->xim->height;

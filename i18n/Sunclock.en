@@ -28,17 +28,18 @@ Legal time
 Day length
 Sunrise
 Sunset
+#
+seconds
+minute
+hour
+day
+days
+#
 Click on a city
 Click on a location
 Click consecutively on two locations
 Double click or strike Tab for ° ' "
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable
-Sunclock has a number of internal procedures which can be accessed through mouse clicks or key controls:
+#
 Key
 Key/Mouse controls
 Escape
@@ -47,12 +48,16 @@ Unknown key binding !!
 Synchro
 Progress value =
 Global time shift =
-seconds
-minute
-hour
-day
-days
-# Menu window help
+#
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable
+Calculating new image...
+Sunclock has a number of internal procedures which can be accessed through mouse clicks or key controls:
+# General help
 Show help and options (H or click on strip)
 Load Earth map file (F or mouse button 2)
 Zoom (Z or mouse button 3)
@@ -67,7 +72,7 @@ Modify time backward
 Adjust time progress
 Reset global time shift to zero
 Draw/Erase Night area
-Draw/Erase Sun
+Draw/Erase Sun and Moon
 Draw/Erase cities
 Draw/Erase meridians
 Draw/Erase parallels

@@ -7,29 +7,32 @@
 
 enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_DAYLENGTH, L_SUNRISE, L_SUNSET, 
+
+      L_SEC, L_MIN, L_HOUR, L_DAY, L_DAYS, 
+
       L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, L_DEGREE,
+
+      L_KEY, L_CONTROLS, L_ESCAPE, L_ESCMENU, L_UNKNOWN, L_SYNCHRO, 
+      L_PROGRESS, L_TIMEJUMP,
+
       L_OPTION, L_ACTIVATE, L_INCORRECT, L_OPTIONINTRO,
-      L_LISTOPTIONS, L_CONFIG, L_SHORTHELP,
-      L_KEY, L_CONTROLS, 
-      L_ESCAPE, L_ESCMENU, L_UNKNOWN, L_SYNCHRO,
-      L_PROGRESS, L_TIMEJUMP, L_SEC, L_MIN, L_HOUR, L_DAY, L_DAYS, L_END};
+      L_LISTOPTIONS, L_CONFIG, L_NEWIMAGE, L_SHORTHELP,
+
+      L_END
+      };
 
 #ifdef DEFVAR
 char	* Label[L_END] = {
 	"Point", "GMT time", "Solar time", "Legal time", 
         "Day length", "Sunrise", "Sunset", 
+
+	"seconds", "minute", "hour", "day", "days",
+
         "Click on a city",
         "Click on a location",
         "Click consecutively on two locations",
         "Double click or strike * for ° ' \"",
-	"Option",
-        "Activating selected option...",
-        "Option incorrect or not available at runtime !!",
-	"Options: strike <Ctrl><Space> for blank space within an item",
-	"with the following rather long list of options:",
-        "Starting from **, options are runtime configurable.",
-        "Sunclock has a number of internal procedures which can be accessed\n"
-            "through mouse clicks or key controls:",
+
 	"Key",
         "Key/Mouse controls",
 	"Escape",
@@ -38,11 +41,16 @@ char	* Label[L_END] = {
         "Synchro",
 	"Progress value =",
         "Global time shift =",
-	"seconds",
-	"minute",
-	"hour",
-	"day",
-        "days"
+
+	"Option",
+        "Activating selected option...",
+        "Option incorrect or not available at runtime !!",
+	"Options: strike <Ctrl><Space> for blank space within an item",
+	"with the following rather long list of options:",
+        "Starting from **, options are runtime configurable.",
+	"Calculating new image...",
+        "Sunclock has a number of internal procedures which can be accessed\n"
+            "through mouse clicks or key controls:"
 };
 
 char    MenuKey[2*N_MENU] = 
@@ -74,7 +82,7 @@ char  * Help[N_HELP] = {
 "Adjust proGress value",
 "Reset global time shift to Zero",
 "Draw/Erase Night area",
-"Draw/Erase Sun",
+"Draw/Erase Sun and Moon",
 "Draw/Erase cities",
 "Draw/Erase meridians",
 "Draw/Erase parallels",

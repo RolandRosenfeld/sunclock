@@ -28,17 +28,18 @@ Nationell tid
 Dagens längd
 Soluppgång
 Solnedgång
+#
+sekunden
+minut
+timme
+dag
+dagar
+#
 Klicka på en stad
 Klicka på en plats
 Klicka på två platser
 Klick två gånger eller slå Tab för ° ' "
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable.
-Sunclock har ett antal funktioner som kan åtkommas genom mus-klick eller tastaturet:
+#
 Tastatur
 Tastatur/Mus kontroll
 Escape
@@ -47,12 +48,16 @@ Unknown key binding !!
 Synchro
 Tids-variabel =
 Global tid variabel =
-sekunden
-minut
-timme
-dag
-dagar
-# Help
+#
+Option
+Activating selected option...
+Option incorrect or not available at runtime !!
+Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable.
+Calculating new image...
+Sunclock har ett antal funktioner som kan åtkommas genom mus-klick eller tastaturet:
+# General help
 Visa hjälp och alternativ (H eller mus-klick knapp 1)
 Laddar karta Jord (F eller mus-klick knapp 2)
 Zoom (Z eller mus-klick knapp 3)
@@ -67,7 +72,7 @@ Använd nationell tidszon mode
 Justera tidsvariabel
 Återställ Global tid
 Rita/Radera Natt
-Rita/Radera Sön
+Rita/Radera Sön och Måne
 Rita/Radera städer
 Rita/Radera meridianer
 Rita/Radera breddgrader
