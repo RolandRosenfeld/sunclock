@@ -49,6 +49,12 @@ Synchro
 Progression =
 Décalage temporel =
 #
+Nom localité
+Zone horaire
+Latitude
+Longitude
+Taille
+#
 Option
 Activation de l'option sélectionnée...
 Option incorrecte ou non disponible en exécution !!
@@ -61,7 +67,8 @@ Sunclock dispose d'un certain nombre de fonctions accessibles au moyen de la sou
 Afficher l'aide et les options (H ou clic sur la bande du bas)
 Charger une carte de la Terre (F ou souris, bouton 2)
 Zoom (Z ou souris, bouton 3)
-Ouvrir la denêtre de commande des Options
+Paramètres des localités Urbaines
+Fenêtre de commande des Options
 Utiliser le mode Coordonnées
 Utiliser le mode heure Solaire
 Utiliser le mode Distances
@@ -73,7 +80,6 @@ Ajuster la progression temporelle
 Remettre à zéro le décalage temporel
 Montrer/ne pas montrer la zone Nocturne
 Montrer/ne pas montrer le Soleil et la Lune
-Montrer/ne pas montrer les villes
 Montrer/ne pas montrer les Méridiens
 Montrer/ne pas montrer les Parallèles
 Montrer/ne pas montrer les Tropiques/Equateur/Cercles arctiques
@@ -98,6 +104,12 @@ Centrer le rectangle de zoom sur la localité choisie
 Synchroniser l'action du zoom
 # Option window help
 Activer l'option
-Effacer la ligne de commande
+Effacer les commandes et paramètres
 Synchroniser les fenêtres entre elles ou non
+# Urban window help
+Utiliser degrés, minutes, secondes, ou degrés décimaux
+Chercher/sélectionner une localité
+Modifier les paramètres de la localité
+Créer une nouvelle localité
+Supprimer la localité
 # End

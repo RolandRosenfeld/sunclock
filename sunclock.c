@@ -154,24 +154,30 @@ extern void setupMenu();
 extern void PopMenu();
 extern void showMenuHint();
 
-extern void setupSelector();
-extern void PopSelector();
-extern void processSelectorAction();
+extern void setupFilesel();
+extern void PopFilesel();
+extern void processFileselAction();
 
 extern void checkZoomSettings();
 extern void setZoomDimension();
 extern void setZoomAspect();
 extern void setupZoom();
 extern void PopZoom();
-extern void processZoomAction();
 extern void activateZoom();
+extern void processZoomAction();
 
 extern void showOptionHint();
-extern void resetOptionLength();
+extern void resetStringLength();
 extern void setupOption();
 extern void PopOption();
 extern void activateOption();
 extern void processOptionAction();
+
+extern void updateUrbanEntries();
+extern void setupUrban();
+extern void PopUrban();
+extern void activateUrban();
+extern void processUrbanAction();
 
 extern void resetAuxilWins();
 extern void remapAuxilWins();
@@ -217,7 +223,12 @@ char language[4] = "";
 
 Pixmap textpix = 0, zoompix = 0;
 
-struct Sundata *Seed, *MenuCaller, *SelCaller, *ZoomCaller, *OptionCaller;
+struct Sundata *Seed = NULL, 
+               *MenuCaller = NULL, 
+               *FileselCaller = NULL, 
+               *ZoomCaller = NULL, 
+               *OptionCaller = NULL,
+               *UrbanCaller = NULL;
 
 char    ClockBgColor[COLORLENGTH], ClockFgColor[COLORLENGTH], 
         MapBgColor[COLORLENGTH], MapFgColor[COLORLENGTH], 
@@ -252,6 +263,7 @@ int             color_depth;
 int             color_pad;
 int             bytes_per_pixel;
 int             total_colors;
+int             text_input;
 
 int             textheight = 0;
 int             textwidth = 0;
@@ -259,7 +271,6 @@ int             coordvalheight;
 int             coordvalwidth;
 int             extra_width = 10;
 
-int             runtime = 0;
 int             button_pressed = 0;
 int             control_key = 0;
 int             precedence = 0;
@@ -270,34 +281,32 @@ int             erase_obj = 0;
 int             zoom_mode = 0;
 int             zoom_active = 1;
 
-int             option_caret;
-int             option_maxlength = 0;
-int             old_option_caret = -1;
-int             old_option_length;
-
 KeySym          menu_newhint = ' ';
-char            option_newhint = ' ';
 char            zoom_newhint = ' ';
+char            option_newhint = ' ';
+char            urban_newhint = ' ';
 
 char            menu_lasthint = '\0';
-char            option_lasthint = '\0';
 char            zoom_lasthint = '\0';
+char            option_lasthint = '\0';
+char            urban_lasthint = '\0';
 
-char            old_option_string_char;
-char *          option_string = NULL;
+TextEntry       option_entry;
+TextEntry       urban_entry[5];
 
 Pixel           black, white;
 
 Atom            wm_delete_window, wm_protocols;
 
-Window          Menu = 0, Selector = 0, Zoom = 0, Option = 0;
+Window          Menu = 0, Filesel = 0, Zoom = 0, Option = 0, Urban = 0;
 
 struct Geometry MapGeom    = { 0, 30,  30, 792, 396, 320, 160 };
 struct Geometry ClockGeom  = { 0, 30,  30, 128,  64,  48,  24 };
 struct Geometry MenuGeom   = { 0,  0,  30, 792,  40, 700,  40 };
-struct Geometry SelGeom    = { 0,  0,  30, 600, 180, 450,  80 };
+struct Geometry FileselGeom= { 0,  0,  30, 600, 180, 450,  80 };
 struct Geometry ZoomGeom   = { 0,  0,  30, 500, 320, 360, 250 };
 struct Geometry OptionGeom = { 0,  0,  30, 630,  80, 630,  80 };
+struct Geometry UrbanGeom  = { 0,  0,  30, 640, 120, 640, 120 };
 
 int             win_type = 0;
 int             placement = -1;
@@ -305,22 +314,23 @@ int             place_shiftx = 0;
 int             place_shifty = 0;
 int             color_alloc_failed = 0;
 int             num_formats;
-int             parse_cmdline;
+int             runlevel;
 int             verbose = 0;
 int             num_lines;
 int             num_table_entries;
 
 int             label_shift = 0;
-int             selector_shift = 0;
+int             filesel_shift = 0;
 int             zoom_shift = 0;
 
 int             horiz_drift = 0;
 int             vert_drift =  0;
 
 int             do_menu = 0;
-int             do_selector = 0;
+int             do_filesel = 0;
 int             do_zoom = 0;
 int             do_option = 0;
+int             do_urban = 0;
 
 int             do_hint = 0;
 int             do_dock = 0;
@@ -413,16 +423,16 @@ Usage()
      fprintf(stderr, 
      "%s: version %s, %s\n\nUsage:  %s [-options ...]\n\n%s\n\n"
      SP"[-help] [-listmenu] [-version]\n"
-     SP"[-display name] [-rcfile file] [-sharedir directory]\n"
+     SP"[-display name] [-sharedir directory]\n"
      SP"[-clock] [-map] [-dock] [-undock]\n"
-     SP"[-menu] [-nomenu] [-selector] [-noselector]\n"
-     SP"[-zoom] [-nozoom] [-option] [-nooption]\n"
+     SP"[-menu] [-nomenu] [-filesel] [-nofilesel]\n"
+     SP"[-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]\n"
 "**" SP"[-language name] [-dateformat string1|string2|...]\n"
-     SP"[-command string] [-helpcommand string]\n"
+     SP"[-rcfile file] [-command string] [-helpcommand string]\n"
      SP"[-clockimage file] [-mapimage file] [-mapmode * <L,C,S,D,E>]\n"
      SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
-     SP"[-auxilgeom <geom>] [-menugeom <geom>]\n"
-     SP"[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>]\n"
+     SP"[-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>]\n"
+     SP"[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>]\n"
      SP"[-title name] [-mapclassname name] [-clockclassname name]\n"
      SP"[-auxilclassname name] [-classname name]\n"
      SP"[-menufont fontname] [-coordfont fontname] [-cityfont fontname]\n"
@@ -431,7 +441,8 @@ Usage()
      SP"[-fullcolors] [-invertcolors] [-monochrome] [-aspect mode]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
      SP"[-placementshift x, y] [-extrawidth value]\n"
-     SP"[-decimal] [-dms] [-city name] [-position latitude longitude]\n"
+     SP"[-decimal] [-dms] [-city name] [-position \"latitude|longitude\"]\n"
+     SP"[-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
      SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
      SP"[-night] [-terminator] [-twilight] [-luminosity] [-lightgradient]\n"
@@ -505,6 +516,9 @@ initValues()
         gzoom.meridspacing = 0.0;
         gzoom.paralspacing = 0.0;
 
+        option_entry.string = NULL;
+        for (i=0; i<=4; i++) urban_entry[i].string = NULL;
+
         strcpy(ClockBgColor, "White");
         strcpy(ClockFgColor, "Black");
         strcpy(MapBgColor, "White");
@@ -537,7 +551,7 @@ initValues()
         strcpy(SunColor, "Yellow");
         strcpy(MoonColor, "Khaki");
 
-        position.lat = 100;
+        position.lat = 100.0;
         position.tz = NULL;
 
         StringReAlloc(&share_maps_dir, SHAREDIR"/earthmaps/");
@@ -579,26 +593,28 @@ correctValues()
 	if (do_dock) win_type = 0;
 }
 
-void
+int
 needMore(argc, argv)
-register int                    argc;
-register char **                argv;
+int *                  argc;
+char **                argv;
 {
-        if (argc == 1) {
-                fprintf(stderr, "%s: option `%s' requires an argument\n\n",
+	-- *argc;
+        if (*argc == 0) {
+                if (runlevel == PARSECMDLINE) Usage();
+		   else 
+                if (runlevel == RUNTIMEOPTION) {
+                   fprintf(stderr, "Invalid option specification\n");
+		   runlevel = FAILEDOPTION;
+		} else
+                   fprintf(stderr, "Error in config file : \n");
+
+                fprintf(stderr, "%s: option `%s' (with no argument) incorrect\n",
                         ProgName, *argv);
-                if (parse_cmdline) {
-                        Usage();
-                        exit(1);
-		} else
-		if (runtime) {
-                   fprintf(stderr, 
-                        "Invalid option specification\n");
-		   runtime = -1;
-		} else
-                   fprintf(stderr, 
-                        "Error in config file %s. "RECOVER, *argv);
+
+		if (runlevel == PARSECMDLINE) exit(1);
+	        return 1;
         }
+	return 0;
 }
 
 void
@@ -612,7 +628,7 @@ register struct Geometry *      g;
         if (mask == 0) {
                 fprintf(stderr, "%s: `%s' is a bad geometry specification\n",
                         ProgName, s);
-                exit(1);
+                return;
         }
         if (g->width<g->w_mini) g->width = g->w_mini;
         if (g->height<g->h_mini) g->height = g->h_mini;
@@ -718,567 +734,218 @@ register char **                argv;
         if (strcmp(language, oldlanguage)) readLanguage();
 }
 
+double
+dms2decim(string)
+char *string;
+{
+double deg=0.0, min=0.0, sec=0.0;
+
+    if (rindex(string, '°')) {
+       sscanf(string, "%lf°%lf'%lf", &deg, &min, &sec);
+       return deg+(min+sec/60.0)/60.0;
+    } else
+       return atof(string);
+}
+
+void
+scanPosition(string, city)
+char * string;
+City * city;
+{
+int i, l;
+char lat[80], lon[80];
+
+     if (!string || !*string) return; 
+     
+     l = strlen(string);
+     for (i=0; i<l; i++) if (string[i] == '|') string[i] = ' ';
+     
+     if (sscanf(string, "%s %s", lat, lon)<2) {
+        city->lat = -100.0;
+        return;
+     }
+     city->lat = dms2decim(lat);
+     if (fabs(city->lat)>90.0) city->lat = -100.0;
+     city->lon = dms2decim(lon);
+     city->lon = fixangle(city->lon + 180.0) - 180.0;
+}
+
+City *
+searchCityLocation(params)
+char *params;
+{
+     City *c;
+     char name[80], lat[80], lon[80];
+     double dlat=0.0, dlon=0.0;
+     int i, l, complete = 0;
+
+     if (!params || !*params) return NULL;
+
+     if (rindex(params, '|')) {
+        l =strlen(params);
+        for (i=0; i<l; i++) {
+            if (params[i] == ' ') params[i]= '\037';
+            if (params[i] == '|') params[i]= ' ';
+	}
+        sscanf(params, "%s %s %s", name, lat, lon);
+	dlat = dms2decim(lat);
+	dlon = dms2decim(lon);
+        l =strlen(name);
+        for (i=0; i<l; i++)
+            if (name[i] == '\037') name[i]= ' ';
+	complete = 1;
+     } else
+        strncpy(name, params, 80);
+
+     c = cities;
+     while (c) {
+        if (!strcasecmp(c->name, name) &&
+           (!complete || (fabs(c->lon-dlon)<0.01 && fabs(c->lat-dlat)<0.01)))
+	   return c;
+        c = c->next;
+     }
+     return NULL;
+}
+
+City *
+addCity(longparams)
+char *longparams;
+{
+     City *city;
+     char name[80], lat[80], lon[80], tz[80];
+     char params[256];
+     int i, size;
+
+     i = 0;
+     if (longparams) {
+        while (longparams[i] != '\0') {
+           if (longparams[i]==' ') longparams[i] = '\037';
+           if (longparams[i]=='|') longparams[i] = ' ';
+           ++i;
+        }
+        if (sscanf(longparams,"%d %s %s %s %s", &size, name, lat, lon, tz)<5) {
+           fprintf(stderr, "Incorrect number of parameters in -addcity\n");
+	   return NULL;
+	}
+        i = 0;
+        while (name[i] != '\0') {
+           if (name[i]=='\037') name[i] = ' ';
+           ++i;
+        }
+     } else {
+       if (do_urban) {
+          if (!*urban_entry[0].string) {
+	     strcpy(urban_entry[0].string, "???");
+	     return NULL;
+	  }
+          strcpy(name, urban_entry[0].string);
+          if (!*urban_entry[1].string) {
+	     strcpy(urban_entry[1].string, "???");
+	     return NULL;
+	  }
+          strcpy(tz, urban_entry[1].string);
+          if (!*urban_entry[2].string) return NULL;
+          strcpy(lat, urban_entry[2].string);
+          if (!*urban_entry[3].string) return NULL;
+          strcpy(lon, urban_entry[3].string);
+          if (!*urban_entry[4].string) return NULL;
+          if (!sscanf(urban_entry[4].string, "%d", &size)) {
+	     strcpy(urban_entry[4].string, "?");
+             return NULL;
+	  }
+       } else
+	  return NULL;
+     }
+     
+     if (runlevel>READSYSRC) {
+        sprintf(params, "%s|%s|%s", name, lat, lon);
+	if (searchCityLocation(params)) return NULL;
+     }
+
+     /* Create the record for the city */
+     if ((city = (City *) calloc(1, sizeof(City))) == NULL) return NULL;     
+
+     /* Set up the record */
+
+     city->name = strdup(name);
+     city->lat = dms2decim(lat);
+     city->lon = dms2decim(lon);
+     city->size = size;
+     city->mode = 0;
+     city->tz = strdup(tz);
+
+     /* Link it into the list */
+
+     city->next = cities;
+     cities = city;
+     return city;
+}
+
+void
+removeCity(params)
+char *params;
+{
+     City *c, *cp, *cn;
+
+     c = searchCityLocation(params);
+
+     if (!c) return;  
+     cn = c->next;
+     free(c->name);
+     free(c);
+
+     if (c == cities) {
+        cities = cn;
+	return;
+     }
+
+     cp = cities;
+     while (cp) {
+        if (cp->next == c) {
+	    cp->next = cn;
+	    return;
+	}  
+	cp = cp->next;
+     }
+}
+
+void
+deleteMarkedCity()
+{
+     City *c, *cp = NULL;
+
+     if (!do_urban || !UrbanCaller) return;
+     c = cities;
+
+     while (c) {
+        if (c == UrbanCaller->mark1.city) {
+	   UrbanCaller->mark1.city = NULL;
+	   if (cp) {
+	      cp->next = c->next;
+	   } else
+	      cities = c->next;
+           free(c->name);
+           free(c);
+	   return;
+	}
+        cp = c;
+        c = c->next;
+     }
+}
+
+int 
+readRC();
+
 int
 parseArgs(argc, argv)
-register int                    argc;
-register char **                argv;
+int                    argc;
+char **                argv;
 {
         int     opt;
 
         while (--argc > 0) {
                 ++argv;
-                if (runtime) goto configurable;
-                if (strcasecmp(*argv, "-display") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&Display_name, *++argv); 
-                        --argc;
-                } 
-                else if (strcasecmp(*argv, "-rcfile") == 0) {
-                        needMore(argc, argv);
-                        ++argv;  /* already done in checkRCfile */
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-sharedir") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&share_maps_dir, *++argv);
-                        strncpy(image_dir, *argv, 1020);
-                        --argc;
-                }
-                else 
-                  configurable:
-                     if (strcasecmp(*argv, "-language") == 0) {
-                        needMore(argc, argv);
-                        strncpy(language, *++argv, 2);
-			if (strcmp(language, oldlanguage)) readLanguage();
-                        --argc;
-                } 
-	        else if (strcasecmp(*argv, "-title") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&Title, *++argv);
-                        --argc;
-		}
-	        else if (strcasecmp(*argv, "-clockclassname") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&ClockClassName, *++argv);
-                        --argc;
-		}
-	        else if (strcasecmp(*argv, "-mapclassname") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&MapClassName, *++argv);
-                        --argc;
-		}
-	        else if (strcasecmp(*argv, "-auxilclassname") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&AuxilClassName, *++argv);
-                        --argc;
-		}
-	        else if (strcasecmp(*argv, "-classname") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&ClassName, *++argv);
-                        --argc;
-		}
-                else if (strcasecmp(*argv, "-clockgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &ClockGeom);
-			option_changes |= 8;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &MapGeom);
-			option_changes |= 16;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockimage") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&Clock_img_file, *++argv);
-			option_changes |= 32;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapimage") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&Map_img_file, *++argv);
-			option_changes |= 64;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-auxilgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &MenuGeom);
-			option_changes |= 2;
-			ZoomGeom.x = SelGeom.x = OptionGeom.x = MenuGeom.x;
-			ZoomGeom.y = SelGeom.y = OptionGeom.y = MenuGeom.y;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-menugeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &MenuGeom);
-			option_changes |= 2;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-selgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &SelGeom);
-			option_changes |= 2;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-zoomgeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &ZoomGeom);
-			option_changes |= 2;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-optiongeom") == 0) {
-                        needMore(argc, argv);
-                        getGeom(*++argv, &OptionGeom);
-			option_changes |= 2;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mag") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fx = atof(*++argv);
-                        if (gzoom.fx < 1) gzoom.fx = 1.0;
-                        if (gzoom.fx > 100.0) gzoom.fx = 100.0;
-                        gzoom.fy = gzoom.fx;
-			option_changes |= 4;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-magx") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fx = atof(*++argv);
-                        if (gzoom.fx < 1) gzoom.fx = 1.0;
-			option_changes |= 4;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-magy") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fy = atof(*++argv);
-                        if (gzoom.fy < 1) gzoom.fy = 1.0;
-			option_changes |= 4;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-dx") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fdx = atof(*++argv)/360.0+0.5;
-                        checkZoomSettings(&gzoom);
-			option_changes |= 4;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-dy") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fdy = 0.5-atof(*++argv)/180.0;
-                        checkZoomSettings(&gzoom);
-			option_changes |= 4;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockstripfont") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&ClockStripFont_name, *++argv); 
-                        --argc;
-                } 
-                else if (strcasecmp(*argv, "-mapstripfont") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&MapStripFont_name, *++argv); 
-                        --argc;
-                } 
-                else if (strcasecmp(*argv, "-coordfont") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&CoordFont_name, *++argv); 
-                        --argc;
-                } 
-                else if (strcasecmp(*argv, "-cityfont") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&CityFont_name, *++argv); 
-                        --argc;
-                } 
-                else if (strcasecmp(*argv, "-menufont") == 0) {
-                        needMore(argc, argv);
-			if (!MenuFont_name)
-			   option_changes |= 1;
-			else
-			  if (strcmp(MenuFont_name, argv[1]))
-			     option_changes |= 1;
-                        StringReAlloc(&MenuFont_name, *++argv); 
-                        --argc;
-                } 
-                else if (strcasecmp(*argv, "-mapmode") == 0) {
-                        needMore(argc, argv);
-                        if (!strcasecmp(*++argv, "c")) 
-                           gflags.map_mode = COORDINATES;
-                        if (!strcasecmp(*argv, "d")) 
-                           gflags.map_mode = DISTANCES;
-                        if (!strcasecmp(*argv, "e")) 
-                           gflags.map_mode = EXTENSION;
-                        if (!strcasecmp(*argv, "l")) {
-                           StringReAlloc(&CityInit, NULL);
-                           gflags.map_mode = LEGALTIME;
-                        }
-                        if (!strcasecmp(*argv, "s")) 
-                           gflags.map_mode = SOLARTIME;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-parallelmode") == 0) {
-                        needMore(argc, argv);
-                        opt = atoi(*++argv);
-                        if (opt<0) opt = 0;
-                        if (opt>3) opt = 3;
-			gflags.parallel = opt + (gflags.parallel & 8);
-                        --argc;
-                } 
-		else if (strcasecmp(*argv, "-parallelspacing") == 0) {
-                        needMore(argc, argv);
-                        gzoom.paralspacing = atof(*++argv);
-                        if (gzoom.paralspacing<0) gzoom.paralspacing = 0;
-                        if (gzoom.paralspacing>30.0) gzoom.paralspacing = 30.0;
-                        if (gzoom.paralspacing<0.1) gzoom.paralspacing = 0.1;
-                        --argc;
-                } 
-		else if (strcasecmp(*argv, "-meridianmode") == 0) {
-                        needMore(argc, argv);
-                        gflags.meridian = atoi(*++argv);
-                        if (gflags.meridian<0) gflags.meridian = 0;
-                        if (gflags.meridian>3) gflags.meridian = 3;
-                        --argc;
-                } 
-		else if (strcasecmp(*argv, "-meridianspacing") == 0) {
-                        needMore(argc, argv);
-                        gzoom.meridspacing = atof(*++argv);
-                        if (gzoom.meridspacing<0) gzoom.meridspacing = 0;
-                        if (gzoom.meridspacing>30.0) gzoom.meridspacing = 30.0;
-                        if (gzoom.meridspacing<0.1) gzoom.meridspacing = 0.1;
-                        --argc;
-                } 
-		else if (strcasecmp(*argv, "-citymode") == 0) {
-                        needMore(argc, argv);
-                        gflags.citymode = atoi(*++argv);
-                        if (gflags.citymode<0) gflags.citymode = 0;
-                        if (gflags.citymode>3) gflags.citymode = 3;
-                        --argc;
-                } 
-		else if (strcasecmp(*argv, "-objectmode") == 0) {
-                        needMore(argc, argv);
-                        gflags.objectmode = atoi(*++argv);
-                        if (gflags.objectmode<0) gflags.objectmode = 0;
-                        if (gflags.objectmode>=2) gflags.objectmode = 2;
-                        --argc;
-		}
-                else if (strcasecmp(*argv, "-spotsize") == 0) {
-                        needMore(argc, argv);
-                        gflags.spotsize = atoi(*++argv);
-                        if (gflags.spotsize<1) gflags.spotsize = 1;
-                        if (gflags.spotsize>5) gflags.spotsize = 5;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-fillmode") == 0) {
-                        needMore(argc, argv);
-                        gflags.fillmode = atoi(*++argv);
-                        if (gflags.fillmode<0) gflags.fillmode = 0;
-                        if (gflags.fillmode>3) gflags.fillmode = 3;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-darkness") == 0) {
-                        needMore(argc, argv);
-                        darkness = atof(*++argv);
-                        if (darkness<0.0) darkness = 0.0;
-                        if (darkness>1.0) darkness = 1.0;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-diffusion") == 0) {
-                        needMore(argc, argv);
-                        atm_diffusion = atof(*++argv);
-                        if (atm_diffusion<0.0) atm_diffusion = 0.0;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-refraction") == 0) {
-                        needMore(argc, argv);
-                        atm_refraction = atof(*++argv);
-                        if (atm_refraction<0.0) atm_refraction = 0.0;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-colorscale") == 0) {
-                        needMore(argc, argv);
-			opt = atoi(*++argv);
-			if (opt<=0) opt = 1;
-			if (opt>32767) opt = 32767;
-                        gflags.colorscale = opt;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockbgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ClockBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockfgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ClockFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapbgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MapBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapfgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MapFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-menubgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MenuBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-menufgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MenuFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockstripbgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ClockStripBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockstripfgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ClockStripFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapstripbgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MapStripBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mapstripfgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MapStripFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-citynamecolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(CityNameColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-menufgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MenuFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-zoombgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ZoomBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-zoomfgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ZoomFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-optionbgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(OptionBgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-optionfgcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(OptionFgColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-caretcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(CaretColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-changecolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ChangeColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-choicecolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ChoiceColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-dircolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(DirColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-imagecolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ImageColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-citycolor0") == 0) {
-                        needMore(argc, argv);
-                        strncpy(CityColor0, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-citycolor1") == 0) {
-                        needMore(argc, argv);
-                        strncpy(CityColor1, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-citycolor2") == 0) {
-                        needMore(argc, argv);
-                        strncpy(CityColor2, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-markcolor1") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MarkColor1, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-markcolor2") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MarkColor2, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-linecolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(LineColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-meridiancolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MeridianColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-parallelcolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(ParallelColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-tropiccolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(TropicColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-suncolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(SunColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mooncolor") == 0) {
-                        needMore(argc, argv);
-                        strncpy(MoonColor, *++argv, COLORLENGTH);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-position") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&CityInit, NULL);
-                        position.lat = atof(*++argv);
-                        if (fabs(position.lat)>90.0) position.lat = 100.0;
-                        --argc;
-                        needMore(argc, argv);
-                        position.lon = atof(*++argv);
-                        position.lon = fixangle(position.lon + 180.0) - 180.0;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-city") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&CityInit, *++argv);
-                        position.lat = 100.0;
-                        gflags.map_mode = COORDINATES;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-placement") == 0) {
-		        option_changes |= 2;
-                        needMore(argc, argv);
-                        if (strcasecmp(*++argv, "random")==0)
-                           placement = RANDOM;
-                        if (strcasecmp(*argv, "fixed")==0) {
-                           placement = FIXED;
-                           MapGeom.mask = XValue | YValue | 
-                                          WidthValue | HeightValue;
-                        }
-                        if (strcasecmp(*argv, "center")==0)
-                           placement = CENTER;
-                        if (strcasecmp(*argv, "nw")==0)
-                           placement = NW;
-                        if (strcasecmp(*argv, "ne")==0)
-                           placement = NE;
-                        if (strcasecmp(*argv, "sw")==0)
-                           placement = SW;
-                        if (strcasecmp(*argv, "se")==0)
-                           placement = SE;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-extrawidth") == 0) {
-                        needMore(argc, argv);
-			extra_width = atol(*++argv);
-			--argc;
-		}
-                else if (strcasecmp(*argv, "-placementshift") == 0) {
-		        option_changes |= 2;
-                        needMore(argc, argv);
-			place_shiftx = atol(*++argv);
-			--argc;
-                        needMore(argc, argv);
-			place_shifty = atol(*++argv);
-			--argc;
-		}
-                else if (strcasecmp(*argv, "-command") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&ExternAction, *++argv);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-helpcommand") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&HelpCommand, *++argv);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-dateformat") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&ListFormats, *++argv);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-shading") == 0) {
-                        needMore(argc, argv);
-                        gflags.shading = atoi(*++argv);
-                        if (gflags.shading < 0) gflags.shading = 0;
-                        if (gflags.shading > 5) gflags.shading = 5;
-                        --argc;
-                }
-                else if ((opt = (strcasecmp(*argv, "-progress") == 0)) ||
-                         (strcasecmp(*argv, "-jump") == 0)) {
-                        char *str, *invalid, c;
-                        long value;
-                        needMore(argc, argv);
-                        str=*++argv;
-                        value = strtol(str, &invalid, 10);
-                        if (invalid) 
-                           c = *invalid;
-			else
-			   c = 's';
-                        if (c>='0' && c<='9') c='s';
-                        switch(c) {
-                          case 's': break;
-                          case 'm': value *= 60 ; break;
-                          case 'h': value *= 3600 ; break;
-                          case 'd': value *= 86400 ; break;
-                          case 'M': value *= 2592000 ; break;
-                          case 'y':
-                          case 'Y': value *= 31536000 ; break;
-                          default : c = ' '; break;
-                        }
-                        if (c == ' ') Usage();
-                        if (opt) {
-                           progress_value[5] = abs(value); 
-                           if (value) 
-                              gflags.progress = 5;
-                           else
-                              gflags.progress = 0;
-                        } else 
-                           time_jump = value;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-aspect") == 0) {
-                        needMore(argc, argv);
-                        gzoom.mode = atoi(*++argv);
-                        if (gzoom.mode<0) gzoom.mode = 0;
-                        if (gzoom.mode>2) gzoom.mode = 2;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-fullcolors") == 0) {
+                if (strcasecmp(*argv, "-fullcolors") == 0) {
                         gflags.spotsize = 3;
                         gflags.mono = 0;
                         gflags.fillmode = 2;
@@ -1351,13 +1018,10 @@ register char **                argv;
                         do_dock = 1;
                 else if (strcasecmp(*argv, "-undock") == 0)
                         do_dock = 0;
-                else if (runtime) {
-                   fprintf(stderr, 
-                      "Option %s : incorrect or not available at runtime !!\n",
-                      *argv);
-                   runtime = -1;
-                   return(0);
-                } 
+                else if (runlevel == RUNTIMEOPTION) {
+                        if (needMore(&argc, argv)) return(1);
+                        goto options_with_parameter;
+		}
                 else if (strcasecmp(*argv, "-clock") == 0)
                         win_type = 0;
                 else if (strcasecmp(*argv, "-map") == 0)
@@ -1366,10 +1030,10 @@ register char **                argv;
                         do_menu = 1;
                 else if (strcasecmp(*argv, "-nomenu") == 0)
                         do_menu = 0;
-                else if (strcasecmp(*argv, "-selector") == 0)
-                        do_selector = 1;
-                else if (strcasecmp(*argv, "-noselector") == 0)
-                        do_selector = 0;
+                else if (strcasecmp(*argv, "-filesel") == 0)
+                        do_filesel = 1;
+                else if (strcasecmp(*argv, "-nofilesel") == 0)
+                        do_filesel = 0;
                 else if (strcasecmp(*argv, "-zoom") == 0)
                         do_zoom = 1;
                 else if (strcasecmp(*argv, "-nozoom") == 0)
@@ -1378,14 +1042,18 @@ register char **                argv;
                         do_option = 1;
                 else if (strcasecmp(*argv, "-nooption") == 0)
                         do_option = 0;
+                else if (strcasecmp(*argv, "-urban") == 0)
+                        do_urban = 1;
+                else if (strcasecmp(*argv, "-nourban") == 0)
+                        do_urban = 0;
                 else if (strcasecmp(*argv, "-help") == 0) {
-		        if (parse_cmdline) {
+		        if (runlevel == PARSECMDLINE) {
 			   Usage();
 			   exit(0);
 			}
 		}
                 else if (strcasecmp(*argv, "-listmenu") == 0) {
-                        if (parse_cmdline) { 
+                        if (runlevel == PARSECMDLINE) { 
                            ListMenu();
 			   exit(0);
 			}
@@ -1393,22 +1061,388 @@ register char **                argv;
                 else if (strcasecmp(*argv, "-version") == 0) {
                         fprintf(stderr, "%s: version %s, %s\n",
                                 ProgName, VERSION, COPYRIGHT);
-                        if (parse_cmdline) 
+                        if (runlevel == PARSECMDLINE) 
                           exit(0);
                         else
                           return(0);
-                } else {
-                  fprintf(stderr, "%s: unknown option !!\n\n", *argv);
-                  if (parse_cmdline) {
-                    Usage();
-                    exit(1);
-                  }
-                  else {
-                    fprintf(stderr, RECOVER);
-                    return(1);
-                  }
+		}
+             else {
+                if (needMore(&argc, argv)) return(1);
+                if (strcasecmp(*argv, "-display") == 0)
+                        StringReAlloc(&Display_name, *++argv); 
+                else if (strcasecmp(*argv, "-sharedir") == 0) {
+                        StringReAlloc(&share_maps_dir, *++argv);
+                        strncpy(image_dir, *argv, 1020);
+		}
+                else 
+	        options_with_parameter :
+                     if (strcasecmp(*argv, "-rcfile") == 0) {
+		        if (runlevel == RUNTIMEOPTION) {
+			   runlevel = READUSERRC;
+                           if (readRC(*++argv)) runlevel = FAILEDOPTION;
+                           if (runlevel != FAILEDOPTION) 
+                              runlevel = RUNTIMEOPTION;
+			}
+		}
+                else if (strcasecmp(*argv, "-language") == 0) {
+                        strncpy(language, *++argv, 2);
+			if (strcmp(language, oldlanguage)) readLanguage();
+                } 
+	        else if (strcasecmp(*argv, "-title") == 0)
+                        StringReAlloc(&Title, *++argv);
+	        else if (strcasecmp(*argv, "-clockclassname") == 0)
+                        StringReAlloc(&ClockClassName, *++argv);
+	        else if (strcasecmp(*argv, "-mapclassname") == 0)
+                        StringReAlloc(&MapClassName, *++argv);
+	        else if (strcasecmp(*argv, "-auxilclassname") == 0)
+                        StringReAlloc(&AuxilClassName, *++argv);
+	        else if (strcasecmp(*argv, "-classname") == 0)
+                        StringReAlloc(&ClassName, *++argv);
+		else if (strcasecmp(*argv, "-clockgeom") == 0) {
+                        getGeom(*++argv, &ClockGeom);
+			option_changes |= 8;
                 }
-        }
+                else if (strcasecmp(*argv, "-mapgeom") == 0) {
+                        getGeom(*++argv, &MapGeom);
+			option_changes |= 16;
+                }
+                else if (strcasecmp(*argv, "-clockimage") == 0) {
+                        StringReAlloc(&Clock_img_file, *++argv);
+			option_changes |= 32;
+                }
+                else if (strcasecmp(*argv, "-mapimage") == 0) {
+                        StringReAlloc(&Map_img_file, *++argv);
+			option_changes |= 64;
+                }
+                else if (strcasecmp(*argv, "-auxilgeom") == 0) {
+                        getGeom(*++argv, &MenuGeom);
+			option_changes |= 2;
+			ZoomGeom.x = FileselGeom.x 
+                                   = OptionGeom.x 
+                                   = UrbanGeom.x 
+                                   = MenuGeom.x;
+			ZoomGeom.y = FileselGeom.y 
+                                   = OptionGeom.y 
+                                   = UrbanGeom.y 
+                                   = MenuGeom.y;
+                }
+                else if (strcasecmp(*argv, "-menugeom") == 0) {
+                        getGeom(*++argv, &MenuGeom);
+			option_changes |= 2;
+                }
+                else if (strcasecmp(*argv, "-selgeom") == 0) {
+                        getGeom(*++argv, &FileselGeom);
+			option_changes |= 2;
+                }
+                else if (strcasecmp(*argv, "-zoomgeom") == 0) {
+                        getGeom(*++argv, &ZoomGeom);
+			option_changes |= 2;
+                }
+                else if (strcasecmp(*argv, "-optiongeom") == 0) {
+                        getGeom(*++argv, &OptionGeom);
+			option_changes |= 2;
+                }
+                else if (strcasecmp(*argv, "-urbangeom") == 0) {
+                        getGeom(*++argv, &UrbanGeom);
+			option_changes |= 2;
+                }
+                else if (strcasecmp(*argv, "-mag") == 0) {
+                        gzoom.fx = atof(*++argv);
+                        if (gzoom.fx < 1) gzoom.fx = 1.0;
+                        if (gzoom.fx > 100.0) gzoom.fx = 100.0;
+                        gzoom.fy = gzoom.fx;
+			option_changes |= 4;
+                }
+                else if (strcasecmp(*argv, "-magx") == 0) {
+                        gzoom.fx = atof(*++argv);
+                        if (gzoom.fx < 1) gzoom.fx = 1.0;
+			option_changes |= 4;
+                }
+                else if (strcasecmp(*argv, "-magy") == 0) {
+                        gzoom.fy = atof(*++argv);
+                        if (gzoom.fy < 1) gzoom.fy = 1.0;
+			option_changes |= 4;
+                }
+                else if (strcasecmp(*argv, "-dx") == 0) {
+                        gzoom.fdx = atof(*++argv)/360.0+0.5;
+                        checkZoomSettings(&gzoom);
+			option_changes |= 4;
+                }
+                else if (strcasecmp(*argv, "-dy") == 0) {
+                        gzoom.fdy = 0.5-atof(*++argv)/180.0;
+                        checkZoomSettings(&gzoom);
+			option_changes |= 4;
+                }
+                else if (strcasecmp(*argv, "-clockstripfont") == 0)
+                        StringReAlloc(&ClockStripFont_name, *++argv); 
+                else if (strcasecmp(*argv, "-mapstripfont") == 0)
+                        StringReAlloc(&MapStripFont_name, *++argv); 
+                else if (strcasecmp(*argv, "-coordfont") == 0)
+                        StringReAlloc(&CoordFont_name, *++argv); 
+                else if (strcasecmp(*argv, "-cityfont") == 0)
+                        StringReAlloc(&CityFont_name, *++argv); 
+                else if (strcasecmp(*argv, "-menufont") == 0) {
+			if (!MenuFont_name)
+			   option_changes |= 1;
+			else
+			  if (strcmp(MenuFont_name, argv[1]))
+			     option_changes |= 1;
+                        StringReAlloc(&MenuFont_name, *++argv); 
+                } 
+                else if (strcasecmp(*argv, "-mapmode") == 0) {
+                        if (!strcasecmp(*++argv, "c")) 
+                           gflags.map_mode = COORDINATES;
+                        if (!strcasecmp(*argv, "d")) 
+                           gflags.map_mode = DISTANCES;
+                        if (!strcasecmp(*argv, "e")) 
+                           gflags.map_mode = EXTENSION;
+                        if (!strcasecmp(*argv, "l")) {
+                           StringReAlloc(&CityInit, NULL);
+                           gflags.map_mode = LEGALTIME;
+                        }
+                        if (!strcasecmp(*argv, "s")) 
+                           gflags.map_mode = SOLARTIME;
+                }
+                else if (strcasecmp(*argv, "-parallelmode") == 0) {
+                        opt = atoi(*++argv);
+                        if (opt<0) opt = 0;
+                        if (opt>3) opt = 3;
+			gflags.parallel = opt + (gflags.parallel & 8);
+                } 
+		else if (strcasecmp(*argv, "-parallelspacing") == 0) {
+                        gzoom.paralspacing = atof(*++argv);
+                        if (gzoom.paralspacing<0) gzoom.paralspacing = 0;
+                        if (gzoom.paralspacing>30.0) gzoom.paralspacing = 30.0;
+                        if (gzoom.paralspacing<0.1) gzoom.paralspacing = 0.1;
+                } 
+		else if (strcasecmp(*argv, "-meridianmode") == 0) {
+                        gflags.meridian = atoi(*++argv);
+                        if (gflags.meridian<0) gflags.meridian = 0;
+                        if (gflags.meridian>3) gflags.meridian = 3;
+                } 
+		else if (strcasecmp(*argv, "-meridianspacing") == 0) {
+                        gzoom.meridspacing = atof(*++argv);
+                        if (gzoom.meridspacing<0) gzoom.meridspacing = 0;
+                        if (gzoom.meridspacing>30.0) gzoom.meridspacing = 30.0;
+                        if (gzoom.meridspacing<0.1) gzoom.meridspacing = 0.1;
+                } 
+		else if (strcasecmp(*argv, "-citymode") == 0) {
+                        gflags.citymode = atoi(*++argv);
+                        if (gflags.citymode<0) gflags.citymode = 0;
+                        if (gflags.citymode>3) gflags.citymode = 3;
+                } 
+		else if (strcasecmp(*argv, "-objectmode") == 0) {
+                        gflags.objectmode = atoi(*++argv);
+                        if (gflags.objectmode<0) gflags.objectmode = 0;
+                        if (gflags.objectmode>=2) gflags.objectmode = 2;
+		}
+                else if (strcasecmp(*argv, "-spotsize") == 0) {
+                        gflags.spotsize = atoi(*++argv);
+                        if (gflags.spotsize<1) gflags.spotsize = 1;
+                        if (gflags.spotsize>5) gflags.spotsize = 5;
+                }
+                else if (strcasecmp(*argv, "-fillmode") == 0) {
+                        gflags.fillmode = atoi(*++argv);
+                        if (gflags.fillmode<0) gflags.fillmode = 0;
+                        if (gflags.fillmode>3) gflags.fillmode = 3;
+                }
+                else if (strcasecmp(*argv, "-darkness") == 0) {
+                        darkness = atof(*++argv);
+                        if (darkness<0.0) darkness = 0.0;
+                        if (darkness>1.0) darkness = 1.0;
+                }
+                else if (strcasecmp(*argv, "-diffusion") == 0) {
+                        atm_diffusion = atof(*++argv);
+                        if (atm_diffusion<0.0) atm_diffusion = 0.0;
+                }
+                else if (strcasecmp(*argv, "-refraction") == 0) {
+                        atm_refraction = atof(*++argv);
+                        if (atm_refraction<0.0) atm_refraction = 0.0;
+                }
+                else if (strcasecmp(*argv, "-colorscale") == 0) {
+			opt = atoi(*++argv);
+			if (opt<=0) opt = 1;
+			if (opt>32767) opt = 32767;
+                        gflags.colorscale = opt;
+                }
+                else if (strcasecmp(*argv, "-clockbgcolor") == 0)
+                        strncpy(ClockBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-clockfgcolor") == 0)
+                        strncpy(ClockFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-mapbgcolor") == 0)
+                        strncpy(MapBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-mapfgcolor") == 0)
+                        strncpy(MapFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-menubgcolor") == 0)
+                        strncpy(MenuBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-menufgcolor") == 0)
+                        strncpy(MenuFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-clockstripbgcolor") == 0)
+                        strncpy(ClockStripBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-clockstripfgcolor") == 0)
+                        strncpy(ClockStripFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-mapstripbgcolor") == 0)
+                        strncpy(MapStripBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-mapstripfgcolor") == 0)
+                        strncpy(MapStripFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-citynamecolor") == 0)
+                        strncpy(CityNameColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-menufgcolor") == 0)
+                        strncpy(MenuFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-zoombgcolor") == 0)
+                        strncpy(ZoomBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-zoomfgcolor") == 0)
+                        strncpy(ZoomFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-optionbgcolor") == 0)
+                        strncpy(OptionBgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-optionfgcolor") == 0)
+                        strncpy(OptionFgColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-caretcolor") == 0)
+                        strncpy(CaretColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-changecolor") == 0)
+                        strncpy(ChangeColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-choicecolor") == 0)
+                        strncpy(ChoiceColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-dircolor") == 0)
+                        strncpy(DirColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-imagecolor") == 0)
+                        strncpy(ImageColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-citycolor0") == 0)
+                        strncpy(CityColor0, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-citycolor1") == 0)
+                        strncpy(CityColor1, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-citycolor2") == 0)
+                        strncpy(CityColor2, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-markcolor1") == 0)
+                        strncpy(MarkColor1, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-markcolor2") == 0)
+                        strncpy(MarkColor2, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-linecolor") == 0)
+                        strncpy(LineColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-meridiancolor") == 0)
+                        strncpy(MeridianColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-parallelcolor") == 0)
+                        strncpy(ParallelColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-tropiccolor") == 0)
+                        strncpy(TropicColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-suncolor") == 0)
+                        strncpy(SunColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-mooncolor") == 0)
+                        strncpy(MoonColor, *++argv, COLORLENGTH);
+                else if (strcasecmp(*argv, "-addcity") == 0) 
+		        (void) addCity(*++argv);
+                else if (strcasecmp(*argv, "-removecity") == 0) 
+		        removeCity(*++argv);
+		else if (strcasecmp(*argv, "-position") == 0) {
+                        StringReAlloc(&CityInit, NULL);
+                        scanPosition(*++argv, &position);
+			if (position.lat < -90.0) {
+			  fprintf(stderr, 
+                             "Error in -position parameters\n");
+			  return(1);
+			}
+		}
+                else if (strcasecmp(*argv, "-city") == 0) {
+                        StringReAlloc(&CityInit, *++argv);
+                        position.lat = 100.0;
+                        gflags.map_mode = COORDINATES;
+                }
+                else if (strcasecmp(*argv, "-placement") == 0) {
+		        option_changes |= 2;
+                        if (strcasecmp(*++argv, "random")==0)
+                           placement = RANDOM;
+                        if (strcasecmp(*argv, "fixed")==0) {
+                           placement = FIXED;
+                           MapGeom.mask = XValue | YValue | 
+                                          WidthValue | HeightValue;
+                        }
+                        if (strcasecmp(*argv, "center")==0)
+                           placement = CENTER;
+                        if (strcasecmp(*argv, "nw")==0)
+                           placement = NW;
+                        if (strcasecmp(*argv, "ne")==0)
+                           placement = NE;
+                        if (strcasecmp(*argv, "sw")==0)
+                           placement = SW;
+                        if (strcasecmp(*argv, "se")==0)
+                           placement = SE;
+                }
+                else if (strcasecmp(*argv, "-extrawidth") == 0)
+			extra_width = atol(*++argv);
+                else if (strcasecmp(*argv, "-placementshift") == 0) {
+		        option_changes |= 2;
+			if (sscanf(*++argv, "%d %d", 
+                            &place_shiftx, &place_shifty) < 2) {
+			  fprintf(stderr, 
+                             "Error in -placementshift parameters\n");
+			  return(1);
+			}
+		}
+                else if (strcasecmp(*argv, "-command") == 0)
+                        StringReAlloc(&ExternAction, *++argv);
+                else if (strcasecmp(*argv, "-helpcommand") == 0)
+                        StringReAlloc(&HelpCommand, *++argv);
+                else if (strcasecmp(*argv, "-dateformat") == 0)
+                        StringReAlloc(&ListFormats, *++argv);
+                else if (strcasecmp(*argv, "-shading") == 0) {
+                        gflags.shading = atoi(*++argv);
+                        if (gflags.shading < 0) gflags.shading = 0;
+                        if (gflags.shading > 5) gflags.shading = 5;
+                }
+                else if ((opt = (strcasecmp(*argv, "-progress") == 0)) ||
+                         (strcasecmp(*argv, "-jump") == 0)) {
+                        char *str, *invalid, c;
+                        long value;
+                        str=*++argv;
+                        value = strtol(str, &invalid, 10);
+                        if (invalid) 
+                           c = *invalid;
+			else
+			   c = 's';
+                        if (c>='0' && c<='9') c='s';
+                        switch(c) {
+                          case 's': break;
+                          case 'm': value *= 60 ; break;
+                          case 'h': value *= 3600 ; break;
+                          case 'd': value *= 86400 ; break;
+                          case 'M': value *= 2592000 ; break;
+                          case 'y':
+                          case 'Y': value *= 31536000 ; break;
+                          default : c = ' '; break;
+                        }
+                        if (c == ' ') Usage();
+                        if (opt) {
+                           progress_value[5] = abs(value); 
+                           if (value) 
+                              gflags.progress = 5;
+                           else
+                              gflags.progress = 0;
+                        } else 
+                           time_jump = value;
+                }
+                else if (strcasecmp(*argv, "-aspect") == 0) {
+                        gzoom.mode = atoi(*++argv);
+                        if (gzoom.mode<0) gzoom.mode = 0;
+                        if (gzoom.mode>2) gzoom.mode = 2;
+                }
+	        else {
+                   fprintf(stderr, "%s: unknown option !!\n\n", *argv);
+                   if (runlevel == PARSECMDLINE) {
+                        Usage();
+                        exit(1);
+                   } 
+		   else if (runlevel == RUNTIMEOPTION) {
+                        fprintf(stderr, "Option %s : incorrect or not "
+				        "available at runtime !!\n", *argv);
+                        runlevel = FAILEDOPTION;
+		   }
+                   else {
+                        fprintf(stderr, "Trying to recover.\n");
+                        return(1);
+                   }
+		}
+	     }
+	}
         return(0);
 }
 
@@ -1469,66 +1503,37 @@ char * buf;
 
     l = parseArgs(argc+1, argv-1);
 
-    if (l>0)
-       fprintf(stderr, 
-          "Parse error at line %s in [options] !!\n", buf);
-
     free(dup);
     free(argv);
     return l;
 }
 
 /*
- * readRC() - Read the user's ~/.sunclockrc file and app-defaults
+ * readRC() - Read a config file (app-default or user .sunclockrc or whatever)
  */
 
 int 
-readRC()
+readRC(fname)
+char *fname;        /* Path to .sunclockrc file */
 {
     /*
      * Local Variables
      */
 
-    char *fname;        /* Path to .sunclockrc file */
     FILE *rc;           /* File pointer for rc file */
     char buf[1028];     /* Buffer to hold input lines */
-    char *city, *lat, *lon, *tz; /* Information about a place */
-    City *crec;         /* Pointer to new city record */
-    int  first_step;    /* Are we parsing options in rc file ? */
     int  j;
 
-    /*
-     * Get the path to the rc file
-     */
-
-    if (rc_file) fname = rc_file;
-        else
-    if ((fname = tildepath("~/.sunclockrc")) == NULL) {
-        fprintf(stderr, 
-             "Unable to get path to ~/.sunclockrc\n");
-        return(1);
-    }
-    
     /* Open the RC file */
 
     if ((rc = fopen(fname, "r")) == NULL) {
-        char *def_name = app_default;
-        if ((rc = fopen(def_name, "r")) == NULL) {
-          fprintf(stderr, 
-             "Unable to find %s or %s\n", fname, def_name);
-          return(1);
-        } else {
-          if (fname == rc_file)
-          fprintf(stderr, 
-             "Unable to find %s, returning to app-default\n   %s\n", 
-             fname, def_name);
-          fname = app_default;
-        } 
+        fprintf(stderr, 
+           "Unable to find the config file  %s \n", fname);
+        return(1);
     }
 
     /* Read and parse lines from the file */
 
-    first_step = 1;
     while (fgets(buf, 1024, rc)) {
 
         /* Look for blank lines or comments */
@@ -1537,64 +1542,11 @@ readRC()
         while (j<1024 && isspace(buf[j]) && buf[j] != '0') ++j; 
         if ((buf[j] == '#') || (buf[j] == '\0')) continue;
 
-        if (strstr(buf, "[Cities]")) {
-           first_step = 0;
+        if (parseCmdLine(buf))
+	   fprintf(stderr,"Recheck syntax of config file %s !!\n\n", fname);
            continue;
         }
 
-        if (strstr(buf, "[Options]")) {
-           first_step = 1;
-           continue;
-        }
-
-        if (first_step) {
-	   if (parseCmdLine(buf))
-	      fprintf(stderr,"Recheck syntax of config file %s !!\n\n", fname);
-           continue;
-        }
-
-        /* Get the city name looking for blank lines and comments */
-
-        if (((city = strtok(buf, ":\n")) == NULL))
-            continue;
-
-        /* Get the latitude, longitude and timezone */
-
-        if ((lat = strtok(NULL, "       \n")) == NULL) {
-            fprintf(stderr, "Error in %s for city %s\n", fname, city);
-            continue;
-        }
-
-        if ((lon = strtok(NULL, "       \n")) == NULL) {
-            fprintf(stderr, "Error in %s for city %s\n", fname, city);
-            continue;
-        }
-
-        if ((tz = strtok(NULL, "        \n")) == NULL) {
-            fprintf(stderr, "Error in %s for city %s\n", fname, city);
-            continue;
-        }
-
-        /* Create the record for the city */
-
-        if ((crec = (City *) calloc(1, sizeof(City))) == NULL) {
-            fprintf(stderr, "Memory allocation failure\n");
-            return(1);
-        }
-
-        /* Set up the record */
-
-        crec->name = strdup(city);
-        crec->lat = atof(lat);
-        crec->lon = atof(lon);
-        crec->mode = 0;
-        crec->tz = strdup(tz);
-
-        /* Link it into the list */
-
-        crec->next = cities;
-        cities = crec;
-    }
     if (rc) fclose(rc);
     return(0);
 }
@@ -1606,12 +1558,14 @@ Window win;
    struct Sundata * Context;
    if (win==Menu) 
      return MenuCaller;
-   if (win==Selector)
-     return SelCaller;
+   if (win==Filesel)
+     return FileselCaller;
    if (win==Zoom)
      return ZoomCaller;
    if (win==Option)
      return OptionCaller;
+   if (win==Urban)
+     return UrbanCaller;
 
    Context = Seed;
    while (Context && Context->win != win) Context = Context->next;
@@ -1700,8 +1654,8 @@ Sundata * Context;
 	Context->gdata->charspace = Context->gdata->menustrip+5;
 
 	if (option_changes & 1) {
-	       SelGeom.width = SEL_WIDTH * Context->gdata->menustrip;
-               SelGeom.height = (11+4*SEL_HEIGHT)*Context->gdata->menustrip/5;
+	       FileselGeom.width = SEL_WIDTH * Context->gdata->menustrip;
+               FileselGeom.height = (11+4*SEL_HEIGHT)*Context->gdata->menustrip/5;
 	}
 
         h = Context->gdata->cityfont->max_bounds.ascent + 
@@ -1752,7 +1706,7 @@ int private;
         /* Try to use already defined GCs and Pixels in default colormap
            if already defined */
 
-        if (!private && !runtime) {
+        if (!private && runlevel == RUNNING) {
 
 	   graphdata = NULL;
   	   prec = -1;
@@ -2294,6 +2248,7 @@ short dms;
             eps = -1;
           } else
             eps = 1;
+	  value = value+1/7200.0;
           d = (int) value;
           value = 60 * (value - d);
           m = (int) value;
@@ -2683,7 +2638,7 @@ int build;
 	Context->sundec = 100.0;
 	Context->sunlon = 0.0;
 
-        if (runtime<2) {
+        if (runlevel!= IMAGERECYCLE) {
 	   Context->xim = NULL;
            Context->ximdata = NULL;
            if (color_depth<=8) {
@@ -2894,6 +2849,26 @@ int l, mode;
     XDestroyImage(xim);
 }
 
+int
+int_latitude(Context, lat)
+Sundata * Context;
+double lat;
+{
+    return
+       (int) (Context->zoom.height - (lat+90.0) * (Context->zoom.height/180.0))
+             - Context->zoom.dy;
+}
+
+int
+int_longitude(Context, lon)
+Sundata * Context;
+double lon;
+{
+    return
+       (int) ((180.0+lon) * (Context->zoom.width/360.0)) - Context->zoom.dx;
+}
+
+
 /*
  * drawObject() - Draw an object (city, mark, sun, moon) on the map.
  */
@@ -2921,13 +2896,10 @@ char *name;
     if (mode < 0) return;
     if (Context->flags.mono<2 && !Context->flags.citymode && mode <= 2) return;
 
-    ilon = (int) ((180.0 + lon) * ((double)Context->zoom.width / 360.0))
-                  - Context->zoom.dx ;
+    ilon = int_longitude(Context, lon);
     if (ilon<0 || ilon>Context->geom.width) return;
 
-    ilat = (int) ((double)Context->zoom.height 
-                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
-                  - Context->zoom.dy ;
+    ilat = int_latitude(Context, lat);
     if (ilat<0 || ilat>Context->geom.height) return;
 
     bits = symbol_bits[mode-1];
@@ -3071,9 +3043,7 @@ int numdigits;
 
         if (!Context->wintype) return; 
 
-        ilat = (int) ((double) Context->zoom.height
-                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
-                  - Context->zoom.dy ;
+        ilat = int_latitude(Context, lat);
 
         i = Context->flags.meridian & 3 ;
 	min = 0;
@@ -3194,8 +3164,7 @@ int numdigits;
         int ilon, i0, i1, i, j, jp, k, min, max;
 	char s[10], format[10];
 
-        ilon = (int) ((180.0 + lon) * ((double) Context->zoom.width / 360.0))
-                   - Context->zoom.dx;
+        ilon = int_longitude(Context, lon);
 
         i = Context->flags.parallel & 3 ;
 	min = 0;
@@ -3689,21 +3658,27 @@ Sundata * Context;
      }
 }
 
+void markLocation(Context, name)
+struct Sundata * Context;
+char *  name;
+{
+City *c;
+
+        c = searchCityLocation(name);
+        if (c) {
+           if (Context->mark1.city && Context->mark1.city!=&Context->pos1)
+              Context->mark1.city->mode = 0;
+	   Context->mark1.city = c;
+           if (Context->flags.mono==2) Context->mark1.flags = -1;
+           c->mode = 1;
+        }
+}
+
 void checkLocation(Context, name)
 struct Sundata * Context;
 char *  name;
 {
-City *c = NULL;
-
-        if (CityInit)
-        for (c = cities; c; c = c->next) {
-            if (!strcasecmp(c->name, CityInit)) {
-                Context->mark1.city = c;
-                if (Context->flags.mono==2) Context->mark1.flags = -1;
-                c->mode = 1;
-            } else
-                c->mode = 0;
-        }
+        markLocation(Context, name);
 
         if (Context->mark1.city == &Context->pos1) {
                 Context->flags.map_mode = SOLARTIME;
@@ -3772,7 +3747,8 @@ struct Sundata * Context;
         drawSunAndMoon(Context);
 }
 
-void setPosition1(Context, x, y)
+void 
+setPosition1(Context, x, y)
 Sundata *Context;
 int x, y;
 {
@@ -3782,6 +3758,21 @@ int x, y;
     Context->pos1.lon = ((double)(x+Context->zoom.dx)/
                          (double)Context->zoom.width)*360.0-180.0 ;
     Context->mark1.city = &Context->pos1;
+}
+
+void
+updateUrban(Context, city)
+Sundata *Context;
+City *city;
+{
+    if (!do_urban) {
+       if (city!=NULL && city == Context->mark1.city) 
+          PopUrban(Context);
+    }
+    if (do_urban) {
+       updateUrbanEntries(Context, city);
+       setupUrban(0);
+    }
 }
 
 /*
@@ -3800,42 +3791,40 @@ int x, y;      /* Screen co-ordinates of mouse */
      * Local Variables
      */
 
-    City *cptr;    /* Used to search for a city */
+    City *city;    /* Used to search for a city */
     int cx, cy;    /* Screen coordinates of the city */
 
     /* Loop through the cities until on close to the pointer is found */
 
-    for (cptr = cities; cptr; cptr = cptr->next) {
+    for (city = cities; city; city = city->next) {
 
         /* Convert the latitude and longitude of the cities to integer */
 
-        cx = (int) ((180.0 + cptr->lon) * (Context->zoom.width / 360.0))
-                   - Context->zoom.dx;
-        cy = (int) (Context->zoom.height 
-                   - (cptr->lat + 90.0) * (Context->zoom.height / 180.0))
-                   - Context->zoom.dy;
+        cx = int_longitude(Context, city->lon)-x;
+	cy = int_latitude(Context, city->lat)-y;
 
         /* Check to see if we are close enough */
 
-        if ((cx >= x - 3) && (cx <= x + 3) && (cy >= y - 3) && (cy <= y + 3 ))
-           break;
+        if (cx*cx+cy*cy <= 13) break;
     }
 
     if (Context->flags.map_mode == LEGALTIME) {
-      if (cptr)
+      if (city)
         Context->flags.map_mode = COORDINATES;
       else
         Context->flags.map_mode = SOLARTIME;
     }
 
+    updateUrban(Context, city);
+
     switch(Context->flags.map_mode) {
 
       case COORDINATES:
       case EXTENSION:
-        if (cptr) {
+        if (city) {
            if (Context->mark1.city) Context->mark1.city->mode = 0;
-           Context->mark1.city = cptr;
-           cptr->mode = 1;
+           Context->mark1.city = city;
+           city->mode = 1;
         }
         Context->flags.update = 1;
         break;
@@ -3855,8 +3844,8 @@ int x, y;      /* Screen co-ordinates of mouse */
         } else
             Context->mark2.city = Context->mark1.city;
         if (Context->mark2.city) Context->mark2.city->mode = 2;
-        if (cptr) {
-          Context->mark1.city = cptr;
+        if (city) {
+          Context->mark1.city = city;
           Context->mark1.city->mode = 1;
         } else
           setPosition1(Context, x, y);
@@ -3872,8 +3861,8 @@ int x, y;      /* Screen co-ordinates of mouse */
               erase_obj = 0;
 	   }
 	}
-        if (cptr) {
-          Context->mark1.city= cptr;
+        if (city) {
+          Context->mark1.city = city;
           Context->mark1.city->mode = 1;
         } else
           setPosition1(Context, x, y);
@@ -3894,6 +3883,8 @@ int x, y;      /* Screen co-ordinates of mouse */
       showMapImage(Context);
       Context->flags.update = 2;
     }
+
+    if (do_urban && !city) updateUrban(Context, Context->mark1.city);
 }
 
 void
@@ -4108,7 +4099,7 @@ struct Sundata * Context;
    char *file, path[1024]="";
    int code; 
 
-   if (runtime==2) {
+   if (runlevel == IMAGERECYCLE) {
       if (verbose)
          fprintf(stderr, 
            "Recycling image (XID %ld) and changing requested parameters...\n",
@@ -4214,7 +4205,7 @@ struct Sundata * Context;
  run_direct2:
    if (color_depth<=8) {
       quantize(Context);
-      if (color_alloc_failed && runtime == 0) {
+      if (color_alloc_failed && runlevel == RUNNING) {
          code = 6;
          XDestroyImage(Context->xim);
          Context->xim = 0;
@@ -4288,9 +4279,9 @@ int wintype, build;
          do_menu = 1;
          MenuCaller = Context;
       }
-      if (do_selector<0) {
-         do_selector = 1;
-         SelCaller = Context;
+      if (do_filesel<0) {
+         do_filesel = 1;
+         FileselCaller = Context;
       }
       if (do_zoom<0) {
          do_zoom = 1;
@@ -4315,7 +4306,7 @@ int wintype, build;
          Context = Seed;
          return;
      } else
-     if (!runtime)
+     if (runlevel == RUNNING)
          shutDown(Context, -1);
    }
    checkGeom(Context, 0);
@@ -4339,7 +4330,7 @@ int wintype, build;
          remapAuxilWins(Context);
       } else
          resetAuxilWins(Context);
-      if (runtime<2 || color_depth<=8)
+      if (runlevel!=IMAGERECYCLE || color_depth<=8)
          createWorkImage(Context);
       setProtocols(Context, Context->wintype);
    } else {
@@ -4358,10 +4349,80 @@ int wintype, build;
    clearStrip(Context);
    if (Context->gdata->cmap!=cmap0)
       XSetWindowColormap(dpy, Context->win, Context->gdata->cmap);
-   runtime = 0;
+   runlevel = RUNNING;
    option_changes = 0;
    Context->flags.update = 4;
    do_sync |= 2;
+}
+
+void
+processStringEntry(keysym, entry)
+KeySym keysym;
+TextEntry *entry;
+{
+int i, j;
+           i = strlen(entry->string);
+
+           switch(keysym) {
+             case XK_Left:
+               if (entry->caret>0) --entry->caret;
+               break;
+             case XK_Right:
+               if (entry->caret<i) ++entry->caret;
+               break;
+             case XK_Home:
+               entry->caret = 0;
+               break;
+             case XK_End:
+               entry->caret = strlen(entry->string);
+               break;
+             case XK_BackSpace:
+             case XK_Delete:
+               if (entry->caret>0) {
+                  --entry->caret;
+                  for (j=entry->caret; j<i;j++)
+                     entry->string[j] = entry->string[j+1];
+               }
+               break;
+             default:
+               if (control_key) {
+                  if (keysym==XK_space) {
+                     keysym = 31;
+                     goto specialspace;
+                  }
+                  if (keysym==XK_a) entry->caret = 0;
+                  if (keysym==XK_b && entry->caret>0) --entry->caret;
+                  if (keysym==XK_e) entry->caret = i;
+                  if (keysym==XK_f && entry->caret<i) ++entry->caret;
+                  if (keysym==XK_d) {
+                     for (j=entry->caret; j<i;j++)
+                        entry->string[j] = entry->string[j+1];
+                  }
+                  if (keysym==XK_k) {
+                     entry->oldcaret = entry->caret;
+                     entry->oldlength = i;
+                     entry->oldchar = entry->string[entry->caret];
+                     entry->string[entry->caret] = '\0';
+                  }
+                  if (keysym==XK_y && entry->caret==entry->oldcaret) {
+                     entry->string[entry->oldcaret] = entry->oldchar;
+                     entry->string[entry->oldlength] = '\0';
+                     entry->oldcaret = -1;
+                  }
+                  break;
+               }
+           specialspace:
+               if (keysym<31) break;
+               if (keysym>255) break;
+               if (i<entry->maxlength) {
+                  for (j=i; j>entry->caret; j--)
+                     entry->string[j] = entry->string[j-1];
+                  entry->string[entry->caret] = (char) keysym;
+                  entry->string[i+1] = '\0';
+                  ++entry->caret;
+               }
+               break;
+           }
 }
 
 /*
@@ -4374,7 +4435,7 @@ Window  win;
 KeySym  keysym;
 {
         double v;
-        int i, j, old_mode;
+        int i, old_mode;
         KeySym key;
         struct Sundata * Context = NULL;
 
@@ -4393,36 +4454,36 @@ KeySym  keysym;
 
         /* fprintf(stderr, "Test: <%c> %d %u\n", key, key, key); */
 
-        if (win==Selector) {
+        if (win==Filesel) {
            switch(key) {
              case XK_Escape:
-                if (do_selector) 
-                  PopSelector(Context);
+                if (do_filesel) 
+                  PopFilesel(Context);
                 return;
              case XK_Page_Up:
-                if (selector_shift == 0) return;
-                selector_shift -= num_lines/2;
-                if (selector_shift <0) selector_shift = 0;
+                if (filesel_shift == 0) return;
+                filesel_shift -= num_lines/2;
+                if (filesel_shift <0) filesel_shift = 0;
                 break;
              case XK_Page_Down:
-                if (num_table_entries-selector_shift<num_lines) return;
-                selector_shift += num_lines/2;
+                if (num_table_entries-filesel_shift<num_lines) return;
+                filesel_shift += num_lines/2;
                 break;
              case XK_Up:
-                if (selector_shift == 0) return;
-                selector_shift -= 1;
+                if (filesel_shift == 0) return;
+                filesel_shift -= 1;
                 break;
              case XK_Down:
-                if (num_table_entries-selector_shift<num_lines) return;
-                selector_shift += 1;
+                if (num_table_entries-filesel_shift<num_lines) return;
+                filesel_shift += 1;
                 break;
              case XK_Home:
-                if (selector_shift == 0) return;
-                selector_shift = 0;
+                if (filesel_shift == 0) return;
+                filesel_shift = 0;
                 break;
              case XK_End:
-                if (num_table_entries-selector_shift<num_lines) return;
-                selector_shift = num_table_entries - num_lines+2;
+                if (num_table_entries-filesel_shift<num_lines) return;
+                filesel_shift = num_table_entries - num_lines+2;
                 break;
              case XK_Left:
              case XK_Right:
@@ -4430,7 +4491,7 @@ KeySym  keysym;
              default :
                 goto general;
            }
-           setupSelector(1);
+           setupFilesel(1);
            return;
         }
 
@@ -4446,7 +4507,7 @@ KeySym  keysym;
         }
 
         if (win==Option) {
-           i = strlen(option_string);
+	   if (text_input!=OPTION_INPUT) goto general;
            switch(keysym) {
              case XK_Escape:
                if (do_option) 
@@ -4455,72 +4516,58 @@ KeySym  keysym;
              case XK_Return:
                   activateOption();
                return;
-             case XK_Left:
-               if (option_caret>0) --option_caret;
-               break;
-             case XK_Right:
-               if (option_caret<i) ++option_caret;
-               break;
-             case XK_Home:
-               option_caret = 0;
-               break;
-             case XK_End:
-               option_caret = strlen(option_string);
-               break;
-             case XK_BackSpace:
-             case XK_Delete:
-               if (option_caret>0) {
-                  --option_caret;
-                  for (j=option_caret; j<i;j++)
-                     option_string[j] = option_string[j+1];
-               }
-               break;
-             default:
-               if (control_key) {
-                  if (keysym==XK_space) {
-                     keysym = 31;
-                     goto specialspace;
-                  }
-                  if (keysym==XK_a) option_caret = 0;
-                  if (keysym==XK_b && option_caret>0) --option_caret;
-                  if (keysym==XK_e) option_caret = i;
-                  if (keysym==XK_f && option_caret<i) ++option_caret;
-                  if (keysym==XK_d) {
-                     for (j=option_caret; j<i;j++)
-                        option_string[j] = option_string[j+1];
-                  }
-                  if (keysym==XK_k) {
-                     old_option_caret = option_caret;
-                     old_option_length = i;
-                     old_option_string_char = option_string[option_caret];
-                     option_string[option_caret] = '\0';
-                  }
-                  if (keysym==XK_y && option_caret==old_option_caret) {
-                     option_string[old_option_caret] = old_option_string_char;
-                     option_string[old_option_length] = '\0';
-                     old_option_caret = -1;
-                  }
-                  break;
-               }
-           specialspace:
-               if (keysym<31) break;
-               if (keysym>255) break;
-               if (i<option_maxlength) {
-                  for (j=i; j>option_caret; j--)
-                     option_string[j] = option_string[j-1];
-                  option_string[option_caret] = (char) keysym;
-                  option_string[i+1] = '\0';
-                  ++option_caret;
-               }
-               break;
-           }
-           setupOption(0);
-           return;
+	     default:
+	       processStringEntry(keysym, &option_entry);
+               setupOption(0);
+	       return;
+	   }
+        }
+
+        if (win==Urban) {
+	   if (text_input<URBAN_INPUT && keysym!=XK_Escape) goto general;
+	   i = text_input-URBAN_INPUT;
+           switch(keysym) {
+             case XK_Escape:
+               if (do_urban) 
+                  PopUrban(Context);
+               return;
+             case XK_Return:
+	       /* activateUrban(); */
+               return;
+	     default:
+	       processStringEntry(keysym, &urban_entry[i]);
+               setupUrban(0);
+	       return;
+	   }
         }
 
      general:
         switch(key) {
-           case XK_Tab:
+           case XK_Escape:
+             if (do_menu) PopMenu(Context);
+             return;
+	   case XK_percent:
+	     if (win==Option && do_option && text_input!=OPTION_INPUT) {
+	        option_entry.oldcaret = 0;
+	        option_entry.oldlength = strlen(option_entry.string);
+	        option_entry.oldchar = *option_entry.string;
+	        *option_entry.string = '\0';
+	        option_entry.caret = 0;
+                setupOption(0);
+	     }
+	     if (win==Urban && do_urban && text_input<URBAN_INPUT) {
+	        for (i=0; i<=4; i++) {
+	           urban_entry[i].oldcaret = 0;
+	           urban_entry[i].oldlength = strlen(urban_entry[i].string);
+	           urban_entry[i].oldchar = *urban_entry[i].string;
+	           *urban_entry[i].string = '\0';
+	           urban_entry[i].caret = 0;
+		}
+                setupUrban(0);
+		goto erasemarks;
+	     }
+	     break;
+           case XK_degree:
 	     erase_obj = 1;
              if (Context->flags.objectmode == 2) drawSunAndMoon(Context);
              if (Context->flags.mono != 1) drawCities(Context);
@@ -4528,11 +4575,70 @@ KeySym  keysym;
 	     erase_obj = 0;
              if (Context->flags.objectmode == 2) drawSunAndMoon(Context);
              if (Context->flags.mono == 2) drawCities(Context);
+             if (do_urban) {
+	        if (Context->mark1.city) 
+                   updateUrban(Context, Context->mark1.city);
+                else {
+		   for (i=2; i<=3; i++)
+                      (void) num2str(dms2decim(urban_entry[i].string),
+		         urban_entry[i].string, Context->flags.dms);
+                   setupUrban(0);
+		}
+	     }
 	     Context->flags.update = 2;
              return;
-           case XK_Escape:
-             if (do_menu) PopMenu(Context);
-             return;
+	   case XK_section:
+	     if (do_urban) {
+	        char params[256];
+		sprintf(params, "%s|%s|%s",
+                    urban_entry[0].string,
+                    urban_entry[2].string,
+                    urban_entry[3].string);
+	        markLocation(Context, params);
+                updateUrban(Context, Context->mark1.city);
+		Context->flags.update = 2;
+	     }
+	     break;
+	   case XK_asciitilde:
+	   case XK_parenright:
+	     if (win == Urban && Context->mark1.city &&
+                    Context->mark1.city != &Context->pos1) {
+                City *c = Context->mark1.city;
+		if (c) {
+		   erase_obj = 1;
+		   drawObject(Context, c->lon, c->lat,
+                      Context->flags.spotsize, c->mode, c->name);
+		   erase_obj = 0;
+		} else return;
+	        deleteMarkedCity();
+	        Context->flags.update = 2;
+	     }
+	     if (keysym==XK_parenright)
+	        break;
+	   case XK_parenleft:
+	     if (win == Urban) {
+	        City * c = addCity(NULL);
+		if (c) {
+	           if (Context->mark1.city) {
+		      if (Context->mark1.city == &Context->pos1) {
+			 erase_obj = 1;
+                         drawMarks(Context);
+                         erase_obj = 0;
+		      }
+		      Context->mark1.city->mode = 0;
+		   }
+                   Context->mark1.city = c;
+		   Context->mark1.city -> mode = 1;
+		   if (Context->flags.mono==2) {
+		      drawObject(Context, c->lon, c->lat,
+                         Context->flags.spotsize, c->mode, c->name);
+                      Context->mark1.flags = -1;
+		   }
+	           Context->flags.update = 2;
+		} else
+		   setupUrban(0);
+	     }
+	     break;
            case XK_less:
              if (Context->prevgeom.width && 
                  (Context->prevgeom.width != Context->geom.width ||
@@ -4772,13 +4878,13 @@ KeySym  keysym;
              show_hours(Context);
              break;
            case XK_f:
-             if (!do_selector)
-                PopSelector(Context);
+             if (!do_filesel)
+                PopFilesel(Context);
              else {
-                XMapRaised(dpy, Selector);
-                if (SelCaller != Context) {
-                   PopSelector(Context);
-                   PopSelector(Context);
+                XMapRaised(dpy, Filesel);
+                if (FileselCaller != Context) {
+                   PopFilesel(Context);
+                   PopFilesel(Context);
                 }
              }
              break;
@@ -4826,7 +4932,7 @@ KeySym  keysym;
            case XK_k:
 	     if (Context==Seed && do_dock) return;
              if (do_menu) PopMenu(Context);
-             if (do_selector) PopSelector(Context);
+             if (do_filesel) PopFilesel(Context);
              if (Context==Seed && Seed->next==NULL)
                 shutDown(Context, -1);
              else
@@ -4842,6 +4948,7 @@ KeySym  keysym;
                 break;
              }
              Context->flags.map_mode = LEGALTIME;
+	erasemarks:
 	     if (Context->flags.mono==0) {
 	        erase_obj = 3;
 	        drawMarks(Context);
@@ -4941,6 +5048,11 @@ KeySym  keysym;
              break;
            case XK_u:
              if (!Context->wintype) break;
+	     if (!do_urban) {
+	        PopUrban(Context);
+	        updateUrban(Context, Context->mark1.city);
+		break;
+	     }
              if (Context->flags.mono!=1) {
 	        erase_obj = 1;
 	        drawCities(Context);
@@ -4956,7 +5068,7 @@ KeySym  keysym;
            case XK_w: 
              if (Context->time<=last_time+2) return;
              if (do_menu) do_menu = -1;
-             if (do_selector) do_selector = -1;
+             if (do_filesel) do_filesel = -1;
              if (do_zoom) do_zoom = -1;
              if (do_option) do_option = -1;
              buildMap(Context, 1, 1);
@@ -5053,8 +5165,8 @@ struct Sundata * Context = (struct Sundata *) NULL;
            return;
         }
 
-        if (win == Selector) {
-           processSelectorAction(SelCaller, x, y);
+        if (win == Filesel) {
+           processFileselAction(FileselCaller, x, y);
            return;
         }
 
@@ -5068,10 +5180,17 @@ struct Sundata * Context = (struct Sundata *) NULL;
            return;
         }
 
+        if (win == Urban) {
+           processUrbanAction(UrbanCaller, x, y, button, evtype);
+           return;
+        }
+
         /* Click on bottom strip of window */
         if (y >= Context->geom.height) {
            if (button==1) {
-              if (!do_menu)
+	      if (do_menu) {
+		 if (!do_option) PopOption(Context);
+	      } else
                  processKey(win, XK_h);
               return;
            }
@@ -5086,11 +5205,13 @@ struct Sundata * Context = (struct Sundata *) NULL;
            }
         }
 
-        /* Click on the map */
+        /* Click on the map with button 2*/
         if (button==2) {
            processKey(win, XK_f);
            return;
         }
+
+        /* Click on the map with button 3*/
         if (button==3) {
           if (do_zoom && win==ZoomCaller->win) {
               Context->newzoom.fdx = ((double)(x+Context->zoom.dx))
@@ -5103,7 +5224,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
               zoom_lasthint = ' ';
               activateZoom(Context, zoom_active);
            } else
-           /* Open zoom selector */
+           /* Open zoom filesel */
              processKey(win, XK_z);
            return;
         } 
@@ -5112,7 +5233,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
 
         /* It's a clock, just execute predefined command */
         if (!Context->wintype) {
-           processKey(win, XK_x);
+	   processKey(win, XK_x);
            return;
         }
 
@@ -5131,11 +5252,11 @@ Window win;
            struct Sundata * Context = NULL;
            struct Geometry * Geom = NULL;
 
-           if (win == Menu) return;
+           if (win == Menu || win == Urban) return;
 
-           if (win == Selector) {
-	      if (!do_selector) return;
-              Geom = &SelGeom;
+           if (win == Filesel) {
+	      if (!do_filesel) return;
+              Geom = &FileselGeom;
               num = 3;
            }
            if (win == Zoom) {
@@ -5158,7 +5279,7 @@ Window win;
               Geom->height = h;
               if (verbose)
                  fprintf(stderr, "Resizing %s to %d %d\n", 
-                   (num==3)? "selector" : ((num==4)? "zoom" : 
+                   (num==3)? "filesel" : ((num==4)? "zoom" : 
                              "option window"), w, h);
               XSelectInput(dpy, win, 0);
               XFlush(dpy);
@@ -5168,7 +5289,7 @@ Window win;
               setSizeHints(NULL, num);
               setProtocols(NULL, num);
               if (num==3)
-                 setupSelector(0);
+                 setupFilesel(0);
               if (num==4) {
                  if (zoompix) {
                     XFreePixmap(dpy, zoompix);
@@ -5177,7 +5298,9 @@ Window win;
                  setupZoom(-1);
               }
               if (num==5) {
-		 resetOptionLength();
+   	         w = ((OptionGeom.width-86) / 
+                     XTextWidth(OptionCaller->gdata->menufont, "_", 1)) - 2;
+		 resetStringLength(w, &option_entry);
                  setupOption(-1);
               }
               return;
@@ -5251,9 +5374,9 @@ Window w;
            return;
         }
 
-        if (w == Selector) {
-           do_selector = 1;
-           setupSelector(0);
+        if (w == Filesel) {
+           do_filesel = 1;
+           setupFilesel(0);
            return;
         }
 
@@ -5267,6 +5390,11 @@ Window w;
         if (w == Option) {
            option_lasthint = ' ';
            setupOption(-1);
+           return;
+        }
+
+        if (w == Urban) {
+           setupUrban(-1);
            return;
         }
 
@@ -5320,11 +5448,18 @@ eventLoop()
               fprintf(stderr, "Event %d, Window %d \n"
                    "  (Main %d, Menu %d, Sel %d, Zoom %d, Option %d)\n", 
                    ev.type, ev.xexpose.window, 
-                   Seed->win, Menu, Selector, Zoom, Option);
+                   Seed->win, Menu, Filesel, Zoom, Option);
 	      */
+
               switch(ev.type) {
 
-                 case FocusChangeMask:
+                 case FocusOut:
+		      if (do_option && ev.xexpose.window == Option) {
+			 text_input = NULL_INPUT;
+			 setupOption(0);
+		      }
+		      break;
+
                  case VisibilityNotify:
                       doExpose(ev.xexpose.window);
                       break;
@@ -5338,15 +5473,18 @@ eventLoop()
                       if (ev.xclient.message_type == wm_protocols &&
                           ev.xclient.format == 32 &&
                           ev.xclient.data.l[0] == wm_delete_window) {
-                             if (ev.xexpose.window == Menu) PopMenu(MenuCaller);
-                                else
-                             if (ev.xexpose.window == Selector) 
-                                   PopSelector(SelCaller);
+                            if (ev.xexpose.window == Menu) PopMenu(MenuCaller);
                                else
-                             if (ev.xexpose.window == Zoom) PopZoom(ZoomCaller);
+                            if (ev.xexpose.window == Filesel) 
+                                  PopFilesel(FileselCaller);
                                else
-                             if (ev.xexpose.window == Option)
-                                   PopOption(OptionCaller);
+                            if (ev.xexpose.window == Zoom) PopZoom(ZoomCaller);
+                               else
+                            if (ev.xexpose.window == Option)
+                                            PopOption(OptionCaller);
+			       else
+                            if (ev.xexpose.window == Urban)
+                                            PopUrban(UrbanCaller);
 			       else {
 			         Context = getContext(ev.xexpose.window);
 				 if (Context!=Seed || !do_dock)
@@ -5362,14 +5500,15 @@ eventLoop()
                          if (ev.type == KeyPress) control_key = 1;
                          if (ev.type == KeyRelease) control_key = 0;
                       } else
-                         if (ev.type == KeyPress)
+                         if (ev.type == KeyPress && keysym != XK_Mode_switch)
                             processKey(ev.xexpose.window, keysym);
                       break;
 
                  case ButtonPress:
 		 case ButtonRelease:
                  case MotionNotify:
-                      if (ev.type==ButtonPress) button_pressed = ev.xbutton.button;
+                      if (ev.type==ButtonPress) 
+                            button_pressed = ev.xbutton.button;
                       if (ev.type==ButtonRelease) button_pressed = 0;
                       processMouseEvent(ev.xexpose.window,
                                            ev.xbutton.x, ev.xbutton.y,
@@ -5408,7 +5547,7 @@ int             argc;
 char **         argv;
 {
         char * p;
-        int    i, rem_selector, rem_zoom, rem_menu, rem_option;
+        int    i, rem_filesel, rem_zoom, rem_menu, rem_option, rem_urban;
 
         ProgName = *argv;
         if ((p = strrchr(ProgName, '/'))) ProgName = ++p;
@@ -5416,15 +5555,26 @@ char **         argv;
         /* Set default values */
         initValues();
 
-        /* Read the configuration file */
+        /* Read the app-default config file */
+        runlevel = READSYSRC;
+        if (readRC(app_default)) exit(1);
 
-        parse_cmdline = 0;
+        /* Check if user has provided another config file */
+        runlevel = READUSERRC;
         checkRCfile(argc, argv);
-        if (readRC()) exit(1);
 
-        parse_cmdline = 1;
+        if (rc_file) p = rc_file;
+           else
+        if ((p = tildepath("~/.sunclockrc")) == NULL) {
+           fprintf(stderr, 
+               "Unable to get path to ~/.sunclockrc\n");
+	}
+
+	if (p && *p) (void) readRC(p);
+
+        runlevel = PARSECMDLINE;
         (void) parseArgs(argc, argv);
-        parse_cmdline = 0;
+        runlevel = RUNNING;
 
         /* Open Display */
 
@@ -5468,26 +5618,24 @@ char **         argv;
         if (placement<0) placement = NW;
         correctValues();
         rem_menu = do_menu; do_menu = 0;
-        rem_selector = do_selector; do_selector = 0;
+        rem_filesel = do_filesel; do_filesel = 0;
         rem_zoom = do_zoom; do_zoom = 0;
         rem_option = do_option; do_option = 0;
+        rem_urban = do_urban; do_urban = 0;
 
         parseFormats(ListFormats);
         buildMap(NULL, win_type, 1);
 
-        for (i=2; i<=5; i++) {
+        for (i=2; i<=6; i++) {
            createWindow(NULL, i);
            setSizeHints(NULL, i);
         }
 
-        if (rem_menu)
-           PopMenu(Seed);
-        if (rem_selector)
-           PopSelector(Seed);
-        if (rem_zoom)
-           PopZoom(Seed);
-        if (rem_option)
-           PopOption(Seed);
+        if (rem_menu) PopMenu(Seed);
+        if (rem_filesel) PopFilesel(Seed);
+        if (rem_zoom) PopZoom(Seed);
+        if (rem_option) PopOption(Seed);
+        if (rem_urban) PopUrban(Seed);
 
         eventLoop();
         exit(0);

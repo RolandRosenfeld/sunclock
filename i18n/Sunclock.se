@@ -49,6 +49,12 @@ Synchro
 Tids-variabel =
 Global tid variabel =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock har ett antal funktioner som kan åtkommas genom mus-klick eller tastatu
 Visa hjälp och alternativ (H eller mus-klick knapp 1)
 Laddar karta Jord (F eller mus-klick knapp 2)
 Zoom (Z eller mus-klick knapp 3)
+Parameters of Urban locations
 Option command window
 Använd koordinat mode
 Använd solstånd mode
@@ -73,7 +80,6 @@ Justera tidsvariabel
 Återställ Global tid
 Rita/Radera Natt
 Rita/Radera Sön och Måne
-Rita/Radera städer
 Rita/Radera meridianer
 Rita/Radera breddgrader
 Rita/Radera Tropik/Ekvator/Arktik cirklar
@@ -100,6 +106,10 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchronize windows or not
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End
-
-

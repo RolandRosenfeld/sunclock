@@ -49,6 +49,12 @@ Synchro
 Tidsvariabel =
 Global tidsvariabel =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock har endel funksjoner som man kan komme til ved bruk av musklikk eller t
 Vis hjelp og alternativ (H eller musklikk knapp 1)
 Henter kart (F eller musklikk knapp 2)
 Zoom (Z eller musklikk knapp 3)
+Parameters of Urban locations
 Option command window
 Bruk koordinatmodus
 Bruk soloppgangmodus
@@ -73,7 +80,6 @@ Juster tidsvariabel
 Tilbakestill Global tid
 Tegn/Fjern natt
 Tegn/Fjern sol og måne
-Tegn/Fjern steder
 Tegn/Fjern meridianer
 Tegn/Fjern breddegrader
 Tegn/Fjern tropisk/ekvator/arktisk sirkel
@@ -100,4 +106,10 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchronize windows or not
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End

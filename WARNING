@@ -10,17 +10,22 @@ xglobe/xplanet home sites
 A bundled package of Earth maps is also provided on
    ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_jpg_maps.tgz
 
-This version now has A POWERFUL ZOOM IMPLEMENTATION !!
+This version has A POWERFUL ZOOM IMPLEMENTATION !!
 If you want to get the full power of it, you can use the huge 11Mb jpeg 
 Earth map from 
     http://apollo.spaceports.com/~jhasting/earth.html
     ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_huge_earthmap.jpg
 
-Starting from version 3.38 on, a number of geometry options have been
-changed or added - possibly with a modified syntax. CHECK THE MAN PAGE 
-for the detail of changes, of type key 'h' twice within sunclock.
-Almost all options can be configured either from the command line, 
-from the ~/.sunclockrc config file or at runtime.
+                       ********************
+                       ***  CAUTION !!! ***
+                       ********************
+
+Starting from version 3.42 on, the format of the RC config files has been
+slightly changed. The -addcity option replaces the former [Cities] more
+rigid syntax. Older tags [Options] and [Cities] SHOULD NO LONGER be used.
+BOTH the system wide Sunclockrc and the user's private ~/.sunclockrc are 
+now read by sunclock at start-up, so cities defined in Sunclockrc
+SHOULD NOT BE REDEFINED in ~/.sunclockrc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

@@ -49,6 +49,12 @@ Synchro
 Progreso =
 Diferencia de tiempo =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock tiene varios procedimientos internos a los que se puede acceder usando 
 Mostrar ayuda y opciones (H o ratón, botone 1)
 Encargar carta de la Tierra (F o ratón, botone 2)
 Zoom (Z o ratón, botone 3)
+Parameters of Urban locations
 Option command window
 Usar modo coordenadas
 Usar modo hora solar
@@ -73,7 +80,6 @@ Ajustar valor de progreso de tiempo
 Poner a cero la diferencia de tiempo
 Dibujar/Borrar noche
 Dibujar/Borrar sol y luna
-Dibujar/Borrar ciudades
 Dibujar/Borrar meridianos
 Dibujar/Borrar paralelos
 Dibujar/Borrar círculos Trópicos/Polares/Ecuador
@@ -100,4 +106,10 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Sincronizar las ventanas o no
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End

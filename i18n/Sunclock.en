@@ -49,6 +49,12 @@ Synchro
 Progress value =
 Global time shift =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock has a number of internal procedures which can be accessed through mouse
 Show help and options (H or click on strip)
 Load Earth map file (F or mouse button 2)
 Zoom (Z or mouse button 3)
+Parameters of Urban locations
 Option command window
 Use coordinate mode
 Use solar time mode
@@ -73,7 +80,6 @@ Adjust time progress
 Reset global time shift to zero
 Draw/Erase Night area
 Draw/Erase Sun and Moon
-Draw/Erase cities
 Draw/Erase meridians
 Draw/Erase parallels
 Draw/Erase Tropics/Equator/Arctic circles
@@ -98,6 +104,12 @@ Center zoom area on selected city or location
 Synchronize zoom operation
 # Option window help
 Activate the option
-Erase the option command line
+Erase the command/parameter line(s)
 Synchronize windows or not
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End

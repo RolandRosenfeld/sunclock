@@ -2,6 +2,9 @@ TODO
 ====
 
 - Larger data base of cities/coordinates, with level of size
-- Searching cities
+  (almost done, just wait for 3.43 !!)
+
+- Spherical representation of Earth
 - Moon phases
-- Spherical representation of Earth (?)
+- Adding new images formats: png, other vector map formats (the rmap 
+  database would be great...)

@@ -6,11 +6,26 @@ Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 Planned versions 3.4x, 3.5x... (features to appear in some order)
 
 - Larger data base of cities/coordinates, with level of size
-- Searching cities
+  Most of this is now implemented, but the representing spots still don't 
+  take into account the size of cities. This should come with 3.43.
+
+- Spherical representation of Earth
+- Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 
   database would be great...)
-- Moon phases
-- Spherical representation of Earth (?)
+
+
+Version 3.42, June 11, 2001
+
+- New "Urban widget", which allows to easily search, introduce, erase or 
+  modify city locations at runtime
+- Change of format for the Sunclockrc and ~/.sunclockrc config files.
+  They now make use of the new -addcity option to enter (or remove) cities.
+  *Both* are read (with ~/.sunclockrc being read later, so that it
+  overrides the system wide Sunclockrc)
+- The -position option now allows degrees, minutes, seconds format
+- Fixes in option handling (hopefully fixing infamous segfault 
+  crashes when options were activated from the Option widget)
 
 Version 3.41, May 31, 2001
 

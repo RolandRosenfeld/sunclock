@@ -52,8 +52,6 @@
 #define PROJINT  (60 * 10)	   /* Frequency of seasonal recalculation
 				      in seconds. */
 
-#define RECOVER         "Trying to recover.\n"
-
 #define EARTHRADIUS_KM  6378.160
 #define EARTHRADIUS_ML  3963.202
 #define SUN_APPRADIUS   0.266      /* Sun apparent radius, in degrees */
@@ -70,6 +68,11 @@
 #define TIMESTEP  10000
 
 enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
+
+enum {READSYSRC=0, READUSERRC, PARSECMDLINE, RUNNING, RUNTIMEOPTION, 
+      IMAGERECYCLE, FAILEDOPTION};
+
+enum {NULL_INPUT=0, OPTION_INPUT, URBAN_INPUT};
 
 /* Geometry structure */
 
@@ -235,17 +238,30 @@ typedef struct City {
     char *name;		/* Name of the city */
     double lat, lon;	/* Latitude and longitude of city */
     char *tz;		/* Timezone of city */
-    int mode;
+    short size;
+    short mode;
     struct City *next;	/* Pointer to next record */
 } City;
 
 /* Records to hold marks */
+
 typedef struct Mark {
     City *city;
     double save_lat, save_lon;
     int  flags, pulse, full;
     struct tm sr, ss, dl;
 } Mark;
+
+/* Records to hold text entries */
+
+typedef struct TextEntry {
+    char * string;
+    int maxlength;
+    int caret;
+    int oldcaret;
+    int oldlength;
+    char oldchar;
+} TextEntry;
 
 /* Sundata structure */
 typedef struct Sundata {

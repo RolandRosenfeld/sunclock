@@ -49,6 +49,12 @@ Synchro
 Stapgrootte =
 Tijdverschuiving =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock heeft een aantal interne procedures welke met de muis of toetsen geacti
 Toon help en opties (H of muisknop 1)
 Laad aardkaart (F of muisknop 2)
 Zoom (Z of muisknop 3)
+Parameters of Urban locations
 Option command window
 Gebruik coordinaat modus
 Gebruik zonnetijd modus
@@ -73,7 +80,6 @@ Verander tijdverschuiving
 Reset tijd verschuiving naar nul
 Teken/Wis nacht
 Teken/Wis zon en maan
-Teken/Wis steden
 Teken/Wis meridianen
 Teken/Wis parallelen
 Teken/Wis Tropische/Evenaar/Pool circels
@@ -100,4 +106,10 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchroniseer schermen of niet
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End

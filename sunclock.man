@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "April 27, 2001"
+.TH SUNCLOCK 1 "June 3, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -13,17 +13,17 @@ where the list of licit options is the following long list
 (starting from (**) the options are configurable at runtime):
 .PP
 [-help] [-listmenu] [-version] \
-[-display name] [-rcfile file] [-sharedir directory] \
+[-display name] [-sharedir directory] \
 [-clock] [-map] [-dock] [-undock] \
 [-menu] [-nomenu] [-selector] [-noselector] \
-[-zoom] [-nozoom] [-option] [-nooption]
+[-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]
 .PP
 (**)  [-language name] [-dateformat string1|string2|...] \
-[-command string] [-helpcommand string] \
+[-rcfile file] [-command string] [-helpcommand string] \
 [-clockimage file] [-mapimage file] [-mapmode * <L,C,S,D,E>] \
 [-clockgeom <geom>] [-mapgeom <geom>] \
-[-auxilgeom <geom>] [-menugeom <geom>] \
-[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>] \
+[-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>] \
+[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>] \
 [-title name] [-clockclassname name] [-mapclassname name] \
 [-auxilclassname name] [-classname name] \
 [-menufont fontname] [-coordfont fontname] [-cityfont fontname] \
@@ -33,6 +33,7 @@ where the list of licit options is the following long list
 [-placement (random, fixed, center, NW, NE, SW, SE)] \
 [-placementshift x y] [-extrawidth value] \
 [-decimal] [-dms] [-city name] [-position latitude longitude] \
+[-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)] \
 [-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]] \
 [-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
 [-night] [-terminator] [-twilight] [-luminosity] [-lightgradient] \
@@ -139,9 +140,13 @@ with the "huge" Earthmap of 11 Mbytes, which offers clean images up to
 The program does not use the Xt nor any other more advanced toolkit,
 and hence only those options explicitly enumerated below may be used.
 The only needed resource is the list of coordinates and timezones of
-cities to be displayed. Users can possibly customize the system-wide 
-prepackaged configuration file Sunclockrc, or their individual 
-configuration file ~/.sunclockrc.
+cities to be displayed. The system administrator can possibly customize 
+the system-wide prepackaged config file Sunclockrc before installing the
+package, while users can tweak their individual configuration file 
+~/.sunclockrc at any time. The individual config file ~/.sunclockrc is 
+read *after* the system wide config file Sunclockrc, and therefore its
+settings override those of the system wide config. The command line
+options can be used to override ~/.sunclockrc itself.
 .TP
 .BI "\-help "
 Show brief help and exit.
@@ -207,11 +212,14 @@ Select the (normally smaller) clock strip font, used in the bottom line of
 the clock window. Default is 6x10.
 .TP
 .B "\-rcfile " filename
-Select a configuration file that is possibly different than the system 
-wide app-default Sunclock or the user default ~/.sunclockrc. The rcfile
-(or user default) has a higher priority than the system wide app-default, 
-but it can be overriden by the command line options which still have 
-a higher priority.
+Read a configuration file that is different from the user default 
+~/.sunclockrc (if this option is not set, the user config file defaults to
+~/.sunclockrc). Notice that the app-default config file Sunclockrc is 
+read first, and the file set by the -rcfile option is read afterwards;
+therefore its settings override those set by the system wide config file. 
+Reading further config files is possible at runtime, using the option 
+window. Set -rcfile with a void string "" if you wish to bypass the
+user config file step.
 .TP
 .B "\-sharedir " directory
 Set the directory where system wide shared Earthmaps are located.
@@ -338,6 +346,20 @@ Raise the zoom window along with the main (map, clock) window.
 Don't raise the zoom window along with the main (map, clock) window.
 This is the default.
 .TP
+.B "\-option "
+Raise the option window along with the main (map, clock) window.
+.TP
+.B "\-nooption "
+Don't raise the option window along with the main (map, clock) window.
+This is the default.
+.TP
+.B "\-urban "
+Raise the urban window along with the main (map, clock) window.
+.TP
+.B "\-nourban "
+Don't raise the urban window along with the main (map, clock) window.
+This is the default.
+.TP
 .B "\-aspect " mode
 Sets the aspect mode, i.e. the way by which zooming behaves with 
 respect to horizontal and vertical directions. Mode = 0 means that no 
@@ -422,6 +444,11 @@ is relative to the main window (or to the menu, when the menu is raised).
 See above option -menugeom for further explanations. The height
 specification depends solely on the selected menufont and is therefore
 ignored. The default geometry of the option window is 630x80+0+30. 
+.TP
+.BI "\-urbangeom " +(x coord)+(y coord)
+Specify the relative position (x = horizontal shift, y = vertical shift)
+of the urban window with respect to the main window (or to the menu, when 
+the menu is raised). See above option -menugeom for further explanations. 
 .TP
 .BI "\-auxilgeom " +(x coord)+(y coord)
 Specify the relative position (x = horizontal shift, y = vertical shift)
@@ -510,14 +537,48 @@ is understood to be expressed by default in seconds. Useful to get sunclock
 progress by other steps than the predefined ones (by default the steps 
 cycle between the values 1 mn, 1 hour, 1 day, 7 days, 30 days).
 .TP
-.BI "\-city " name
-Initialize program so as to display data of city 'name'. This becomes
-effective only if the above mentioned city is listed in the app-default 
-or rc file. The operating mode is set to Coordinates mode.
+.BI "\-addcity " size|name|latitude|longitude|timezone
+.PP
+where name is the ascii name of the place to be shown on the map.
+The first argument "size" is an nonnegative integer meant to indicate the
+size of the city (1: major city, 2: important city, 3: less important
+city, ...). The argument "size" can also be set to 0, with the effect
+of hiding the corresponding city, while keeping in memory all of its
+other parameters. The city can then be shown again with
+Latitude and longitude are floating point numbers representing the
+geographical location of the place. Western longitudes and southern latitudes
+should be entered as negative numbers. timezone is the name of the timezone
+that the place is in. This should be the name of a file under
+/usr/share/zoneinfo (or whatever directory is used on your system),
+incorrect timezones cause the clock to display GMT. It is also possible to
+reference a file in a directory relative to /usr/share/zoneinfo for example
+Canada/Eastern instead of EST5EDT.
 .TP
-.BI "\-position " latitude longitude
+.BI "\-city " name (\"name|lat|lon\")
+Initialize program so as to display data of city 'name', respectively
+(name, with latitude and longitude specified). This becomes effective only 
+if the above mentioned city is listed in the systemwide RC file Sunclockrc
+or in the user's private ~/.sunclockrc. The operating mode is set to 
+Coordinates mode.
+.TP
+.BI "\-position " \"latitude|longitude\"
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
+Notice that \"latitude|longitude\" should be given as a single parameter
+with a vertical bar | (a blank space is also admitted instead of a |).
+.TP
+.BI "\-addcity " \"size|name|lat|lon|tz\"
+Adds a city in the list of cities to be displayed on the map. They must be
+defined by exactly 5 parameters: size, name, latitude, longitude, timezone,
+in this order, with parameters being separated by a vertical bar |. Blank
+characters may appear in the name if double quotes are used to mark
+the group of parameters (but there shouldn't be any blank characters
+in the other parameters). In the RC config file, blank characters should
+be replaced by the octal character 037 (i.e. Ctrl-Q Ctrl-_ within emacs).
+.TP
+.BI "\-removecity " name (\"name|lat|lon\")
+Removes name (respectively name|lat|lon) from the list of cities to be
+displayed. Same remarks as above for blank characters.
 .TP
 .BI "\-shading " mode=0,1,2,3,4,5
 Start sunclock with the specified shading mode. Mode 0 means that the night
@@ -730,9 +791,7 @@ Default is Yellow.
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain specify any number of options which are also available
-as command line options, following a heading [Options]:
-.PP
-[Options]
+as command line options:
 .PP
 mapmode: L
 .PP
@@ -748,24 +807,8 @@ tropics
 .PP
 twilight
 .PP
-There should be only one option specified per line. A list of cities can
-also be specified under a heading [Cities], in the following format:
-.PP
-name: latitude longitude timezone
-.PP
-.PP
-where name is the ascii name of the place to be shown on the map.
-Latitude and longitude are floating point numbers representing the
-geographical location of the place. Western longitudes and southern latitudes
-should be entered as negative numbers. timezone is the name of the timezone
-that the place is in. This should be the name of a file under
-/usr/share/zoneinfo (or whatever directory is used on your system),
-incorrect timezones cause the clock to display GMT. It is also possible to
-reference a file in a directory relative to /usr/share/zoneinfo for example
-Canada/Eastern instead of EST5EDT.
-.PP
 The user may click on the dot on the map associated with a place
-defined in the .sunclockrc file. When this is done, the city name and its 
+defined in the list of cities. When this is done, the city name and its 
 corresponding local time and time zone will be displayed in the bottomline.
 .SH "HOW IT WORKS"
 .I sunclock

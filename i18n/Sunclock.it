@@ -49,6 +49,12 @@ Synchro
 Progressione =
 Scarto temporale =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock dispone di un certo numero di funzioni accessibili per mezzo del mouse 
 Mostrare aiuto ed opzioni (H o mouse, bottone 1)
 Caricare carta della Terra (F o mouse, bottone 2)
 Zoom (Z o mouse, bottone 3)
+Parameters of Urban locations
 Option command window
 Utilizza la modalità coordinate
 Utilizza la modalità ora solare
@@ -73,7 +80,6 @@ Aggiustare la progressione temporale
 Rimettere a zero lo scarto temporale
 Mostrare/non mostrare la notte
 Mostrare/non mostrare il sole e la luna
-Mostrare/non mostrare le città
 Mostrare/non mostrare i meridiani
 Mostrare/non mostrare i paralleli
 Mostrare/non mostrare i tropici/circoli polari/l'equatore
@@ -100,4 +106,10 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Finestri sincronizzati o no
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End

@@ -1,7 +1,8 @@
 #define N_MENU 28
 #define N_ZOOM 13
 #define N_OPTION 6
-#define N_HELP 40
+#define N_URBAN 12
+#define N_HELP 45
 
 #define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
 
@@ -14,6 +15,8 @@ enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
 
       L_KEY, L_CONTROLS, L_ESCAPE, L_ESCMENU, L_UNKNOWN, L_SYNCHRO, 
       L_PROGRESS, L_TIMEJUMP,
+
+      L_CITYNAME, L_TIMEZONE, L_LATITUDE, L_LONGITUDE, L_CITYSIZE, 
 
       L_OPTION, L_ACTIVATE, L_INCORRECT, L_OPTIONINTRO,
       L_LISTOPTIONS, L_CONFIG, L_NEWIMAGE, L_SHORTHELP,
@@ -42,6 +45,12 @@ char	* Label[L_END] = {
 	"Progress value =",
         "Global time shift =",
 
+        "City name",
+	"Timezone",
+	"Latitude",
+	"Longitude",
+	"Size",
+
 	"Option",
         "Activating selected option...",
         "Option incorrect or not available at runtime !!",
@@ -54,7 +63,7 @@ char	* Label[L_END] = {
 };
 
 char    MenuKey[2*N_MENU] = 
-"H,F,Z,O;C,S,D,E,L;A,B,G,J;N,Y,U;M,P,T;W,K,I,R;>,<,!;X,Q;";
+"H,F,Z,U,O;C,S,D,E,L;A,B,G,J;N,Y,M,P,T;W,K,I,R;>,<,!;X,Q;";
 
 char    ZoomKey[2*N_ZOOM] =
 "*,#,/;&,+,-,1,.;>,<,!,W,K;";
@@ -62,8 +71,11 @@ char    ZoomKey[2*N_ZOOM] =
 char    OptionKey[2*N_OPTION] = 
 "@,%;=;!,W,K;";
 
+char    UrbanKey[2*N_URBAN] = 
+"U,°,§,%;C,S;~,(,);!,W,K;";
+
 char    CommandKey[N_HELP] = 
-"HFZOCSDELABGJNYUMPTWKIR><!XQ*#/&+-1.\"@%=";
+"HFZUOCSDELABGJNYMPTWKIR><!XQ*#/&+-1.\"@%=°§~()";
 
 char  * Help[N_HELP] = {
 
@@ -71,6 +83,7 @@ char  * Help[N_HELP] = {
 "Show help and commands (H or click on strip)",
 "Load Earth map file (F or mouse button 2)",
 "Zoom (Z or mouse button 3)",
+"Urban command window",
 "Option command window",
 "Use coordinate mode",
 "Use solar time mode",
@@ -83,7 +96,6 @@ char  * Help[N_HELP] = {
 "Reset global time shift to Zero",
 "Draw/Erase Night area",
 "Draw/Erase Sun and Moon",
-"Draw/Erase cities",
 "Draw/Erase meridians",
 "Draw/Erase parallels",
 "Draw/Erase Tropics/Equator/Arctic circles",
@@ -110,8 +122,16 @@ char  * Help[N_HELP] = {
 
 /* Option window help */
 "Activate the selected option",
-"Erase the option command line",
-"Synchronize windows or not"
+"Erase the command/parameter line(s)",
+"Synchronize windows or not",
+
+/* Urban window help */
+"Use degree, minute, seconds, or decimal degrees",
+"Search/select city",
+"Modify city parameters",
+"Create new city location",
+"Delete city"
+
 };
 
 char	*ShortHelp = 
@@ -134,6 +154,7 @@ extern char Month_name[12][10];
 extern char MenuKey[N_MENU];
 extern char ZoomKey[N_ZOOM];
 extern char OptionKey[N_OPTION];
+extern char UrbanKey[N_URBAN];
 extern char CommandKey[N_HELP];
 
 #endif

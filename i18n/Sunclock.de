@@ -49,6 +49,12 @@ Synchro
 Schrittweite =
 Zeitverschiebung =
 #
+City name
+Timezone
+Latitude
+Longitude
+Size
+#
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
@@ -61,6 +67,7 @@ Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick oder Tastatur
 Zeige die Hilfe und Optionen an (H oder Mausknopf 1)
 Eingabe Erde kartendatei (F oder Mausknopf 2)
 Zoom (Z oder Mausknopf 3)
+Parameteren der Städte
 Option command window
 Verwende Koordinaten-Modus
 Verwende Sonnenzeit-Modus
@@ -73,7 +80,6 @@ Verschiebe Zeit rückwärts
 Setze Zeitverschiebung auf Null zurück
 Zeichne/Lösche Nacht
 Zeichne/Lösche Sonne und Mond
-Zeichne/Lösche Markierungen der Städte
 Zeichne/Lösche Meridiane
 Zeichne/Lösche Parallelen
 Zeichne/Lösche Tropische/Äquator/Polarkreise
@@ -100,4 +106,10 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchronisieren die Fenster oder nicht
+# Urban window help
+Use degrees, minutes, seconds, or decimal degrees
+Search/select city
+Modify city parameters
+Create new city location
+Delete city
 # End

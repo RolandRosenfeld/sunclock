@@ -56,7 +56,7 @@ demailly@fourier.ujf-grenoble.fr
 
 ==============================================================================
 
-WARNING (obsolete?)
+WARNING
 -------
 
 If you are upgrading from a version of sunclock prior to 3.20, notice
@@ -71,6 +71,12 @@ are by default installed in
 
 Thus you can probably remove the obsolete Sunclock.** files from their 
 older place /usr/X11R6/lib/X11/app-defaults -- or something like this.
+
+Starting from version 3.42 on, the format of the RC config files has been
+slightly changed. The -addcity option replaces the former [Cities] more
+rigid syntax. Older tags [Options] and [Cities] should no longer be used.
+both the system wide Sunclockrc and the user's private ~/.sunclockrc are 
+now read by sunclock at start-up, so cities defined in Sunclockrc.
 
 ==============================================================================
 
