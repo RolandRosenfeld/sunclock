@@ -2,9 +2,9 @@ README for Sunclock version 3.xx
 --------------------------------
 
 Sunclock is a sophisticated clock for the X Window system.  It is
-based on an earlier version by John Mackin, itself derived from a
-Suntools program by John Walker and Stephen Martin. Many possibilities
-of the original astronomy routines are now exploited.
+based on an earlier version by John Mackin, itself derived from the
+Suntools program by John Walker. Many possibilities of the original 
+astronomy routines are now exploited.
 
 Sunclock displays a map of the Earth and shows which portion is illuminated
 by the sun. It can commute between two states, the "clock window" and

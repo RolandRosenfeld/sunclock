@@ -28,12 +28,12 @@ Version 3.11, October 8, 2000.
   arbitrarily.
 - The command line options can now also be set through the configuration 
   file, and the version number appears in the tips of 'H' option
-  Suggestions by François Massonneau <island@worldnet.fr>
+  Suggestions by François Massonneau <fmas@celtes.com>
 
 Version 3.10, October 3, 2000.
 
 - Interface has been improved and should be substantially easier to use,
-  following some suggestions by François Massonneau <island@worldnet.fr>
+  following some suggestions by François Massonneau <fmas@celtes.com>
 - Added Sun position functionality
 - Added "hour extension" mode
 - Swedish localization by <janoh@telia.com>

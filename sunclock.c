@@ -168,6 +168,12 @@ typedef struct Mark {
     struct tm sr, ss, dl;
 } Mark;
 
+struct geom {
+	int	mask;
+	int	x;
+	int	y;
+};
+
 /*
  * bits in s_flags
  */
@@ -177,22 +183,13 @@ typedef struct Mark {
 #define	S_DIRTY		04	/* pixmap -> window copy required */
 #define	S_CLOCK		010	/* this is the clock window */
 
-struct sunclock *	makeMapContext();
-Bool			evpred();
-
 char share_file[] = SHAREDIR"/Sunclock.**";
 char app_default[] = APPDEF"/Sunclock";
-char *rc_file = NULL;
-char *Language = NULL;
-
-struct geom {
-	int	mask;
-	int	x;
-	int	y;
-};
+char language[4] = "";
 
 char *	ProgName;
 char *  Command = NULL;
+char *rc_file = NULL;
 
 Color	BgColor, FgColor, TextBgColor, TextFgColor,
 	CityColor0, CityColor1, CityColor2,
@@ -369,7 +366,7 @@ register struct geom *		g;
 }
 
 void
-checkRCfile(argc, argv)
+checkBasicOptions(argc, argv)
 register int			argc;
 register char **		argv;
 {
@@ -379,7 +376,7 @@ register char **		argv;
            if (strcasecmp(argv[i], "-rcfile") == 0)
 	      rc_file = argv[i+1];
            if (strcasecmp(argv[i], "-language") == 0)
-	      Language = argv[i+1];
+	      strncpy(language, argv[i+1], 2);
 	}
 	   
 }
@@ -401,12 +398,12 @@ register int			cond;
 		} 
 		if (strcasecmp(*argv, "-language") == 0 && argc>1) {
 			needMore(argc, argv);
-			if (!Language) Language = *++argv;
+			strncpy(language, *++argv, 2);
 			--argc;
 		} 
                 else if (strcasecmp(*argv, "-rcfile") == 0 && argc>1) {
 			needMore(argc, argv);
-			++argv;  /* already done in checkRCfile */
+			++argv;  /* already done in checkBasicOptions */
 			--argc;
 		}
 		else if (strcasecmp(*argv, "-clockgeom") == 0 && argc>1) {
@@ -643,11 +640,11 @@ register int			cond;
 }
 
 /*
- * readrc() - Read the user's ~/.sunclockrc file and app-defaults
+ * readRCFile() - Read the user's ~/.sunclockrc file and app-defaults
  */
 
 int 
-readrc()
+readRCFile()
 {
     /*
      * Local Variables
@@ -656,7 +653,6 @@ readrc()
     char *fname;	/* Path to .sunclockrc file */
     FILE *rc;		/* File pointer for rc file */
     char buf[128];	/* Buffer to hold input lines */
-    char language[4]=""; /* String to hold language identifier */
     char option[3][128]; /* Pointers to options */
     char *args[3];      /* Pointers to options */
     char *city, *lat, *lon, *tz; /* Information about a place */
@@ -799,15 +795,12 @@ readrc()
 
     i = strlen(share_file);
        
-    if (!Language)
-       Language = getenv("LANG");
-    if (Language)
-       strncpy (language, Language, 2);
-    else
+    if (!*language && getenv("LANG"))
+       strncpy(language, getenv("LANG"), 2);
+    if (!*language)
        strcpy (language,"en");
 
-    share_file[i-2] = language[0];
-    share_file[i-1] = language[1];
+    for (j=0; j<=1; j++) share_file[i+j-2] = tolower(language[j]);
 
     if ((rc = fopen(fname, "r")) != NULL) {
       int j=0, k=0, l=0, m=0, n=0, p;
@@ -1472,24 +1465,6 @@ makePixmaps()
 				 clock_icon_height, 0, 1, 1);
 }
 
-void
-makeMapContexts()
-{
-	register struct sunclock * s;
-
-	s = makeMapContext(map_icon_width, map_icon_height, Map, Mappix,
-		     BigFont_gc, bigtprint, 4,
-		     map_icon_height + BigFont->max_bounds.ascent + 2);
-	Current = s;
-
-	s = makeMapContext(clock_icon_width, clock_icon_height, 
-		     Clock, Clockpix, SmallFont_gc, smalltprint, 4,
-		     clock_icon_height + SmallFont->max_bounds.ascent + 1);
-	Current->s_next = s;
-	s->s_flags |= S_CLOCK;
-	s->s_next = Current;
-}
-
 struct sunclock *
 makeMapContext(wid, ht, win, pix, gc, fun, txx, txy)
 int				wid;
@@ -1524,6 +1499,24 @@ int				txy;
 
 	return (s);
 }	
+
+void
+makeMapContexts()
+{
+	register struct sunclock * s;
+
+	s = makeMapContext(map_icon_width, map_icon_height, Map, Mappix,
+		     BigFont_gc, bigtprint, 4,
+		     map_icon_height + BigFont->max_bounds.ascent + 2);
+	Current = s;
+
+	s = makeMapContext(clock_icon_width, clock_icon_height, 
+		     Clock, Clockpix, SmallFont_gc, smalltprint, 4,
+		     clock_icon_height + SmallFont->max_bounds.ascent + 1);
+	Current->s_next = s;
+	s->s_flags |= S_CLOCK;
+	s->s_next = Current;
+}
 
 void
 SwitchWindows()
@@ -2827,8 +2820,8 @@ register char **		argv;
 
 	/* Read the configuation file */
 
-        checkRCfile(argc, argv);
-	if (readrc()) exit(1);
+        checkBasicOptions(argc, argv);
+	if (readRCFile()) exit(1);
 
 	if ((p = strrchr(ProgName, '/'))) ProgName = ++p;
 
