@@ -64,9 +64,9 @@ install.man::
 install:: install.man
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
-	cd i18n ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
+	cd i18n ; rm -f *~ ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
-	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
+	cd vmf ; rm -f *~ ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
 
 clean::

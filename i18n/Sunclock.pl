@@ -38,7 +38,7 @@ dni
 Kliknij na miasto
 Kliknij na lokacjê
 Kliknij kolejno na dwie lokacje (przeci±gnij)
-Kliknij dwukrotnie lub naci¶nij przycisk Tab dla ° ' "
+Kliknij dwukrotnie lub naci¶nij przycisk ° dla ° ' "
 #
 Klawisz
 Opcje klawiatury/myszy

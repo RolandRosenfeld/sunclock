@@ -97,8 +97,7 @@ Sundata * Context;
     png_colorp    palette;
     png_bytep	  *row_pointers, png_data, png;
     int           bit_depth, color_type, interlace_type, num_palette, rowbytes;
-    int           x, y, i, j, i1, i2, size, destroy;
-    int           level /* , npasses */ ;
+    int           y, i, j, i1, i2, size, destroy;
     unsigned char * scan, *out;
     unsigned char c, *scanp;
     int * ys;
@@ -226,7 +225,7 @@ Sundata * Context;
     if (verbose)
        fprintf(stderr, 
 	       "Reading %d x %d PNG image, color type = %d, rowbytes = %d\n",
-	       width, height, color_type, rowbytes);
+	       (int) width, (int) height, color_type, rowbytes);
    
     for (j=0; j<height; ++j) {
         y = ((2*j+1) * Context->zoom.height) / (2*height) - Context->zoom.dy;

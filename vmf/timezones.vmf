@@ -9,13 +9,14 @@
 #86CB28	% 4 YellowGreen
 #D7EB00	% 5 GreenGold
 #8CCD8C	% 6 LightGreen3 
-#CD7054	% 7 Salmon3
+#CD7054 % 7 Salmon3
 #EE8262	% 8 Salmon2
 #DEB887	% 9 Burlywood
 #F4A460	% 10 SandyBrown
 #000000	% 11 Black
 #0000FF	% 12 Blue
 #FF0000	% 13 Red
+#000000 % 14 Black
 ;
 
 % Default color
@@ -46,7 +47,7 @@ range -90 90 -180 180
 
 % List of closed curves of land areas & lakes
 % Set internal flag
-flag 1
+flag 2
 
 % Fill mode = fill areas within closed curves
 fillmode 2
@@ -18096,7 +18097,7 @@ closedcurves
 ;
 % Time zone limits
 % Set internal flag
-flag 2
+flag 5
 
 % Fill small rectangles at bottom to indicate main timezones
 
@@ -21600,5 +21601,105 @@ opencurves
  74.826 -179.673   74.924 -179.886   74.953 -179.946   90.000 -179.946
 ;
 
+% Normal time zones
+flag 9
+label 1708 14 0 -87.000 0.000
+ 0
+;
+label 1709 14 0 -87.000 15.000
+ +1
+;
+label 1710 14 0 -87.000 30.000
+ +2
+;
+label 1711 14 0 -87.000 45.000
+ +3
+;
+label 1712 14 0 -87.000 60.000
+ +4
+;
+label 1713 14 0 -87.000 75.000
+ +5
+;
+label 1714 14 0 -87.000 90.000
+ +6
+;
+label 1715 14 0 -87.000 105.000
+ +7
+;
+label 1716 14 0 -87.000 120.000
+ +8
+;
+label 1717 14 0 -87.000 135.000
+ +9
+;
+label 1718 14 0 -87.000 150.000
+ +10
+;
+label 1719 14 0 -87.000 165.000
+ +11
+;
+label 1720 14 0 -87.000 180.000
+ +12
+;
+label 1721 14 0 -87.000 -15.000
+ -1
+;
+label 1722 14 0 -87.000 -30.000
+ -2
+;
+label 1723 14 0 -87.000 -45.000
+ -3
+;
+label 1724 14 0 -87.000 -60.000
+ -4
+;
+label 1725 14 0 -87.000 -75.000
+ -5
+;
+label 1726 14 0 -87.000 -90.000
+ -6
+;
+label 1727 14 0 -87.000 -105.000
+ -7
+;
+label 1728 14 0 -87.000 -120.000
+ -8
+;
+label 1729 14 0 -87.000 -135.000
+ -9
+;
+label 1730 14 0 -87.000 -150.000
+ -10
+;
+label 1731 14 0 -87.000 -165.000
+ -11
+;
+label 1732 14 0 -87.000 -180.000
+ -12
+;
 
+% Exceptional time zones
+flag 17
+label 1733 14 0 31.000 54.000
+ +3:30
+;
+label 1734 14 0 34.000 67.000
+ +4:30
+;
+label 1735 14 0 22.000 78.000
+ +5:30
+;
+label 1736 14 0 28.000 83.000
+ +5:45
+;
+label 1737 14 0 21.000 96.000
+ +6:30
+;
+label 1738 14 0 -21.000 133.000
+ +9:30
+;
+label 1739 14 0 50.000 -54.000
+ -3:30
+;
 end

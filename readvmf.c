@@ -53,6 +53,8 @@ extern int              verbose;
 extern int              reformat;
 
 static struct Sundata *map;
+#define pixels map->vmfpixels   /* Pointer to list of colors */
+
 static int mapwidth;
 static int mapheight;
 static int fillmode;
@@ -60,7 +62,6 @@ static int fillmode;
 static char *buffer;  /* Buffer to hold input lines */
 static int *grid;     /* Pointer to grid data */
 static int *palette;  /* Pointer to list of color codes */
-static Pixel *colors; /* Pointer to list of colors */
 
 static int uu, cc, vv, vv1, vv2, full;
 static int num_palette;
@@ -284,13 +285,13 @@ pixmap_image()
        else
 	   l = default_color;
        if (bigendian) {
-          c[k+1] = (colors[l] >> 16) & 255;
-          c[k+2] = (colors[l] >> 8) & 255;
-          c[k+3] = colors[l];
+          c[k+1] = (pixels[l] >> 16) & 255;
+          c[k+2] = (pixels[l] >> 8) & 255;
+          c[k+3] = pixels[l];
        } else {
-          c[k] = colors[l];
-          c[k+1] = (colors[l] >> 8) & 255;
-          c[k+2] = (colors[l] >> 16) & 255;
+          c[k] = pixels[l];
+          c[k+1] = (pixels[l] >> 8) & 255;
+          c[k+2] = (pixels[l] >> 16) & 255;
        }
     }
   }
@@ -306,11 +307,11 @@ pixmap_image()
        else
 	 l = default_color;
        if (bigendian) {
-          c[k] = colors[l] / 256;
-          c[k+1] = colors[l] & 255;
+          c[k] = pixels[l] / 256;
+          c[k+1] = pixels[l] & 255;
        } else {
-          c[k] = colors[l] & 255;
-          c[k+1] = colors[l] / 256;
+          c[k] = pixels[l] & 255;
+          c[k+1] = pixels[l] / 256;
        }
     }
   }
@@ -324,7 +325,7 @@ pixmap_image()
            l = palette[l];
        else
 	   l = default_color;
-       c[k] = colors[l] & 255;
+       c[k] = pixels[l] & 255;
     }
   }
 
@@ -416,7 +417,8 @@ struct Sundata * Context;
   char coordformat[32] = "%7.3f %8.3f";
   int num_colors, correct, maxgrid, run_flag = -1, opencurves = 0, 
       ret_value = -1;
-  int color=0, i, j, k, l, num=0, count=0, u=0, v=0, up, vp;
+  int color=0, i, j, k, l, num=0, count=0, u=0, v=0, up, vp, flag;
+  int position=0;
   int m, min, max, addumin, addvmin, addumax, addvmax, diffu, diffv, sum;
   double fx=0.0, fy=0.0, fx0=0.0, fy0=0.0;
   double fxmin=-180.0, fxmax=180.0, fymin=-90.0, fymax=90.0, 
@@ -424,7 +426,7 @@ struct Sundata * Context;
   double rxmin=-180.0, rxmax, rymin=-90.0, rymax;
   double cx=1.0, cy=1.0, cdx=0.0, cdy=0.0;
   double theta, phi;
-  char *str;
+  char *str, *ptr;
 #ifdef ZLIB
   gzFile * fd;
 #else
@@ -434,7 +436,6 @@ struct Sundata * Context;
   fd = NULL;
   buffer = NULL;
   palette = NULL;
-  colors = NULL;
   grid = NULL;
 
   if (!path) {
@@ -493,10 +494,10 @@ struct Sundata * Context;
 	     str[l] = '\0';
              if (*str) {
 	        ++num_colors;
-                colors = 
-                  (Pixel *)realloc((void *)colors, num_colors*sizeof(Pixel));
-	        if (!colors) goto abort;
-                colors[num_colors-1] = getPixel(tmp_cmap, str);
+                pixels = 
+                  (Pixel *)realloc((void *)pixels, num_colors*sizeof(Pixel));
+	        if (!pixels) goto abort;
+                pixels[num_colors-1] = getPixel(tmp_cmap, str);
 	     } else
 	        --count;
           } else
@@ -507,9 +508,9 @@ struct Sundata * Context;
        if (!vmfcolors || color_alloc_failed>count) {
 	  count = color_alloc_failed;
 	  ++num_colors;
-          colors = (Pixel *)realloc((void *)colors, num_colors*sizeof(Pixel));
-	  if (!colors) goto abort;
-	  colors[num_colors-1] = getPixel(tmp_cmap, str);
+          pixels = (Pixel *)realloc((void *)pixels, num_colors*sizeof(Pixel));
+	  if (!pixels) goto abort;
+	  pixels[num_colors-1] = getPixel(tmp_cmap, str);
        }
        if (color_alloc_failed>count) {
 	  color_alloc_failed = 1;
@@ -519,7 +520,7 @@ struct Sundata * Context;
 	  color_alloc_failed &= 1;
        if (color_depth<=8)
           Context->daypixel[num_colors-1] = 
-             (unsigned char) colors[num_colors-1];
+             (unsigned char) pixels[num_colors-1];
     } else {
        str = getdata(fd);
        ++num_colors;
@@ -671,6 +672,62 @@ struct Sundata * Context;
            cdy = -fymin*cy+rymin;
            printf("range %g %g %g %g\n\n", rymin, rymax, rxmin, rxmax);
         }
+     } else
+     if (!strcmp(str, "label")) {
+        /* get rid of count number */
+        str = getdata(fd);
+        str = getdata(fd);
+        if (!str) goto abort;
+        color = atoi(str);
+        str = getdata(fd);
+        if (!str) goto abort;
+        position = atoi(str);
+        str = getdata(fd);
+        if (!str) goto abort;
+        fy = atof(str);
+        str = getdata(fd);
+        if (!str) goto abort;
+        fx = atof(str);
+        if (reformat) {
+           printf("\nlabel %d %d %d ", count, color, position);
+           printf(coordformat, fy, fx);
+        }
+        ++count;
+        ptr = NULL;
+        l = 0;
+#ifdef ZLIB
+        while (!gzeof(fd) && str && *str !=';') {
+           str = gzgets(fd, buffer, LINELENGTH);
+#else
+        while (!feof(fd)) {
+           str = fgets(buffer, LINELENGTH, fd);
+#endif
+           if (reformat) {
+	      printf("%s", str);
+	   }
+	   if (!str) break;
+	   if (*str != ' ') break;
+           ++str;
+           k = strlen(str);
+   	   if (k>=2 && str[k-1]=='\n' && str[k-2]=='\\' &&
+               (k==2 || (k>=3 && str[k-3]!='\\'))) {
+	      k -=2;
+              str[k] = '\0';
+	   }
+           ptr = realloc(ptr, l+k+2);
+           strcpy(ptr + l, str);
+           l += k;
+	}
+	l -= 1;
+	if (l>=0 && ptr[l]=='\n') ptr[l] = '\0';
+        str = (char *)Context->label;
+        Context->label = (struct TextLabel *)salloc(sizeof(TextLabel));
+        Context->label->text = ptr;
+        Context->label->lon = fx;
+        Context->label->lat = fy;
+        Context->label->color = color;
+        Context->label->position = position;
+        Context->label->next = (struct TextLabel *)str;
      }
      goto iter;
   } else
@@ -704,7 +761,9 @@ struct Sundata * Context;
      ++num;
   }
 
-  if (!(run_flag & map->flags.vmfflags)) goto iter;
+  flag = run_flag & map->flags.vmfflags;
+  if (!flag) goto iter;
+  if ((flag&1) && !map->wintype) goto iter;
 
   theta = (fx - fxmin) / fdx;
   phi = (fymax - fy) / fdy;
@@ -782,7 +841,6 @@ struct Sundata * Context;
 #endif
   if (buffer) free(buffer); 
   if (grid) free(grid); 
-  if (colors) free(colors);
   if (palette) free(palette);
   return ret_value;
 }

@@ -38,7 +38,7 @@ dager
 Klikk på en by
 Klikk på et sted
 Klikk på to steder i kartet
-Klikk to ganger eller trykk Tab for ° ' "
+Klikk to ganger eller trykk ° for ° ' "
 #
 Tastatur
 Tastatur/Muskontroll

@@ -38,7 +38,7 @@ jours
 Cliquer sur une ville
 Cliquer sur un point
 Cliquer sur deux points
-Cliquer 2 fois ou taper Tab pour ° ' "
+Cliquer 2 fois ou taper ° pour ° ' "
 #
 Touche
 Contrôles Clavier/Souris

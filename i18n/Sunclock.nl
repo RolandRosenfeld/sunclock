@@ -38,7 +38,7 @@ dagen
 Klik op een plaats
 Klik op een locatie
 Klik achtereenvolgens op 2 locaties
-Dubbelklik of gebruik Tab voor ° ' "
+Dubbelklik of gebruik ° voor ° ' "
 #
 Toets
 Toets/muis controls

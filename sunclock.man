@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "August 27, 2004"
+.TH SUNCLOCK 1 "October 31, 2004"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -20,7 +20,8 @@ where the list of licit options is the following long list
 .PP
 (**)  [-language name] [-dateformat string1|string2|...] \
 [-rcfile file] [-command string] [-helpcommand string] \
-[-clockimage file] [-mapimage file] [-mapmode * <L,C,S,D,E>] \
+[-mapmode * <L,C,S,D,E>] [-image file] \
+[-clockimage file] [-mapimage file] \
 [-clockgeom <geom>] [-mapgeom <geom>] \
 [-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>] \
 [-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>] \
@@ -219,13 +220,16 @@ to bypass the user config file step.
 Set the directory where system wide shared Earthmaps are located.
 Default is /usr/share/sunclock/earthmaps.
 .TP
+.B "\-image " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
+Start sunclock with an Earth map image loaded in the clock and
+map windows. The same map is then used for both windows, but
+the clock image is usually scaled down.
+.TP
 .B "\-mapimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the map window.
 .TP
 .B "\-clockimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the clock window. 
-The same maps can be used used for the map and clock windows, but
-in the latter case they will tend to be scaled down.
 .TP
 .B "\-colorlevel " level=0,1,2,3
 Sets the color level (0=monochrome, 1=few colors, 2=many colors,
@@ -771,10 +775,14 @@ case the default becomes "%g %g" (from the POSIX rules, this stands for
 6 significant digits in any position).
 .TP 
 .BI "\-vmfflags " "number"
-Sets the flags (integer value) for a *.vmf file. For instance setting
--vmfflags 1 with timezones.vmf will let the timezone regions appear,  
-while -vmfflags 3 will also show the timezone boundary lines. (Only
-bits 0 and 1 are currently used in timezones.vmf).
+Sets the flags (integer value) for a *.vmf file. Each bit is a distinct
+flag. The zeroth order bit (i.e. &1) determines whether features which have
+their own zeroth bit set are to be drawn in clock window mode (if the zeroth 
+bit is not set, the feature will always be drawn). Other bits are used
+to control whether given features are to be drawn or not. For instance setting
+-vmfflags 2 with timezones.vmf will let the timezone regions appear,  
+while -vmfflags 6 will also show the timezone boundary lines. (Only
+bits 0, 1, 2 are currently used in timezones.vmf).
 .TP 
 .BI "\-setcolor " "field|color"
 Sets the color of a specified field in the sunclock widgets. 
@@ -795,6 +803,16 @@ mapfg (map foreground color; Black)
 menubg (menu text background color; Grey92)
 .PP
 menufg (menu text foreground color; Black)
+.PP
+buttonbg (button background color; Grey84)
+.PP
+buttonfg1 (button very dark border color ; Black)
+.PP
+buttonfg2 (button dark border color ; Grey50)
+.PP
+buttonfg3 (button light border color ; Grey95)
+.PP
+buttonfg4 (button very light border color ; White)
 .PP
 weak (color for disabled menu commands; Red)
 .PP

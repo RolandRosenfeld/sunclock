@@ -72,6 +72,8 @@ extern char *           BigFont_name;
 extern char *           image_dir;
 extern char *           Help[N_HELP];
 extern char *           Label[L_END];
+extern char *           FileselBanner[N_FILESEL];
+extern char             WeakChars[];
 
 extern char             language[4];
 extern char             Default_vmf[];
@@ -120,7 +122,7 @@ extern unsigned int     adjust_dark;
 extern int              urban_t[5], urban_x[5], urban_y[5], urban_w[5];
 
 int                     areaw, areah;
-
+int			urbanh;
 
 void shutDown();
 
@@ -455,6 +457,189 @@ int num;
 	return win;
 }
 
+void getWinParams(win, Context, keys, nkeys, y, width)
+Window win;
+struct Sundata **Context;
+char **keys;
+int *nkeys;
+int *y;
+int *width;
+{
+    *Context = NULL;
+    if (win==Menu) {
+       *Context = MenuCaller;
+       *keys = MenuKey;
+       *nkeys = N_MENU;
+       *y = 0;
+       *width = MenuGeom.width;
+    }
+    if (win==Option) {
+       *Context = OptionCaller;
+       *keys = OptionKey;
+       *nkeys = N_OPTION;
+       *y = OptionGeom.height-2*OptionCaller->gdata->menustrip - 1;
+       *width = OptionGeom.width;
+    }
+    if (win==Zoom) {
+       *Context = ZoomCaller;
+       *keys = ZoomKey;
+       *nkeys = N_ZOOM;
+       *y = areah+64;
+       *width = ZoomGeom.width;
+    }
+    if (win==Urban) {
+       *Context = UrbanCaller;
+       *keys = UrbanKey;
+       *nkeys = N_URBAN;
+       *y = urbanh;
+       *width = UrbanGeom.width;
+    }
+    if (win==Filesel) {
+       *Context = FileselCaller;
+       *keys = WeakChars;
+       *nkeys = 6;
+       *y = 0;
+       *width = FileselGeom.width;
+    }
+}
+
+int 
+getButton(win, x, y)
+Window win;
+int x, y;
+{
+struct Sundata * Context=NULL;
+char *keys=NULL;
+int nkeys=0;
+int y1, w0, n, i, j, b, d;
+    getWinParams(win, &Context, &keys, &nkeys, &y1, &w0);
+    n = -1;
+    if (y<=y1 || y>=y1+Context->gdata->menustrip) return n;
+    b = 0;
+    d = Context->gdata->charspace;
+    if (win==Filesel) d = 2*d;
+    for (i=0; i<nkeys; i++) {
+	j = i*d + b;
+	b += 5*(keys[2*i+1]==';');
+	if (x>j && x<j+d) {
+	    n = i;
+	    break;
+	}
+    }
+    if (x>j+d+5) n = nkeys;
+    return n;
+}
+
+void
+drawBox(win, gc, pix, x1, y1, x2, y2, clicked)
+Window win;
+GC gc;
+Pixel *pix;
+int x1, y1, x2, y2;
+int clicked;
+{
+    XSetForeground(dpy, gc, pix[BUTTONCOLOR]);
+    XFillRectangle(dpy, win, gc, x1, y1, x2-x1, y2-y1);
+
+    XSetForeground(dpy, gc, pix[(clicked)?BUTTONFGCOLOR1:BUTTONFGCOLOR3]);
+    XDrawLine(dpy, win, gc, x1, y1, x1, y2);
+    XDrawLine(dpy, win, gc, x1, y1, x2, y1);
+
+    XSetForeground(dpy, gc, pix[(clicked)?BUTTONFGCOLOR2:BUTTONFGCOLOR4]);
+    XDrawLine(dpy, win, gc, x1+1, y1+1, x1+1, y2-1);
+    XDrawLine(dpy, win, gc, x1+1, y1+1, x2-1, y1+1);
+
+    XSetForeground(dpy, gc, pix[(clicked)?BUTTONFGCOLOR4:BUTTONFGCOLOR2]);
+    XDrawLine(dpy, win, gc, x1+1, y2-1, x2-1, y2-1);
+    XDrawLine(dpy, win, gc, x2-1, y1+1, x2-1, y1+1);
+
+    XSetForeground(dpy, gc, pix[(clicked)?BUTTONFGCOLOR3:BUTTONFGCOLOR1]);
+    XDrawLine(dpy, win, gc, x1, y2, x2, y2);
+    XDrawLine(dpy, win, gc, x2, y1, x2, y2);
+}
+
+void 
+drawButton(win, n, clicked)
+Window win;
+int n;
+int clicked;
+{
+int i, j=0, b, d, x1=0, y1=0, x2=0, y2=0, x, y, w0=0;
+struct Sundata * Context=NULL;
+char c[2];
+char *keys=NULL;
+char *s = c;
+int nkeys=0;
+int charspace;
+
+    getWinParams(win, &Context, &keys, &nkeys, &y1, &w0);
+    if (!Context) return;
+    charspace = Context->gdata->charspace;
+    if (win==Filesel) charspace = 2*charspace;
+
+    b = 0;
+    for (i=0; i<=n; i++) {
+        j = i*charspace + b;
+	b += 5*((i==nkeys-1) || (keys[2*i+1]==';'));
+    }
+    x1 = j;
+    y2 = y1+Context->gdata->menustrip;
+    if (n>=0 && n<nkeys) {
+        if (win==Filesel)
+	   s = FileselBanner[n];
+	else {
+           c[0] = keys[2*n];
+           c[1] = '\0';
+	}
+        x2 = j+charspace-1;
+    } else {
+        if (win==Zoom && n==nkeys+1) {
+	   c[0] = (zoom_active)?'+':'-';
+           c[1] = '\0';
+           x1 = areah+170, 
+           y1 = 21;
+           x2 = x1+charspace;
+           y2 = y1+18;        
+        } else {
+           s = Label[L_ESCAPE];
+           x2 = w0 - 1;
+	}
+    }
+
+    if (clicked<=-1) {
+       XSetForeground(dpy, Context->gdata->wingc, 
+	              Context->gdata->pixel[(clicked==-2)?
+                                  BUTTONCOLOR:MENUFGCOLOR]);
+       for (y=y1+2; y<=y2-3; y+=y2-y1-5)
+           for (x=x1+4; x<=x2-3; x++) 
+              if ((x+y)&1) XDrawPoint(dpy, win, 
+			              Context->gdata->wingc, x, y);
+       for (y=y1+2; y<=y2-3; y++)
+           for (x=x1+4; x<=x2-3; x+=x2-x1-7) 
+              if ((x+y)&1) XDrawPoint(dpy, win, 
+			              Context->gdata->wingc, x, y);
+       return;
+    }
+
+    drawBox(win, Context->gdata->wingc, 
+            Context->gdata->pixel, x1, y1, x2, y2, clicked);
+
+    d = (5*Context->gdata->charspace)/12;
+    XSetBackground(dpy, Context->gdata->wingc, 
+		   Context->gdata->pixel[BUTTONCOLOR]);
+    if (win==Menu && do_dock && index(WeakChars,s[0])) 
+        XSetForeground(dpy, Context->gdata->wingc, 
+                            Context->gdata->pixel[WEAKCOLOR]);
+    else
+        XSetForeground(dpy, Context->gdata->wingc, 
+                            Context->gdata->pixel[MENUFGCOLOR]);
+
+    XDrawImageString(dpy, win, Context->gdata->wingc, 
+                     x1+d, 
+                     y1+Context->gdata->font[MENUFONT]->max_bounds.ascent + 4, 
+                     s, strlen(s));
+}
+
 int
 getNumCmd(key)
 char key;
@@ -545,8 +730,10 @@ char *hint;
 }
 
 void
-showMenuHint()
+showMenuHint(but_pos)
+int but_pos;
 {
+        static int move_pos = -1;
         char key;
 	char hint[128];
 
@@ -555,6 +742,10 @@ showMenuHint()
 
         if (menu_newhint == XK_Shift_L || menu_newhint == XK_Shift_R) return;
 	key = toupper((char) menu_newhint);
+
+        if (move_pos>=0) drawButton(Menu, move_pos, -2);
+        if (but_pos>=0) drawButton(Menu, but_pos, -1);
+	move_pos = but_pos;
 
 	if (key == menu_lasthint) return;
 	helpHint(MenuCaller, key, hint);
@@ -571,24 +762,22 @@ void
 setupMenu(mode)
 int mode;
 {
-	char s[2];
-	char which[] = "QCDEMPSTUK><!";
-	int i, j, j0, b, d;
+	int i, d;
 
 	if (!do_menu) return;
 
-	d = strlen(which);
+	d = strlen(WeakChars);
         if (MenuCaller->wintype) {
 	   if (do_dock)
-              which[1] = '\0';
+              WeakChars[1] = '\0';
            else 
-              which[0] = '\0';
+              WeakChars[0] = '\0';
 	} else {
 	   if (do_dock) {
 	      if (MenuCaller != Seed)
-                 which[d-4] = '\0';
+                 WeakChars[d-4] = '\0';
 	   } else
-	         which[d-5] = '\0';
+	         WeakChars[d-5] = '\0';
 	}
 
         BasicSettings(MenuCaller);
@@ -596,38 +785,11 @@ int mode;
         XSetWindowBackground(dpy, Menu, MenuCaller->gdata->pixel[MENUBGCOLOR]);
         XClearArea(dpy, Menu,  0, 0, MenuGeom.width, MenuGeom.height, False);
 
-        s[1] = '\0';
-	d = (5*MenuCaller->gdata->charspace)/12;
-	for (i=0; i<N_MENU; i++) {
-	      b = (MenuKey[2*i+1]==';');
-	      j0 = (i+1)*MenuCaller->gdata->charspace;
-              XSetForeground(dpy, MenuCaller->gdata->wingc, 
-                                MenuCaller->gdata->pixel[MENUFGCOLOR]);
-	      for (j=j0-b; j<=j0+b; j++)
-	          XDrawLine(dpy, Menu, MenuCaller->gdata->wingc, 
-                      j, 0, j, MenuCaller->gdata->menustrip);
-	      s[0] = MenuKey[2*i];
-	      if (index(which,s[0])) 
-                 XSetForeground(dpy, MenuCaller->gdata->wingc, 
-                                MenuCaller->gdata->pixel[WEAKCOLOR]);
-	      XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 
-                  d+i*MenuCaller->gdata->charspace, 
-                  MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, s, 1);
-	}
-
-        XSetForeground(dpy, MenuCaller->gdata->wingc, MenuCaller->gdata->pixel[MENUFGCOLOR]);
-	XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 
-                     d +N_MENU*MenuCaller->gdata->charspace,
-                     MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, 
-		     Label[L_ESCAPE], strlen(Label[L_ESCAPE]));
-        XDrawLine(dpy, Menu, MenuCaller->gdata->wingc, 0, 
-                     MenuCaller->gdata->menustrip, 
-                     MENU_WIDTH * MenuCaller->gdata->menustrip, 
-                     MenuCaller->gdata->menustrip);
+	for (i=0; i<=N_MENU; i++)
+            drawButton(Menu, i, 0);
         menu_lasthint = '\0';
-	showMenuHint();
+	showMenuHint(-1);
 }
-
 
 void
 PopMenu(Context)
@@ -677,6 +839,48 @@ struct Sundata * Context;
         setProtocols(NULL, 2);
 }
 
+void 
+processMenuAction(Context, x, y, button, evtype)
+Sundata * Context;
+int x, y, button, evtype;
+{
+static int move_pos = -1;
+static int click_pos = -1;
+int but_pos;
+KeySym key;
+	   if (evtype == ButtonRelease && click_pos>=0) {
+	       drawButton(Menu, click_pos, 0);
+               click_pos = -1;
+	   }
+           but_pos = getButton(Menu, x, y);
+           if (evtype == ButtonPress && but_pos>=0 && but_pos<=N_MENU) {
+	       drawButton(Menu, but_pos, 1);
+	       click_pos = but_pos;
+               return;
+	   }
+           if (evtype == MotionNotify) {
+	     if (but_pos >= N_MENU) {
+		menu_newhint = XK_Escape;
+                showMenuHint(N_MENU);
+		return;
+	     }
+	     if (but_pos <= -1) 
+		menu_newhint = ' ';
+	     else
+	        menu_newhint = MenuKey[2*but_pos];
+             showMenuHint(getNumCmd(menu_newhint));
+             return;
+           }
+	   if (but_pos==-1) return;	   
+           if (do_menu && but_pos >= N_MENU) {
+              PopMenu(MenuCaller);
+              return;
+           }
+           key = MenuKey[2*but_pos];
+	   if (button<=2) key = tolower(key);
+           processKey(Menu, (KeySym)key);
+}
+
 void
 clearFileselPartially()
 {
@@ -689,49 +893,36 @@ void
 setupFilesel(mode)
 int mode;
 {
-	int i, j, b, d, p, q, w, h, ht, skip;
+	int i, j, b, d, p, w, h, ht, skip;
 	char *s, *sp;
-	char *banner[7] = { "home", "share", "  /", "  .", 
-	                     "  W", "  !", Label[L_ESCAPE]};
 
         if (!do_filesel) return;
 
-        BasicSettings(FileselCaller);
         XSetWindowColormap(dpy, Filesel, FileselCaller->gdata->cmap);
         XSetWindowBackground(dpy, Filesel, 
            FileselCaller->gdata->pixel[MENUBGCOLOR]);
 
 	d = FileselCaller->gdata->charspace/3;
+        h = FileselCaller->gdata->menustrip;
 
 	if (mode < 0) {
-
+          BasicSettings(FileselCaller);
           XClearArea(dpy, Filesel,  0, 0, 
              FileselGeom.width, FileselGeom.height, False);
-
 	  for (i=0; i<=6; i++)
-             XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc,
-                d+2*i*FileselCaller->gdata->charspace, 
-                FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, 
-                banner[i], strlen(banner[i]));
- 
-          for (i=1; i<=6; i++) {
-	     h = 2*i*FileselCaller->gdata->charspace;
-             XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, h,0,h,
-             FileselCaller->gdata->menustrip);
-	  }
-
-	  h = FileselCaller->gdata->menustrip;
-          XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
-              0, h, FileselGeom.width, h);
+	     drawButton(Filesel, i, 0);
 	}
 	
+        BasicSettings(FileselCaller);
+
         if (mode <= 0) {
             XClearArea(dpy, Filesel,  0, FileselCaller->gdata->menustrip+1,
-                FileselGeom.width - 13, FileselGeom.height, False);
+                FileselGeom.width - 15, FileselGeom.height, False);
             XClearArea(dpy, Filesel,  
-                FileselGeom.width - 13, FileselCaller->gdata->menustrip+1,
+                FileselGeom.width - 15, FileselCaller->gdata->menustrip+1,
                 13, FileselCaller->gdata->menustrip, False);
-
+            XSetForeground(dpy,  FileselCaller->gdata->wingc,
+                FileselCaller->gdata->pixel[MENUFGCOLOR]);
             XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc,
                 d, FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
                    FileselCaller->gdata->menustrip+4, 
@@ -742,10 +933,10 @@ int mode;
                 0, h, FileselGeom.width, h);
 
             XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
-                FileselGeom.width - 13, 2*FileselCaller->gdata->menustrip, 
-                FileselGeom.width - 13, FileselGeom.height);
+                FileselGeom.width - 15, 2*FileselCaller->gdata->menustrip, 
+                FileselGeom.width - 15, FileselGeom.height);
             /* Drawing small triangular icons */
-            w = FileselGeom.width - 6;
+            w = FileselGeom.width - 7;
             h = 2 * FileselCaller->gdata->menustrip + 1;
             for (i=0; i<=10; i++)
 	       XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
@@ -758,7 +949,7 @@ int mode;
 
 	if (mode<=1)
            XClearArea(dpy, Filesel,  0, 2*FileselCaller->gdata->menustrip+1,
-               FileselGeom.width - 13, FileselGeom.height, False);
+               FileselGeom.width - 15, FileselGeom.height, False);
 
 	if (!dirtable) 
 	   dirtable = get_dir_list(image_dir, &num_table_entries);
@@ -778,12 +969,13 @@ int mode;
 	skip = (3*FileselCaller->gdata->menustrip)/4;
 	num_lines = (FileselGeom.height-2*FileselCaller->gdata->menustrip)/skip;
         /* drawing the thumb */
-        XClearArea(dpy, Filesel,  
-           FileselGeom.width - 12, 2*FileselCaller->gdata->menustrip+12,
-           12, FileselGeom.height-2*FileselCaller->gdata->menustrip-24, 
-           False);
+        XSetForeground(dpy, FileselCaller->gdata->wingc,
+           FileselCaller->gdata->pixel[ZOOMBGCOLOR]);
+        XFillRectangle(dpy, Filesel, FileselCaller->gdata->wingc, 
+           FileselGeom.width - 14, 2*FileselCaller->gdata->menustrip+12,
+           14, FileselGeom.height-2*FileselCaller->gdata->menustrip-23);
 
-        w = FileselGeom.width - 10;
+        w = FileselGeom.width - 12;
         p = FileselGeom.height - 2 * FileselCaller->gdata->menustrip - 28;
         ht = p * (num_lines+1) / (num_table_entries+1);
         if (ht<20) ht = 20;
@@ -792,7 +984,8 @@ int mode;
         h = 2 * FileselCaller->gdata->menustrip + 14;
         if (num_table_entries>2)
            h += (filesel_shift * p)/(num_table_entries-2);
-        XDrawRectangle(dpy, Filesel, FileselCaller->gdata->wingc, w, h, 7, ht);
+	drawBox(Filesel, FileselCaller->gdata->wingc, 
+                FileselCaller->gdata->pixel, w, h, w+9, h+ht, 0);
 
         for (i=0; i<num_table_entries-filesel_shift; i++) 
 	if (i<num_lines) {
@@ -889,17 +1082,34 @@ struct Sundata * Context;
 }
 
 void 
-processFileselAction(Context, a, b, evtype)
+processFileselAction(Context, x, y, evtype)
 struct Sundata * Context;
-int a;
-int b;
+int x;
+int y;
 int evtype;
 {
+	static int pressed3 = 0;
+	static int move_pos = -1;
+	static int click_pos = -1;
+	static int but_pos;
         char newdir[1030];
 	char *s, *f, *path;
-	static int pressed3 = 0;
+
+        if (evtype == MotionNotify && move_pos>=0) {
+	   drawButton(Filesel, move_pos, -2);
+	   move_pos = -1;
+	}
+        if (evtype == ButtonRelease && click_pos>=0) {
+	   drawButton(Filesel, click_pos, 0);
+           click_pos = -1;
+	}
+  
+        but_pos = getButton(Filesel, x, y);
 
 	if (evtype == ButtonPress) {
+           if (click_pos>=0) drawButton(Filesel, click_pos, 0);
+	   if (but_pos>=0) drawButton(Filesel, but_pos, 1);
+	   click_pos = but_pos;
 	   pressed3 = 1;
 	   return;
 	}
@@ -907,40 +1117,44 @@ int evtype;
 	   pressed3 = 0;
 	}
 
-	if (evtype == MotionNotify && 
-            (a < FileselGeom.width - 13 ||
-             b <= 2 * Context->gdata->menustrip) )
-	   return;
+	if (evtype == MotionNotify) {
+	   if (but_pos>=0 && but_pos!=click_pos) {
+	      drawButton(Filesel, but_pos, -1);
+	      move_pos = but_pos;
+	   }
+           if (x < FileselGeom.width - 15 ||
+               y <= 2 * Context->gdata->menustrip)
+	      return;
+	}
 	
-        if (b <= Context->gdata->menustrip) {
-	  a = a/(2*Context->gdata->charspace);
-	  if (a==0 && getenv("HOME"))
+        if (y <= Context->gdata->menustrip) {
+	  if (but_pos==0 && getenv("HOME"))
 	     sprintf(image_dir, "%s/", getenv("HOME")); 
-	  if (a==1)
+	  if (but_pos==1)
 	     StringReAlloc(&image_dir, share_maps_dir);
-	  if (a==2)
+	  if (but_pos==2)
 	     StringReAlloc(&image_dir, "/"); 
-	  if (a==3 && getcwd(NULL,1024)) {
+	  if (but_pos==3 && getcwd(NULL,1024)) {
 	     sprintf(newdir, "%s/", getcwd(NULL,1024));
 	     StringReAlloc(&image_dir, newdir);
 	  }
-	  if (a<=3) {
+	  if (but_pos>=0 && but_pos<=3) {
 	     filesel_shift = 0;
 	     if (dirtable) {
 	        free(dirtable);
 	        dirtable = NULL;
 	     }
 	  }
-	  if (a==4) {	
+	  if (but_pos==4) {	
 	      do_filesel = -1;
               processKey(Context->win, XK_w);
 	      return;
 	  }
-	  if (a==5) {	
+	  if (but_pos==5) {	
               processKey(Context->win, XK_exclam);
 	      return;
 	  }
-	  if (a>=6) {
+	  if (but_pos>=6) {
 	     XUnmapWindow(dpy, Filesel);
 	     do_filesel = 0;
 	     return;
@@ -948,21 +1162,21 @@ int evtype;
 	  setupFilesel(0);
 	  return;
 	}
-        if (b <= 2*Context->gdata->menustrip) {
+        if (y <= 2*Context->gdata->menustrip) {
 	  filesel_shift = 0;
 	  setupFilesel(0);
 	  return;
 	}
 
-	if (a > FileselGeom.width - 13) {
+	if (x > FileselGeom.width - 15) {
 	   int old_shift = filesel_shift;
-	   if (b <= 2*Context->gdata->menustrip + 10) {
+	   if (y <= 2*Context->gdata->menustrip + 10) {
 	      if (evtype != ButtonRelease) return;
 	      if (filesel_shift == 0) return;
 	      filesel_shift -= num_lines/2;
 	      if (filesel_shift <0) filesel_shift = 0;
 	   } else
-	   if (b >= FileselGeom.height - 10) {
+	   if (y >= FileselGeom.height - 10) {
 	      if (evtype != ButtonRelease) return;
 	      if (num_table_entries-filesel_shift<num_lines) return;
 	      filesel_shift += num_lines/2;
@@ -971,7 +1185,7 @@ int evtype;
 		 return;
 	      }
 	      filesel_shift = ( num_table_entries *
-		 ( b - 2*Context->gdata->menustrip - 10 ))
+		 ( y - 2*Context->gdata->menustrip - 10 ))
                  / (FileselGeom.height - 2*Context->gdata->menustrip - 20);
 	      if (filesel_shift > num_table_entries - num_lines/2) 
                  filesel_shift = num_table_entries - num_lines/2;
@@ -982,17 +1196,17 @@ int evtype;
 	   return;
 	}
 
-	b = (b-2*Context->gdata->menustrip-4)/(3*Context->gdata->menustrip/4)
+	y = (y-2*Context->gdata->menustrip-4)/(3*Context->gdata->menustrip/4)
             +filesel_shift;
-	if (b<num_table_entries) {
-	   s = dirtable[b];
+	if (y<num_table_entries) {
+	   s = dirtable[y];
 	   if (s==NULL || *s=='\0') return;
-	   if (a > XTextWidth (Context->gdata->font[MENUFONT], s, 
+	   if (x > XTextWidth (Context->gdata->font[MENUFONT], s, 
                    strlen(s))+Context->gdata->charspace/4) return;
-	   b = strlen(s)-1;
-	   f = (char *) salloc(strlen(image_dir)+b+2);
+	   y = strlen(s)-1;
+	   f = (char *) salloc(strlen(image_dir)+y+2);
 	   strcpy(f, image_dir);
-           if (s[b] == '/') {
+           if (s[y] == '/') {
 	      int l;
 	      if (!strcmp(s, "../")) {
 	        l=strlen(f)-1;
@@ -1167,10 +1381,16 @@ struct Sundata * Context;
 }
 
 void
-showZoomHint()
+showZoomHint(but_pos)
+int but_pos;
 {
+        static int move_pos = -1;
 	char hint[120];
 	int v;
+
+        if (move_pos>=0) drawButton(Zoom, move_pos, -2);
+        if (but_pos>=0) drawButton(Zoom, but_pos, -1);
+	move_pos = but_pos;
 
 	if (!do_zoom || zoom_lasthint==zoom_newhint) return;
 
@@ -1228,23 +1448,10 @@ int mode;
           24+ ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent, 
           synchro, strlen(synchro));
 
-       for (i=0; i<=N_ZOOM; i++) {
-          if (i<N_ZOOM) {
-	     s[0] = ZoomKey[2*i];
-	     s[1] = '\0';
-	     b = (ZoomKey[2*i+1]==';');
-	     j0 = (i+1)*ZoomCaller->gdata->charspace;
-	     for (j=j0-b; j<=j0+b; j++)
-                 XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 
-                    j, areah+64, j, areah+64+ZoomCaller->gdata->menustrip);
-	  } else
-	     strcpy(s, Label[L_ESCAPE]);
-             XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, 
-	       i*ZoomCaller->gdata->charspace + 
-               5*ZoomCaller->gdata->charspace/12, 
-               ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent + areah+69, 
-               s, strlen(s));
-       }
+       for (i=0; i<=N_ZOOM; i++)
+	  drawButton(Zoom, i, 0);
+
+       BasicSettings(ZoomCaller);
 
        for (i=0; i<=6; i++) {
           j = 63 + (int) ( (areah-6)*log(atof(num[i]))/log(100.0));
@@ -1260,10 +1467,6 @@ int mode;
           XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 30, j-10, 34, j-10);
        }
 
-       for (i=0; i<=1; i++)
-          XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 
-             0, areah+64+i*ZoomCaller->gdata->menustrip, 
-             ZoomGeom.width, areah+64+i*ZoomCaller->gdata->menustrip);
        XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 60, 22, areah+60, 22);
        XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 32, 50, 32, areah+50);
     }
@@ -1410,10 +1613,7 @@ int mode;
     }
 
     if (mode & 16) {
-       XClearArea(dpy, Zoom,  areah+171, 23, 17, 17, False);
-       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, 
-          areah+177, 25+ ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent, 
-          (zoom_active)?"+":"-", 1);
+       drawButton(Zoom, N_ZOOM+1, 0);
     }
 
     XSetForeground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[MENUFGCOLOR]);
@@ -1422,11 +1622,11 @@ int mode;
        XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 60, 30, areah+1, 10);
        XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 40, 50, 10, areah+1);
        XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 32, 22, 18, 18);
-       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, areah+170, 22,18,18);
+       drawButton(Zoom, N_ZOOM+1, 0);
     }
 
     zoom_lasthint = '\0';
-    showZoomHint();
+    showZoomHint(-1);
 }
 
 void
@@ -1512,20 +1712,35 @@ int rebuild;
 
 void processZoomAction(Context, x, y, button, evtype)
 Sundata * Context;
-int x, y, button, evtype;
+int x;
+int y;
+int button;
+int evtype;
 {
+           static int click_pos=-1;
            double v1, v2;
-	   int click_pos;
+	   int but_pos;
 
-	   if (y>=areah+64 && y<=areah+64+Context->gdata->menustrip) {
-	      click_pos = x/Context->gdata->charspace;
-	      if (click_pos>=N_ZOOM)
+           if (evtype == ButtonRelease && click_pos>=0) {
+	       drawButton(Zoom, click_pos, 0);
+               click_pos = -1;
+  	   } 
+
+	   if (y>areah+63 && y<areah+63+Context->gdata->menustrip) {
+	      but_pos = getButton(Zoom, x, y);
+	      if (but_pos>=N_ZOOM)
 		 zoom_newhint = '\033';
 	      else
-		 zoom_newhint = ZoomKey[2*click_pos];
-	      if (evtype==MotionNotify)
-		 showZoomHint();
-	      else
+	      if (but_pos>=0)
+		 zoom_newhint = ZoomKey[2*but_pos];
+	      if (evtype==MotionNotify) {
+	         if (but_pos>=0)
+		    showZoomHint(but_pos);
+	      }
+              if (evtype==ButtonPress && but_pos>=0) {
+	         drawButton(Zoom, but_pos, 1);
+		 click_pos  = but_pos;
+	      }
 	      if (evtype==ButtonRelease) {
 		 if (zoom_newhint == '\033') {
 		    PopZoom(Context);
@@ -1533,17 +1748,32 @@ int x, y, button, evtype;
 		 }
 		 if (zoom_newhint == 'W') do_zoom = -1;
 		 processKey(Context->win, tolower(zoom_newhint));
-		 showZoomHint();
+		 showZoomHint(but_pos);
 		 zoom_mode = 0;
 	      }
 	      return;
 	   }
 	   if (button_pressed>=2) return;
 
-	   if (x>=areah+170 && x<=areah+188 && 
-               y>=22 && y<=40 && evtype==ButtonRelease) {
-	       zoom_active = 1 -zoom_active;
-	       zoom_mode |= 16;
+           if (evtype==ButtonRelease)
+	       drawButton(Zoom, N_ZOOM+1, 0);
+           if (evtype==MotionNotify)
+	       drawButton(Zoom, N_ZOOM+1, -2);
+
+	   if (x>areah+170 && x<areah+170+Context->gdata->charspace && 
+               y>21 && y<39) {
+               if (evtype==MotionNotify) {
+		  drawButton(Zoom, N_ZOOM+1, -1);
+		  zoom_newhint = '"';
+		  showZoomHint(getNumCmd(zoom_newhint));
+	       }
+               if (evtype==ButtonPress) {
+		  drawButton(Zoom, N_ZOOM+1, 1);
+	       }
+               if (evtype==ButtonRelease) {
+	          zoom_active = 1 -zoom_active;
+	          zoom_mode |= 16;
+	       }
 	   } else
 	   if (x>=60 && x<=areah+60 && y>=30 && y<=40 && button_pressed) {
               v1 = exp((double)(x-66)*log(100.00)/(double)(areah-6));
@@ -1574,7 +1804,7 @@ int x, y, button, evtype;
 	   }
 	   else {
 	     zoom_newhint = ' ';
-	     showZoomHint();
+	     showZoomHint(-1);
 	     if (button_pressed) return;
 	   }
 
@@ -1592,10 +1822,16 @@ int x, y, button, evtype;
 }
 
 void
-showOptionHint()
+showOptionHint(but_pos)
+int but_pos;
 {
+        static int move_pos = -1;
 	char hint[128];
 	int l, v;
+
+        if (move_pos>=0) drawButton(Option, move_pos, -2);
+        if (but_pos>=0) drawButton(Option, but_pos, -1);
+	move_pos = but_pos;
 
 	if (!do_option || option_lasthint==option_newhint) return;
 
@@ -1657,7 +1893,7 @@ void
 setupOption(mode)
 int mode;
 {
-    int b, i, j, j0, opth, vskip;
+    int b, i, j, j0, vskip;
     char s[80];
 
     if (!do_option) return;
@@ -1666,36 +1902,19 @@ int mode;
     XSetWindowColormap(dpy, Option, OptionCaller->gdata->cmap);
     XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixel[MENUBGCOLOR]);
 
-    opth = OptionGeom.height-2*OptionCaller->gdata->menustrip;
     vskip = 3*OptionCaller->gdata->menustrip/8;
     option_lasthint = '\0';
 
     if (mode == -1) {
        XClearArea(dpy, Option, 0,0, OptionGeom.width,
                                     OptionGeom.height, False);
-       for (i=0; i<=N_OPTION; i++) {
-          if (i<N_OPTION) {
-	     s[0] = OptionKey[2*i];
-	     s[1] = '\0';
-	     b = (OptionKey[2*i+1]==';');
-	     j0 = (i+1)*OptionCaller->gdata->charspace;
-	     for (j=j0-b; j<=j0+b; j++)
-                 XDrawLine(dpy, Option, OptionCaller->gdata->wingc, 
-                   j, opth, j, opth+OptionCaller->gdata->menustrip);
-	  } else
-	     strcpy(s, Label[L_ESCAPE]);
-          XDrawImageString(dpy, Option, OptionCaller->gdata->wingc, 
-	       i*OptionCaller->gdata->charspace + 
-               5*OptionCaller->gdata->charspace/12, 
-               OptionCaller->gdata->font[MENUFONT]->max_bounds.ascent + opth + 4, 
-               s, strlen(s));
-       }
-       for (i=0; i<=1; i++)
-          XDrawLine(dpy, Option, OptionCaller->gdata->wingc, 
-               0, opth+i*OptionCaller->gdata->menustrip, 
-               OptionGeom.width, 
-               opth+i*OptionCaller->gdata->menustrip);
+       for (i=0; i<=N_OPTION; i++)
+	   drawButton(Option, i, 0);
 
+       XSetBackground(dpy, OptionCaller->gdata->wingc, 
+                      OptionCaller->gdata->pixel[MENUBGCOLOR]);
+       XSetForeground(dpy, OptionCaller->gdata->wingc, 
+                      OptionCaller->gdata->pixel[MENUFGCOLOR]);
        strcpy(s, Label[L_OPTION]);
        XDrawImageString(dpy, Option, OptionCaller->gdata->wingc, 
 	       8, OptionCaller->gdata->font[MENUFONT]->max_bounds.ascent + vskip + 3,
@@ -1719,7 +1938,7 @@ int mode;
        option_entry.string, strlen(option_entry.string));
     if (text_input == OPTION_INPUT) 
        showCaret(OptionCaller, Option, &option_entry, 76, vskip, 1);
-    showOptionHint();
+    showOptionHint(-1);
 }
 
 void
@@ -1827,12 +2046,12 @@ activateOption()
 	correctValues();
         if (i>0 || runlevel == FAILEDOPTION) {
 	   option_newhint = '?';
-	   showOptionHint();
+	   showOptionHint(-1);
 	   return;
 	} else
 	   option_newhint = '\n';
 
-        showOptionHint();
+        showOptionHint(-1);
      /* Set runlevel=IMAGERECYCLE if previous image/pixmap can be recycled */
 	if (option_changes<4 && gflags.colorlevel==oldflags.colorlevel && 
             gflags.fillmode==oldflags.fillmode) {
@@ -1885,21 +2104,27 @@ processOptionAction(Context, x, y, button, evtype)
 Sundata * Context;
 int x, y, button, evtype;
 {
-        int i, opth, vskip, click_pos;
+        static int click_pos = -1;
+        int i, opth, vskip, but_pos;
 	KeySym key;
 
-        opth = OptionGeom.height - 2 * Context->gdata->menustrip;
+        opth = OptionGeom.height - 2 * Context->gdata->menustrip - 1;
 	vskip = 3*Context->gdata->menustrip/8;
+
+        if (evtype == ButtonRelease && click_pos>=0) {
+	   drawButton(Option, click_pos, 0);
+           click_pos = -1;
+        }
 
 	if (evtype==ButtonRelease && x>=70 && 
             x<=OptionGeom.width-15 &&
             y>=vskip && y<=Context->gdata->menustrip+vskip) {
 	   text_input = OPTION_INPUT;
-	   click_pos = (x-76)/XTextWidth(OptionCaller->gdata->font[MENUFONT], "_", 1);
+	   but_pos = (x-76)/XTextWidth(OptionCaller->gdata->font[MENUFONT], "_", 1);
 	   i = strlen(option_entry.string);
-	   if (click_pos<0) click_pos = 0;
-	   if (click_pos>i) click_pos = i;
-	   option_entry.caret = click_pos;
+	   if (but_pos<0) but_pos = 0;
+	   if (but_pos>i) but_pos = i;
+	   option_entry.caret = but_pos;
 	   setupOption(0);
 	   return;
 	}
@@ -1909,19 +2134,27 @@ int x, y, button, evtype;
 	   setupOption(0);
 	}
 
-	if (y>=opth && y<=opth+Context->gdata->menustrip) {
-           click_pos = x/Context->gdata->charspace;
-	   if (click_pos>=N_OPTION)
+	if (y>opth && y<opth+Context->gdata->menustrip) {
+           but_pos = getButton(Option, x, y);
+	   if (but_pos>=N_OPTION)
 	      option_newhint = '\033';
 	   else
-	      option_newhint = OptionKey[2*click_pos];
-	   if (evtype==MotionNotify) 
-              showOptionHint();
+	   if (but_pos>=0)
+	      option_newhint = OptionKey[2*but_pos];
+	   if (evtype==MotionNotify) {
+	      if (but_pos>=0)
+                 showOptionHint(but_pos);
+	   }
+	   if (evtype==ButtonPress && but_pos>=0) {
+	      drawButton(Option, but_pos, 1);
+	      click_pos = but_pos;
+	   }
 	   if (evtype==ButtonRelease) {
-	      if (click_pos<N_OPTION) {
+	      if (but_pos<0) return;
+	      if (but_pos<N_OPTION) {
 		 key = (KeySym)tolower(option_newhint);
 	         processKey(Option, key);
-		 showOptionHint();
+		 showOptionHint(but_pos);
 	      } else
 	         PopOption(Context);
 	   }
@@ -1952,7 +2185,9 @@ char * str;
               strncpy(hint, str, 125);
 	   else {
 	      l = getNumCmd(urban_newhint);
-	      if (l>=0 && l<N_HELP) strcpy(hint, Help[l]);
+	      if (l>=0 && l<N_HELP) {
+		 strcpy(hint, Help[l]);
+	      }
 	   }
 	}
 
@@ -2009,7 +2244,7 @@ void
 setupUrban(mode)
 int mode;
 {
-    int b, i, j, j0, urbanh, vskip;
+    int b, i, j, j0, vskip;
     char s[80];
 
     if (!do_urban) return;
@@ -2025,9 +2260,9 @@ int mode;
        urban_x[3] = 20 + UrbanGeom.width/2;
        urban_x[4] = UrbanGeom.width-40;
        for (i=0; i<=1; i++)
-           urban_y[i] = UrbanCaller->gdata->mapstrip/2;
+           urban_y[i] = UrbanCaller->gdata->mapstrip/2 - 1;
        for (i=2; i<=4; i++)
-           urban_y[i] = 2*UrbanCaller->gdata->mapstrip;
+           urban_y[i] = 2*UrbanCaller->gdata->mapstrip - 1;
        urban_w[0] = urban_w[1] = (UrbanGeom.width-210)/2;
        urban_w[2] = urban_w[3] = (UrbanGeom.width-320)/2;
        urban_w[4] = 35;
@@ -2038,41 +2273,23 @@ int mode;
     XSetWindowColormap(dpy, Urban, UrbanCaller->gdata->cmap);
     XSetWindowBackground(dpy, Urban, UrbanCaller->gdata->pixel[MENUBGCOLOR]);
 
-    urbanh = UrbanGeom.height-2*UrbanCaller->gdata->menustrip;
+    urbanh = UrbanGeom.height-2*UrbanCaller->gdata->menustrip - 1;
     vskip = 3*UrbanCaller->gdata->menustrip/8;
     urban_lasthint = '\0';
 
     if (mode == -1) {
        XClearArea(dpy, Urban, 0,0, UrbanGeom.width,
                                     UrbanGeom.height, False);
-       for (i=0; i<=N_URBAN; i++) {
-          if (i<N_URBAN) {
-	     s[0] = UrbanKey[2*i];
-	     s[1] = '\0';
-	     b = (UrbanKey[2*i+1]==';');
-	     j0 = (i+1)*UrbanCaller->gdata->charspace;
-	     for (j=j0-b; j<=j0+b; j++)
-                 XDrawLine(dpy, Urban, UrbanCaller->gdata->wingc, 
-                   j, urbanh, j, urbanh+UrbanCaller->gdata->menustrip);
-	  } else
-	     strcpy(s, Label[L_ESCAPE]);
-          XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc, 
-	       i*UrbanCaller->gdata->charspace + 
-               5*UrbanCaller->gdata->charspace/12, 
-               UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent + urbanh + 4, 
-               s, strlen(s));
-       }
-       for (i=0; i<=1; i++)
-          XDrawLine(dpy, Urban, UrbanCaller->gdata->wingc, 
-               0, urbanh+i*UrbanCaller->gdata->menustrip, 
-               UrbanGeom.width, 
-               urbanh+i*UrbanCaller->gdata->menustrip);
+       for (i=0; i<=N_URBAN; i++)
+	  drawButton(Urban, i, 0);
 
+       BasicSettings(UrbanCaller);
        for (i=0; i<=4; i++) {
            strcpy(s, Label[L_CITYNAME+i]);
            XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc, 
 	       urban_t[i], 
-               urban_y[i]+UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent+3, 
+               urban_y[i]+
+                  UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent+4, 
                s, strlen(s));
            XDrawRectangle(dpy, Urban, UrbanCaller->gdata->wingc,
                            urban_x[i], urban_y[i], urban_w[i], 
@@ -2096,7 +2313,7 @@ int mode;
                       UrbanCaller->gdata->pixel[OPTIONFGCOLOR]);
        XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc,
           urban_x[i]+6,
-          urban_y[i]+ UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent + 3,
+          urban_y[i]+ UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent +4,
           urban_entry[i].string, strlen(urban_entry[i].string));
        if (text_input == URBAN_INPUT+i)
           showCaret(UrbanCaller, Urban, &urban_entry[i], 
@@ -2139,11 +2356,11 @@ struct Sundata * Context;
 	}
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
-	   x = Context->geom.x + UrbanGeom.x - horiz_drift;
-	   a = Context->geom.y + h + UrbanGeom.y;
+	   x = Context->geom.x + UrbanGeom.x - horiz_drift - 5;
+	   a = Context->geom.y + h + 6;
            if (do_menu && Context == MenuCaller) 
                a += MenuGeom.height + MenuGeom.y + vert_drift + 2;
-           b = Context->geom.y - UrbanGeom.height - UrbanGeom.y - 2*vert_drift;
+           b = Context->geom.y - UrbanGeom.height - UrbanGeom.y - 2*vert_drift -28;
            if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - 2*UrbanGeom.height -vert_drift -20)
@@ -2171,10 +2388,21 @@ processUrbanAction(Context, x, y, button, evtype)
 Sundata * Context;
 int x, y, button, evtype;
 {
-        int i, j, urbanh, vskip, click_pos;
+        static int move_pos;
+        static int click_pos;
+        int i, j, vskip, but_pos;
 	KeySym key;
+        
+        if (evtype == MotionNotify && move_pos>=0) {
+	       drawButton(Urban, move_pos, -2);
+	       move_pos = -1;
+	}
 
-        urbanh = UrbanGeom.height - 2 * Context->gdata->menustrip;
+        if (evtype == ButtonRelease && click_pos>=0) {
+	       drawButton(Urban, click_pos, 0);
+               click_pos = -1;
+	} 
+
 	vskip = 3*Context->gdata->menustrip/8;
 
 	for (i=0; i<=4; i++)
@@ -2182,12 +2410,12 @@ int x, y, button, evtype;
             x<=urban_x[i]+urban_w[i] &&
             y>=urban_y[i] && y<=urban_y[i]+Context->gdata->menustrip) {
 	   text_input = URBAN_INPUT+i;
-	   click_pos = 
+	   but_pos = 
              (x-urban_x[i]-6)/XTextWidth(UrbanCaller->gdata->font[MENUFONT], "_", 1);
 	   j = strlen(urban_entry[i].string);
-	   if (click_pos<0) click_pos = 0;
-	   if (click_pos>j) click_pos = j;
-	   urban_entry[i].caret = click_pos;
+	   if (but_pos<0) but_pos = 0;
+	   if (but_pos>j) but_pos = j;
+	   urban_entry[i].caret = but_pos;
 	   setupUrban(0);
 	   return;
 	}
@@ -2197,16 +2425,27 @@ int x, y, button, evtype;
 	   setupUrban(0);
 	}
 
-	if (y>=urbanh && y<=urbanh+Context->gdata->menustrip) {
-           click_pos = x/Context->gdata->charspace;
-	   if (click_pos>=N_URBAN)
+	if (y>urbanh && y<urbanh+Context->gdata->menustrip) {
+           but_pos = getButton(Urban, x, y);
+	   if (but_pos>=N_URBAN)
 	      urban_newhint = '\033';
 	   else
-	      urban_newhint = UrbanKey[2*click_pos];
-	   if (evtype==MotionNotify) 
-              showUrbanHint(NULL);
+	   if (but_pos>=0)
+	      urban_newhint = UrbanKey[2*but_pos];
+	   if (evtype==MotionNotify) {
+	      if (but_pos>=0 && but_pos<=N_URBAN) {
+                 showUrbanHint(NULL);
+		 drawButton(Urban, but_pos, -1);
+                 move_pos = but_pos;
+	      }
+	   }
+	   if (evtype==ButtonPress && but_pos>=0) {
+	      drawButton(Urban, but_pos, 1);
+	      click_pos = but_pos;
+	   }
 	   if (evtype==ButtonRelease) {
-	      if (click_pos<N_URBAN) {
+	      if (but_pos<0) return;
+	      if (but_pos<N_URBAN) {
 		 if (button<=2)
 		    key = (KeySym)tolower(urban_newhint);
 		 else
@@ -2216,6 +2455,11 @@ int x, y, button, evtype;
 	      } else
 	         PopUrban(Context);
 	   }
+	}
+	if (evtype==MotionNotify && 
+            (y<=urbanh || y>=urbanh+Context->gdata->menustrip)) {
+	   urban_newhint = 'U';
+           showUrbanHint(NULL);
 	}
 }
 
@@ -2384,6 +2628,13 @@ int all;
 	      free(Context->ximdata);
 	      Context->ximdata = NULL;
 	   }
+	   while (Context->label) {
+	      struct TextLabel *ptr;
+	      ptr = (Context->label)->next;
+              free(Context->label->text);
+              free(Context->label);
+	      Context->label = ptr;
+	   }
 	   if (Context->mappix) {
               XFreePixmap(dpy, Context->mappix);
 	      Context->mappix = 0;
@@ -2396,6 +2647,10 @@ int all;
 	      free(Context->nightpixel);
 	      Context->nightpixel = NULL;
            }
+           if (Context->vmfpixels) {
+	      free(Context->vmfpixels);
+              Context->vmfpixels = NULL;
+	   }
            if (Context->tr1) {
               free(Context->tr1);
               Context->tr1 = NULL;

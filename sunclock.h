@@ -80,7 +80,9 @@ enum {NULL_INPUT = 0, OPTION_INPUT, URBAN_INPUT};
 enum { 
   CLOCKBGCOLOR=0, MAPBGCOLOR, MENUBGCOLOR, CLOCKSTRIPBGCOLOR, MAPSTRIPBGCOLOR, 
   ZOOMBGCOLOR, OPTIONBGCOLOR, STARCOLOR,
-  CLOCKFGCOLOR, MAPFGCOLOR, MENUFGCOLOR, CLOCKSTRIPFGCOLOR, MAPSTRIPFGCOLOR,
+  CLOCKFGCOLOR, MAPFGCOLOR, MENUFGCOLOR, 
+  BUTTONCOLOR, BUTTONFGCOLOR1, BUTTONFGCOLOR2, BUTTONFGCOLOR3, BUTTONFGCOLOR4,
+  CLOCKSTRIPFGCOLOR, MAPSTRIPFGCOLOR,
   ZOOMFGCOLOR, OPTIONFGCOLOR, WEAKCOLOR, ROOTCOLOR,
   CARETCOLOR, CHANGECOLOR, CHOICECOLOR, DIRCOLOR, IMAGECOLOR, CITYNAMECOLOR, 
   CITYCOLOR0, CITYCOLOR1, CITYCOLOR2, MARKCOLOR1, MARKCOLOR2, 
@@ -89,7 +91,7 @@ enum {
 };
 
 enum {
-  CLOCKSTRIPFONT, MAPSTRIPFONT, COORDFONT, CITYFONT, MENUFONT, NUMFONTS
+  CLOCKSTRIPFONT, MAPSTRIPFONT, COORDFONT, CITYFONT, LABELFONT, MENUFONT, NUMFONTS
 };
 
 /* Geometry structure */
@@ -154,7 +156,7 @@ typedef struct ZoomSettings {
 typedef struct GraphicData {
         GC              wingc;          /* window gc */
         GC              pixgc;          /* pixmap gc */
-        Pixel           pixel[NUMPIXELS];  /* list of extra pixels used */
+        Pixel           pixel[NUMPIXELS];  /* list of pixels used */
         int             precedence;     /* ordinal number of creation */
         int             clockstrip;     /* height of strip for clock */
         int             mapstrip;       /* height of strip for map */
@@ -184,6 +186,16 @@ typedef struct Mark {
     int  flags, pulse, full;
     struct tm sr, ss, dl;
 } Mark;
+
+/* Records to hold text labels */
+
+typedef struct TextLabel {
+    char *text;
+    double lat, lon;
+    int color;
+    int position;
+    struct TextLabel *next;
+} TextLabel ;
 
 /* Records to hold text entries */
 
@@ -224,6 +236,7 @@ typedef struct Sundata {
         double *        sinval;         /* pointer to sine values */
         unsigned char * daypixel;       /* pointer to day pixels */
         unsigned char * nightpixel;     /* pointer to night pixels */
+        Pixel           *vmfpixels;     /* list of additional vmf pixels */
         int             ncolors;        /* number of colors in day pixels */
 	long		time;		/* time - real or fake, see flags */
 	long		projtime;	/* last time projected illumination */
@@ -246,6 +259,7 @@ typedef struct Sundata {
         struct City     *lastmarked;    /* last marked city */
         struct Mark     mark1;          /* first mark */
         struct Mark     mark2;          /* second mark */
+        struct TextLabel *label;        /* label structure if any */
         struct Sundata  *next;          /* pointer to next structure */
 } Sundata;
 

@@ -2,6 +2,7 @@
 #define N_ZOOM 14
 #define N_OPTION 12
 #define N_URBAN 12
+#define N_FILESEL 6
 #define N_HELP 49
 
 #define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
@@ -86,6 +87,12 @@ char    UrbanKey[2*N_URBAN] =
 
 char    CommandKey[N_HELP] = 
 "HFZUOCSDELABGJNYMPTWKIR><!XQ*«#/&+-1.\"@%=[]'°§~()";
+
+char  * FileselBanner[N_FILESEL] = { 
+    "home", "share", "  /", "  .", "  W", "  !"
+};
+
+char    WeakChars[] = "QCDEMPSTUK><!";
 
 char  * Help[N_HELP] = {
 

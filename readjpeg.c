@@ -72,7 +72,7 @@ Sundata * Context;
     struct error_mgr jerr;
     FILE *input_file;
     double ratio;
-    int i, j, k, l, m, prev, next, size;
+    int i, k, l, m, prev, next, size;
     JSAMPROW scanline[1];
     char *scan, *c;
     char pix[RANGE];

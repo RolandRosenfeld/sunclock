@@ -456,7 +456,7 @@ ReadImage(FILE * fd, Sundata * Context, int width, int height, int cmapSize,
 	  unsigned char cmap[3][MAXCOLORMAPSIZE],
 	  int gray, int interlace)
 {
-    unsigned char r, g, b, c;
+    unsigned char c;
     char *out;
     int i, i1, i2, v, ind, y;
     int xpos = 0, ypos = 0, pass = 0;

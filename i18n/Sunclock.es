@@ -38,7 +38,7 @@ días
 Marca una ciudad
 Marca un lugar
 Marca dos lugares consecutivos
-Repetir clic o presionar Tab para ° ' "
+Repetir clic o presionar ° para ° ' "
 #
 Tecla
 Control Teclado/Ratón

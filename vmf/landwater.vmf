@@ -23,6 +23,9 @@ c2 2
 range -90 90 -180 180
 
 % List of closed curves
+% Set internal flag
+flag 2
+
 % Fill mode = fill areas within closed curves
 closedcurves
 

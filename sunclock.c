@@ -163,6 +163,7 @@ extern void destroyGCs();
 extern void setupMenu();
 extern void PopMenu();
 extern void showMenuHint();
+extern void processMenuAction();
 
 extern void setupFilesel();
 extern void PopFilesel();
@@ -171,6 +172,7 @@ extern void processFileselAction();
 extern void checkZoomSettings();
 extern void setZoomDimension();
 extern void setZoomAspect();
+extern void showZoomHint();
 extern void setupZoom();
 extern void PopZoom();
 extern void activateZoom();
@@ -197,7 +199,7 @@ void doTimeout();
 
 char share_i18n[] = SHAREDIR"/i18n/Sunclock.**";
 char app_default[] = SHAREDIR"/Sunclockrc";
-char Default_vmf[] = SHAREDIR"/earthmaps/vmf/standard.vmf";
+char Default_vmf[] = SHAREDIR"/earthmaps/vmf/landwater.vmf";
 
 char * ProgName;
 char * Title = NULL;
@@ -246,8 +248,12 @@ struct Sundata *Seed = NULL,
 char    *Color[NUMPIXELS];
 
 char    *DefaultColor[NUMPIXELS] = {
-"White", "White", "Grey92", "Grey92", "Grey92", "White", "White", "White",
-"Black", "Black", "Black", "Black", "Black", "Black", "Black", "Red", "Black",
+"White", "White", "Grey92", "Grey92", "Grey92", 
+"White", "White", "White",
+"Black", "Black", "Black", 
+"Grey84", "Black", "Grey50", "Grey95", "White",
+"Black", "Black", 
+"Black", "Black", "Red", "Black",
 "SkyBlue2", "Brown", "SkyBlue2", "Blue", "Magenta", 
 "Red", "Orange", "Red", "Red3", "Pink1", "Pink2",
 "Yellow", "Khaki", "White", "White", "White", "White"};
@@ -257,16 +263,19 @@ char    *DefaultColor[NUMPIXELS] = {
 char *colorfield[NUMPIXELS] =
 { "clockbg", "mapbg", "menubg", "clockstripbg", "mapstripbg", 
   "zoombg", "optionbg", "star", 
-  "clockfg", "mapfg", "menufg", "clockstripfg", "mapstripfg", 
+  "clockfg", "mapfg", "menufg",  
+  "buttonbg", "buttonfg1", "buttonfg2", "buttonfg3", "buttonfg4",
+  "clockstripfg", "mapstripfg", 
   "zoomfg", "optionfg", "weak", "root",
   "caret", "change", "choice", "directory", "image", "cityname",
   "city0", "city1", "city2", "mark1", "mark2", "sun", "moon",
   "line", "meridian", "parallel", "tropic"};
 
 char * SunFont[NUMFONTS];
-char * DefaultFont[NUMFONTS]= { "6x10",  "6x13",  "6x13",  "6x10",  "6x13"};
+char * DefaultFont[NUMFONTS]= { 
+  "6x10",  "6x13",  "6x13",  "6x10",  "6x10", "6x13"};
 char * fontfield[NUMFONTS] = { 
-  "clockstrip", "mapstrip", "coord", "city", "menu"};
+  "clockstrip", "mapstrip", "coord", "city", "label", "menu"};
 
 
 char *          Display_name = NULL;
@@ -469,14 +478,15 @@ Usage()
      SP"[-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]\n"
 "**" SP"[-language name] [-dateformat string1|string2|...]\n"
      SP"[-rcfile file] [-command string] [-helpcommand string]\n"
-     SP"[-clockimage file] [-mapimage file] [-mapmode * <L,C,S,D,E>]\n"
+     SP"[-mapmode * <L,C,S,D,E>] [-image file]\n"
+     SP"[-clockimage file] [-mapimage file]\n"
      SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
      SP"[-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>]\n"
      SP"[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>]\n"
      SP"[-title name] [-mapclassname name] [-clockclassname name]\n"
      SP"[-auxilclassname name] [-classname name]\n"
      SP"[-setfont <field>|<fontsetting>{|<languages>}]\twhere\n"
-     SP"\t<field> = clockstrip, mapstrip, city, coord, menu\n"
+     SP"\t<field> = clockstrip, mapstrip, coord, city, label, menu\n"
      SP"\t<languages> = comma separated list (optional)\n"	     
      SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
      SP"[-colorlevel level] [-aspect mode]\n"
@@ -504,6 +514,7 @@ Usage()
      SP"[-vmfrange a|b|c|d] [-vmfcoordformat format] [-vmfflags integer]\n"
      SP"[-setcolor field|color]\n\n"
      SP"field = clockbg, clockfg, mapbg, mapfg, menubg, menufg,\n"
+     SP"buttonbg, buttonfg1, buttonfg2, buttonfg3, buttonfg4,\n"
      SP"clockstripbg, clockstripfg, mapstripbg, mapstripfg,\n"
      SP"cityname, zoombg, zoomfg, optionbg, optionfg, caret, change, choice,\n"
      SP"directory, image, city0, city1, city2, mark1, mark2, line,\n"
@@ -583,11 +594,6 @@ initValues()
 
 	for (i=0; i<L_END; i++) Label[i] = strdup(Label[i]);
 	for (i=0; i<N_HELP; i++) Help[i] = strdup(Help[i]);
-
-        if (!*language && getenv("LANG"))
-           strncpy(language, getenv("LANG"), 2);
-        if (!(language[0] && language[1]))
-           strcpy (language,"en");
 }
 
 /*
@@ -729,7 +735,10 @@ char **                argv;
 {
 	-- *argc;
         if (*argc == 0) {
-                if (runlevel == PARSECMDLINE) Usage();
+                if (runlevel == PARSECMDLINE) {
+		   Usage();
+		   exit(1);
+		}
 		   else 
                 if (runlevel == RUNTIMEOPTION) {
                    fprintf(stderr, "Invalid option specification\n");
@@ -853,10 +862,12 @@ register char **                argv;
         int i;
 
         for (i=1; i<argc; i++) {
-           if (i<argc-1 && strcasecmp(argv[i], "-rcfile") == 0)
+           if (i<argc-1 && !strcasecmp(argv[i], "-rcfile"))
               rc_file = argv[i+1];
-           if (i<argc-1 && strcasecmp(argv[i], "-language") == 0)
+           if (i<argc-1 && !strcasecmp(argv[i], "-language")) {
               strncpy(language, argv[i+1], 2);
+	      language[2] = '\0';
+	   }
            if (strcasecmp(argv[i], "-verbose") == 0)
 	      verbose = 1;
 	} 
@@ -1135,7 +1146,7 @@ int
 parseFont(s)
 char * s;
 {
-int i, l1, l2 = 0, done;
+int i, l1 = 0, l2 = 0, done;
 char *ptr1 = NULL, *ptr2 = NULL;
 
     done = strlen(s);
@@ -1343,6 +1354,7 @@ char **                argv;
 		}
                 else if (!strcasecmp(*argv, "-language")) {
                         strncpy(language, *++argv, 2);
+		        language[2] = '\0';
 			if (strcmp(language, oldlanguage)) readLanguage();
                 } 
 	        else if (!strcasecmp(*argv, "-title"))
@@ -1389,6 +1401,11 @@ char **                argv;
                 else if (!strcasecmp(*argv, "-mapgeom")) {
                         getGeom(*++argv, &MapGeom);
 			option_changes |= 16;
+                }
+                else if (!strcasecmp(*argv, "-image")) {
+                        StringReAlloc(&Clock_img_file, *++argv);
+                        StringReAlloc(&Map_img_file, *argv);
+			option_changes |= 32|64;
                 }
                 else if (!strcasecmp(*argv, "-clockimage")) {
                         StringReAlloc(&Clock_img_file, *++argv);
@@ -1603,10 +1620,11 @@ char **                argv;
                         if (gflags.shading < 0) gflags.shading = 0;
                         if (gflags.shading > 5) gflags.shading = 5;
                 }
-                else if (!(opt = (strcasecmp(*argv, "-progress"))) ||
-                         (strcasecmp(*argv, "-jump"))) {
+                else if (!strcasecmp(*argv, "-progress") ||
+                         !strcasecmp(*argv, "-jump")) {
                         char *str, *invalid, c;
                         long value;
+			opt = ((*argv)[5]!='\0');
                         str=*++argv;
                         value = strtol(str, &invalid, 10);
                         if (invalid) 
@@ -1840,7 +1858,7 @@ int i, h, hp;
             Context->gdata->font[MENUFONT]->max_bounds.ascent + 
             Context->gdata->font[MENUFONT]->max_bounds.descent + 8;
 
-	Context->gdata->charspace = Context->gdata->menustrip+5;
+	Context->gdata->charspace = Context->gdata->menustrip+4;
 
 	if (option_changes & 1) {
 	    FileselGeom.width = SEL_WIDTH * Context->gdata->menustrip;
@@ -2609,6 +2627,8 @@ int build;
            Context->win = 0;
 	   Context->xim = NULL;
            Context->ximdata = NULL;
+	   Context->label = NULL;
+	   Context->vmfpixels = NULL;
            Context->mappix = 0;
            if (Context->wintype)
               Context->geom = MapGeom;
@@ -2831,30 +2851,42 @@ int l, mode;
     char u = 0, test;
     
     if (!s || !strlen(s)) return;
+    if (mode<=1) {
+       font = Context->gdata->font[COORDFONT];
+       pixel = Context->gdata->pixel[PARALLELCOLOR-mode];
+    } else
     if (mode == 2) {
        font = Context->gdata->font[CITYFONT];
        pixel = Context->gdata->pixel[CITYNAMECOLOR];
-    } else {
-       font = Context->gdata->font[COORDFONT];
-       pixel = Context->gdata->pixel[PARALLELCOLOR-mode];
+    } else
+    if (mode >= 3) {
+       font = Context->gdata->font[LABELFONT];
+       pixel = Context->vmfpixels[mode-3];
     }
 
     h = font->max_bounds.ascent + font->max_bounds.descent;
     dy = font->max_bounds.ascent;
     
     w = XTextWidth(font, s, l);
-    if (w>textwidth) {
+    if (w>textwidth || h>textheight) {
        textwidth = w;
+       textheight = h;
        if (textpix) {
 	  XFreePixmap(dpy, textpix);
           textpix = 0;
        }
     }
 
-    if (!textpix)
-       textpix = XCreatePixmap(dpy, Root, textwidth, textheight, 1);
+    if (!textpix) {
+       textpix = XCreatePixmap(dpy, Context->win, textwidth, textheight, 1);
+    }
+    /*printf("%d (%s): %d/%d %d/%d\n", mode, s, textwidth, w, textheight, h);*/
 
-    XDrawImageString(dpy, textpix, Context->gdata->pixgc, 0, dy, s, l);
+    XSetForeground(dpy, Context->gdata->pixgc, black);
+    XFillRectangle(dpy, textpix, Context->gdata->pixgc, 0, 0, w, h);
+    XSetForeground(dpy, Context->gdata->pixgc, white);
+    XSetFont(dpy, Context->gdata->pixgc, font->fid);
+    XDrawString(dpy, textpix, Context->gdata->pixgc, 0, dy, s, l);
     xim = XGetImage(dpy, textpix, 0, 0, w, h, 1, XYPixmap);
     if (!xim) return;
     test = (bigendian)? 128 : 1;
@@ -3077,6 +3109,28 @@ struct Sundata * Context;
           drawObject(Context, Context->mark2.city->lon, 
                               Context->mark2.city->lat,
                               -1, 4, NULL);
+}
+
+void
+drawLabels(Context)
+struct Sundata * Context;
+{
+   int ilon, ilat, width;
+   struct TextLabel * label;
+   if(!Context->wintype) return;
+
+   label = Context->label;
+   while (label) if (label->text && *label->text) {
+      ilon = int_longitude(Context, label->lon);
+      ilat = int_latitude(Context, label->lat);
+      width = XTextWidth(Context->gdata->font[LABELFONT],
+                         label->text, strlen(label->text));
+      if (label->position==0) ilon -= width/2;
+      if (label->position==-1) ilon -= width;
+      XPutStringImage(Context, ilon, ilat, label->text, 
+		      strlen(label->text), label->color+3);
+      label = label->next;
+   }
 }
 
 double
@@ -3421,6 +3475,7 @@ struct Sundata * Context;
         drawBottomline(Context);
         drawCities(Context);
         drawMarks(Context);
+        drawLabels(Context);
 }
 
 void
@@ -4558,8 +4613,11 @@ int dy[5] = { 0, 1, -1, 0, 0};
 void
 warningNew(Context)
 struct Sundata * Context;
-{ 
+{
+   XFlush(dpy);
    clearStrip(Context);
+   XFlush(dpy);
+   usleep(TIMESTEP);
    drawTextStrip(Context, Label[L_NEWIMAGE], strlen(Label[L_NEWIMAGE]));
    XFlush(dpy);
 }
@@ -4764,7 +4822,7 @@ Window  win;
 KeySym  keysym;
 {
         double v;
-        int i, old_mode;
+        int i, j, old_mode;
         KeySym key;
         struct Sundata * Context = NULL;
 
@@ -4974,6 +5032,10 @@ KeySym  keysym;
                 Context->geom = Context->prevgeom;
                 Context->prevgeom.width = 0;
                 adjustGeom(Context, 0);
+		XResizeWindow(dpy, Context->win,
+		      Context->geom.width, 
+		      Context->geom.height+Context->gdata->menustrip);
+                warningNew(Context);
                 shutDown(Context, 0);
                 buildMap(Context, Context->wintype, 0);
              }
@@ -5001,7 +5063,7 @@ KeySym  keysym;
 	     menu_lasthint = '\0';
 	     option_lasthint = '\0';
 	     option_newhint = keysym;
-	     showOptionHint();
+	     showOptionHint(getNumCmd(key));
              break;
            case XK_Delete:
 	   case XK_BackSpace:
@@ -5062,12 +5124,16 @@ KeySym  keysym;
              if (!do_zoom)
                 Context->newzoom = Context->zoom;
              if (setWindowAspect(Context, &Context->zoom)) {
-                if (key == XK_greater) {
+                if (key == XK_greater || key == XK_slash) {
                    adjustGeom(Context, 0);
+		   XResizeWindow(dpy, Context->win,
+		      Context->geom.width, 
+		      Context->geom.height+Context->gdata->menustrip);
                    Context->geom.x = extra_width/2;
                    XMoveWindow(dpy, Context->win, 
                       Context->geom.x, Context->geom.y);
                 }
+                warningNew(Context);
                 shutDown(Context, 0);
                 buildMap(Context, Context->wintype, 0);
                 MapGeom = Context->geom;
@@ -5088,6 +5154,7 @@ KeySym  keysym;
              break;
            case XK_KP_Multiply:
            case XK_asterisk:
+	     key = XK_asterisk;
              if (!memcmp(&Context->newzoom, 
                          &Context->zoom, sizeof(ZoomSettings))) break;
              activateZoom(Context, 1);
@@ -5106,6 +5173,7 @@ KeySym  keysym;
 		return;
            case XK_space:
            case XK_exclam:
+	     key = XK_exclam;
              menu_newhint = XK_exclam;
              if (Context==Seed && do_dock) return;
              Context->wintype = 1 - Context->wintype;
@@ -5125,13 +5193,13 @@ KeySym  keysym;
                  Context->geom.width, 
                  Context->geom.height+((Context->wintype)?
                      Context->gdata->mapstrip:Context->gdata->clockstrip));
-	     XFlush(dpy);
              warningNew(Context);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
              return;
            case XK_1:
            case XK_KP_1:
+	     key = XK_1;
              if (memcmp(&Context->newzoom, 
                         &gzoom, sizeof(ZoomSettings))) {
                 Context->newzoom = gzoom;
@@ -5149,6 +5217,7 @@ KeySym  keysym;
              break;
            case XK_plus:
            case XK_KP_Add:
+	     key = XK_plus;
              Context->newzoom.fx *= ZFACT;
              Context->newzoom.fy *= ZFACT;
              setZoomDimension(Context);
@@ -5157,6 +5226,7 @@ KeySym  keysym;
              break;
            case XK_minus:
            case XK_KP_Subtract:
+	     key = XK_minus;
              Context->newzoom.fx /= ZFACT;
              Context->newzoom.fy /= ZFACT;
              setZoomDimension(Context);  
@@ -5447,7 +5517,8 @@ KeySym  keysym;
              Context->flags.update = 4;             
              break;
            case XK_x:
-             if (ExternAction) system(ExternAction);
+             if (ExternAction) 
+                system(ExternAction);
              break;
            case XK_y:
 	     erase_obj = 1;
@@ -5485,8 +5556,36 @@ KeySym  keysym;
            clearStrip(Context);
 
         if (do_menu) {
-	   menu_newhint = keysym;
-           showMenuHint();
+	   if (getNumCmd(toupper(key))>=0)
+	      menu_newhint = toupper(key);
+	   j = -1;
+	   for (i=0; i<N_MENU; i++) if (MenuKey[2*i]==toupper(key)) { 
+	      j=i; 
+	      break; 
+	   }
+           showMenuHint(j);
+	}
+
+        if (do_zoom) {
+	   if (getNumCmd(toupper(key))>=0)
+	      zoom_newhint = toupper(key);
+	   j = -1;
+	   for (i=0; i<N_ZOOM; i++) if (ZoomKey[2*i]==toupper(key)) { 
+	      j=i; 
+	      break; 
+	   }
+           showZoomHint(j);
+	}
+
+        if (do_option) {
+	   if (getNumCmd(toupper(key))>=0)
+	      option_newhint = toupper(key);
+	   j = -1;
+	   for (i=0; i<N_OPTION; i++) if (OptionKey[2*i]==toupper(key)) { 
+	      j=i; 
+	      break; 
+	   }
+           showOptionHint(j);
 	}
 }
 
@@ -5504,8 +5603,6 @@ int     evtype;
 static int  x0 = -1, y0 = -1, pressed3 = 0;
 static int u, v, w = -1, h = -1;
 static Pixmap savepix = 0;
-char             key;
-int              click_pos;
 struct Sundata * Context = (struct Sundata *) NULL;
 
         Context = getContext(win);
@@ -5519,26 +5616,12 @@ struct Sundata * Context = (struct Sundata *) NULL;
         if (evtype!=MotionNotify) RaiseAndFocus(win);
 
         if (evtype == ButtonPress) {
-	   if (win != Zoom && win != Filesel && win != Context->win) return;
 	   if (win == Context->win && !Context->wintype) return;
 	}
 
         if (win == Menu) {
-           if (y>Context->gdata->menustrip) return;
-           click_pos = x/Context->gdata->charspace;
-           if (evtype == MotionNotify) {
-	     menu_newhint = (click_pos >= N_MENU)? '\033':MenuKey[2*click_pos];
-             showMenuHint();
-             return;
-           }
-           if (do_menu && click_pos >= N_MENU) {
-              PopMenu(MenuCaller);
-              return;
-           }
-           key = MenuKey[2*click_pos];
-	   if (button<=2) key = tolower(key);
-           processKey(win, (KeySym)key);
-           return;
+	   processMenuAction(MenuCaller, x, y, button, evtype);
+	   return;
         }
 
         if (win == Filesel) {
@@ -5678,7 +5761,14 @@ struct Sundata * Context = (struct Sundata *) NULL;
 
         /* It's a clock, just execute predefined command */
         if (!Context->wintype) {
-	   processKey(win, XK_x);
+           if (ExternAction) 
+              system(ExternAction);
+	   else
+	   if (!do_menu) {
+	      menu_lasthint = '\0';
+	      menu_newhint = ' ';
+	      PopMenu(Context);
+	   }
            return;
         }
 
@@ -6042,15 +6132,21 @@ char **         argv;
         /* Set default values */
         initValues();
 
+        /* Set Language */
+        if (getenv("LANG")) {
+           strncpy(language, getenv("LANG"), 2);
+	   language[2] = '\0';
+	}
+        if (!*language)
+           strcpy (language,"en");
+
         /* Check if options define some new language */
         for (i=1; i<argc-1; i++)
-            if (!strcasecmp(argv[i++], "-language")) {
-	       language[0] = argv[i][0];
-	       language[1] = argv[i][1];
+            if (!strcasecmp(argv[i], "-language")) {
+	       strncpy(language, argv[++i], 2);
 	       language[2] = '\0';
-	       strcpy(oldlanguage, language);
 	    }
-		
+
         /* Read the app-default config file */
         runlevel = READSYSRC;
         if (readRC(app_default, 1)) exit(1);
