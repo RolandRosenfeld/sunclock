@@ -145,12 +145,11 @@ unsigned int *w, *h;
 
    XFlush(dpy);
    XQueryTree(dpy, win, &root, &parent, &children, &n);
-
    if (!parent) {
       fprintf(stderr, "Cannot query window tree!\n");
       return 1;
    }
-	
+   
    XGetGeometry(dpy, parent, &root, x, y, w, h, &b, &d);
 
    XTranslateCoordinates(dpy, win, parent, 0, 0, x, y, &junk);
@@ -161,13 +160,12 @@ unsigned int *w, *h;
 
    horiz_drift = *x - xp;
    vert_drift = *y - yp;
- 
-  /*
-   if (verbose)
+/*
+   if (verbose) {
+      fprintf(stderr, "Window placement (%d,%d)\n", *x, *y);	
       fprintf(stderr, "Window drift (%d,%d)\n", horiz_drift, vert_drift);
-   */
-
-   XFlush(dpy);
+   }
+*/
    return 0;
 }
 
@@ -200,21 +198,24 @@ int which;
         if (getPlacement(Context->win, &x, &y, &w, &h)) return;
 
 	if (which) {
-	   if (placement == CENTER) 
-              dx = (MapGeom.width - ClockGeom.width)/2; else
-           if (placement >= NW) {
-	      if (placement & 1) 
-                 dx = 0; else 
-                 dx = MapGeom.width - ClockGeom.width;
-           }
-
-	   diff= MapGeom.height - ClockGeom.height + 
+	   diff= MapGeom.height - ClockGeom.height +
 	         Context->gdata->mapstrip - Context->gdata->clockstrip;
-
-           if (placement == CENTER) dy = diff/2; else
-           if (placement >= NW) {
-	      if (placement <= NE) dy = 0; else dy = diff;
-           }
+	   switch(placement) {
+	      case CENTER:
+		 dx = (MapGeom.width - ClockGeom.width)/2;
+	         dy = diff/2;
+	         break;
+	      case NE:
+                 dx = MapGeom.width - ClockGeom.width;
+	         break;
+	      case SE:
+                 dx = MapGeom.width - ClockGeom.width;
+	      case SW:
+	         dy = diff;
+	         break;	
+	      default:
+	         break;
+	   }
 	}
 
         if (placement) {
@@ -373,7 +374,7 @@ int				num;
 	long                    mask;
 
 	mask = FocusChangeMask | VisibilityChangeMask | ExposureMask | 
-               StructureNotifyMask |
+               StructureNotifyMask | 
                ButtonPressMask | ButtonReleaseMask | KeyPressMask;
 
 	if (num>=1)
@@ -390,6 +391,7 @@ int				num;
 	   case 0:
 	   case 1:
                 if (!Context) return;
+	        mask |= EnterWindowMask | LeaveWindowMask;
 		win = Context->win;
 		break;
 
@@ -651,25 +653,24 @@ struct Sundata * Context;
 
         MenuGeom.width = MENU_WIDTH * Context->gdata->menustrip - 6;
         MenuGeom.height = 2 * Context->gdata->menustrip;
-
+   
 	if (!getPlacement(Context->win, &Context->geom.x, 
                                         &Context->geom.y, &w, &h)) {
-	   x = Context->geom.x + MenuGeom.x - horiz_drift;
-	   a = Context->geom.y + h + MenuGeom.y; 
+	   x = Context->geom.x + MenuGeom.x - horiz_drift - 5;
+	   a = Context->geom.y + h + 6; 
 
-           b = Context->geom.y - MenuGeom.height - MenuGeom.y - 2*vert_drift;
+           b = Context->geom.y - MenuGeom.height - MenuGeom.y - 2*vert_drift - 28;
            if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - 2*MenuGeom.height -vert_drift -20)
               a = b;
-	   y = (placement<=NE)? a : b;              
+	   y = (placement<=NE)? a : b;
 	}
         setSizeHints(NULL, 2);
         XMoveWindow(dpy, Menu, x, y);
-        XResizeWindow(dpy, Menu, MenuGeom.width, MenuGeom.height);
         XMapWindow(dpy, Menu);
         XMoveWindow(dpy, Menu, x, y);
-        XSync(dpy, True);
+        XFlush(dpy);
 	usleep(2*TIMESTEP);
 	menu_lasthint = ' ';
 	setupMenu(-1);
@@ -865,24 +866,23 @@ struct Sundata * Context;
 
 	if (!getPlacement(Context->win, &Context->geom.x, 
                                         &Context->geom.y, &w, &h)) {
-	   x = Context->geom.x + FileselGeom.x - horiz_drift;
-	   a = Context->geom.y + h + FileselGeom.y;
+	   x = Context->geom.x + FileselGeom.x - horiz_drift - 5;
+	   a = Context->geom.y + h + 6;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + MenuGeom.y + vert_drift;
-           b = Context->geom.y - FileselGeom.height - FileselGeom.y - 2*vert_drift;
+               a += MenuGeom.height + MenuGeom.y + vert_drift + 2;
+           b = Context->geom.y - FileselGeom.height - FileselGeom.y - 2*vert_drift - 28;
            if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
-                   - FileselGeom.height - vert_drift -20)
-              a = b;
-	   y = (placement<=NE)? a : b;              
+                   - FileselGeom.height - vert_drift - 20)
+               a = b;
+	   y = (placement<=NE)? a : b;
 	}
 
         setSizeHints(NULL, 3);
         XMoveWindow(dpy, Filesel, x, y);
-        XResizeWindow(dpy, Filesel, FileselGeom.width, FileselGeom.height);
         XMapRaised(dpy, Filesel);
         XMoveWindow(dpy, Filesel, x, y);
-	XSync(dpy, True);
+	XFlush(dpy);
 	usleep(2*TIMESTEP);
 	setupFilesel(-1);
         setProtocols(NULL, 3);
@@ -1462,11 +1462,11 @@ struct Sundata * Context;
 	zoom_newhint = ' ';
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
-	   x = Context->geom.x + ZoomGeom.x - horiz_drift;
-	   a = Context->geom.y + h + ZoomGeom.y;
+	   x = Context->geom.x + ZoomGeom.x - horiz_drift - 5;
+	   a = Context->geom.y + h + 6;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + MenuGeom.y + vert_drift;
-           b = Context->geom.y - ZoomGeom.height - ZoomGeom.y - 2*vert_drift;
+               a += MenuGeom.height + MenuGeom.y + vert_drift + 2;
+           b = Context->geom.y - ZoomGeom.height - ZoomGeom.y - 2*vert_drift - 28;
            if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - ZoomGeom.height - vert_drift -20)
@@ -1476,10 +1476,9 @@ struct Sundata * Context;
 
         setSizeHints(NULL, 4);
         XMoveWindow(dpy, Zoom, x, y);
-        XResizeWindow(dpy, Zoom, ZoomGeom.width, ZoomGeom.height);
         XMapRaised(dpy, Zoom);
         XMoveWindow(dpy, Zoom, x, y);
-        XSync(dpy, True);
+        XFlush(dpy);
 	usleep(2*TIMESTEP);
 	option_lasthint = '\0';
         setupZoom(-1);
@@ -1780,11 +1779,11 @@ struct Sundata * Context;
                           = (15 * Context->gdata->menustrip)/4;
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
-	   x = Context->geom.x + OptionGeom.x - horiz_drift;
-	   a = Context->geom.y + h + OptionGeom.y;
+	   x = Context->geom.x + OptionGeom.x - horiz_drift - 5;
+	   a = Context->geom.y + h + 6;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + MenuGeom.y + vert_drift;
-           b = Context->geom.y - OptionGeom.height - OptionGeom.y - 2*vert_drift;
+               a += MenuGeom.height + MenuGeom.y + vert_drift + 2;
+           b = Context->geom.y - OptionGeom.height - OptionGeom.y - 2*vert_drift - 28;
            if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
                    - 2*OptionGeom.height -vert_drift -20)
@@ -1793,10 +1792,9 @@ struct Sundata * Context;
 	}
         setSizeHints(NULL, 5);
         XMoveWindow(dpy, Option, x, y);
-        XResizeWindow(dpy, Option, OptionGeom.width, OptionGeom.height);
         XMapRaised(dpy, Option);
         XMoveWindow(dpy, Option, x, y);
-        XSync(dpy, True);
+        XFlush(dpy);
 	usleep(2*TIMESTEP);
 	option_lasthint = '\0';
 	option_newhint = ' ';
@@ -2144,7 +2142,7 @@ struct Sundata * Context;
 	   x = Context->geom.x + UrbanGeom.x - horiz_drift;
 	   a = Context->geom.y + h + UrbanGeom.y;
            if (do_menu && Context == MenuCaller) 
-               a += MenuGeom.height + MenuGeom.y + vert_drift;
+               a += MenuGeom.height + MenuGeom.y + vert_drift + 2;
            b = Context->geom.y - UrbanGeom.height - UrbanGeom.y - 2*vert_drift;
            if (b < TOPTITLEBARHEIGHT ) b = TOPTITLEBARHEIGHT;
            if (a > (int) DisplayHeight(dpy,scr) 
@@ -2157,7 +2155,7 @@ struct Sundata * Context;
         XResizeWindow(dpy, Urban, UrbanGeom.width, UrbanGeom.height);
         XMapRaised(dpy, Urban);
         XMoveWindow(dpy, Urban, x, y);
-        XSync(dpy, True);
+        XFlush(dpy);
 	usleep(2*TIMESTEP);
 	setupUrban(-1);
         setProtocols(NULL, 6);

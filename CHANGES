@@ -10,7 +10,11 @@ Planned versions ... (features to appear in some order)
 - Spherical representation of Earth
 - Moon phases
 
+Version 3.52 October 9, 2004
 
+- Corrected many small GUI bugs or annoyances. Thanks to Jamie Zawinski 
+  <jwz@jwz.org> for pointing out some of them and for useful advice.
+  
 Version 3.51 August 27, 2004
 
 - New release, jumped version number to 3.51 because of substantial

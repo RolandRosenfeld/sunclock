@@ -1,5 +1,5 @@
 %define name sunclock
-%define version 3.51
+%define version 3.52
 %define release 1
 %define prefix /usr
 

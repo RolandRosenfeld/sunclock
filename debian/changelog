@@ -1,3 +1,9 @@
+sunclock (3.51-1) unstable; urgency=low
+
+  * New upstream version 3.51.
+
+ -- Roland Rosenfeld <roland@debian.org>  Mon, 6 Sep 2004 11:41:26 +0100
+
 sunclock (3.50pre1-2) unstable; urgency=low
 
   * Disable #ifdef HParchitecture in Imakefile, which causes trouble on

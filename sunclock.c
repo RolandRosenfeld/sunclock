@@ -295,6 +295,7 @@ int             coordvalheight;
 int             coordvalwidth;
 int             extra_width = 10;
 
+int             focus_in = 0;
 int             button_pressed = 0;
 int             control_key = 0;
 int             precedence = 0;
@@ -1569,15 +1570,15 @@ char **                argv;
                            MapGeom.mask = XValue | YValue | 
                                           WidthValue | HeightValue;
                         }
-                        if (!strcasecmp(*argv, "center")==0)
+                        if (!strcasecmp(*argv, "center"))
                            placement = CENTER;
-                        if (!strcasecmp(*argv, "nw")==0)
+                        if (!strcasecmp(*argv, "nw"))
                            placement = NW;
-                        if (!strcasecmp(*argv, "ne")==0)
+                        if (!strcasecmp(*argv, "ne"))
                            placement = NE;
-                        if (!strcasecmp(*argv, "sw")==0)
+                        if (!strcasecmp(*argv, "sw"))
                            placement = SW;
-                        if (!strcasecmp(*argv, "se")==0)
+                        if (!strcasecmp(*argv, "se"))
                            placement = SE;
                 }
                 else if (!strcasecmp(*argv, "-extrawidth"))
@@ -1736,8 +1737,9 @@ char * buf;
  */
 
 int 
-readRC(fname)
+readRC(fname, verbosity)
 char *fname;        /* Path to .sunclockrc file */
+int verbosity;
 {
     /*
      * Local Variables
@@ -1750,8 +1752,9 @@ char *fname;        /* Path to .sunclockrc file */
     /* Open the RC file */
 
     if ((rc = fopen(fname, "r")) == NULL) {
-        fprintf(stderr, 
-           "Unable to find the config file  %s \n", fname);
+        if (verbosity)
+           fprintf(stderr, 
+               "Unable to find the config file  %s \n", fname);
         return(1);
     }
 
@@ -4635,12 +4638,9 @@ int wintype, build;
       old_h -= Context->hstrip;
       if (resize || Context->hstrip != old_s ||
           Context->geom.width!=old_w || Context->geom.height!=old_h) {
-         XResizeWindow(dpy, Context->win, 
-            Context->geom.width, Context->geom.height + Context->hstrip);
-         XMapWindow(dpy, Context->win);
 	 XMapRaised(dpy, Context->win);
 	 Context->flags.mapped = 1;
-	 XSync(dpy, True);
+	 XFlush(dpy);
          usleep(TIMESTEP);
          setAuxilWins(Context, REMAP);
       } else
@@ -5109,10 +5109,13 @@ KeySym  keysym;
              menu_newhint = XK_exclam;
              if (Context==Seed && do_dock) return;
              Context->wintype = 1 - Context->wintype;
-             if (Context->wintype)
-                Context->geom = MapGeom;
-             else
-                Context->geom = ClockGeom;
+             if (Context->wintype) {
+                Context->geom.width = MapGeom.width;
+                Context->geom.height = MapGeom.height;
+             } else {
+                Context->geom.width = ClockGeom.width;
+                Context->geom.height = ClockGeom.height;
+	     }
              adjustGeom(Context, 1);
      	     XSelectInput(dpy, Context->win, 0);
              setSizeHints(Context, Context->wintype);
@@ -5122,7 +5125,7 @@ KeySym  keysym;
                  Context->geom.width, 
                  Context->geom.height+((Context->wintype)?
                      Context->gdata->mapstrip:Context->gdata->clockstrip));
-	     XSync(dpy, True);
+	     XFlush(dpy);
              warningNew(Context);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
@@ -5437,7 +5440,6 @@ KeySym  keysym;
              if (do_zoom) do_zoom = -1;
              if (do_option) do_option = -1;
              buildMap(Context, 1, 1);
-             last_time = Context->time;
 	     keysym = ' ';
              break;
            case XK_r:
@@ -5562,6 +5564,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
         /* Click on bottom strip of window */
         if (y >= Context->geom.height) {
            if (button==1) {
+	      if (evtype==ButtonPress) return;
 	      if (do_menu && getState(Menu)==IsViewable)
                  processKey(win, XK_o);
 	      else
@@ -5574,6 +5577,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
            }
            if (button==3) {
               /* Open new window */
+              if (evtype==ButtonPress || !focus_in) return;
               processKey(win, XK_w);
               return;
            }
@@ -5585,7 +5589,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
            return;
         }
 
-	if (!Context->wintype) pressed3 = 0;
+   	if (!Context->wintype) pressed3 = 0;
 
         if (evtype == MotionNotify && pressed3 && !do_zoom &&
             x0!=-1 && y0!= -1) {
@@ -5682,6 +5686,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
         Context->flags.update = 1;
 
         /* Set the timezone, marks, etc, on a button press */
+        if (evtype==ButtonPress) return;   
         processPoint(Context, x, y);
 }
 
@@ -5727,10 +5732,6 @@ Window win;
                  fprintf(stderr, "Resizing %s to %d %d\n", 
                     widget_type[num], w, h);
               XSelectInput(dpy, win, 0);
-              XFlush(dpy);
-              XResizeWindow(dpy, win, w, h);
-              XSync(dpy, True);
-              usleep(2*TIMESTEP);
               setSizeHints(NULL, num);
               setProtocols(NULL, num);
               if (num==3)
@@ -5792,7 +5793,7 @@ Window win;
            shutDown(Context, 0);
            setZoomAspect(Context, 3);
            buildMap(Context, Context->wintype, 2);
-           XSync(dpy, True);
+           XFlush(dpy);
            usleep(2*TIMESTEP);
 }
 
@@ -5904,6 +5905,14 @@ eventLoop()
 
               switch(ev.type) {
 
+                 case EnterNotify:
+		      focus_in = 1;
+		      break;
+		 
+                 case LeaveNotify:
+		      focus_in = 0;
+		      break;
+		 
                  case FocusOut:
 		      if (do_option && text_input == OPTION_INPUT &&
                           ev.xexpose.window == Option) {
@@ -5927,6 +5936,10 @@ eventLoop()
 		      if (Context->win!=ev.xexpose.window) break;
                       setAuxilWins(Context, DEICONIFY);
    	              Context->flags.mapped = 1;
+                      updateImage(Context);
+   	              Context->flags.update = 2;
+		      showMapImage(Context);
+		      writeStrip(Context);
 		      break;
 
                  case UnmapNotify:
@@ -5981,12 +5994,12 @@ eventLoop()
                  case ButtonPress:
 		 case ButtonRelease:
                  case MotionNotify:
-                      if (ev.type==ButtonPress) 
+                      if (ev.type==ButtonPress)
                             button_pressed = ev.xbutton.button;
                       if (ev.type==ButtonRelease) button_pressed = 0;
                       processMouseEvent(ev.xexpose.window,
-                                           ev.xbutton.x, ev.xbutton.y,
-                                           ev.xbutton.button, ev.type);
+                            ev.xbutton.x, ev.xbutton.y,
+                            ev.xbutton.button, ev.type);
                       break;
 
 		 /* case ResizeRequest: */
@@ -6001,9 +6014,9 @@ eventLoop()
 	   } else {
               Which = getContext(ev.xexpose.window);
               usleep(TIMESTEP);
-
               if (Which == NULL) Which = Seed;
-  
+	      if (Which->win==ev.xexpose.window)
+	         processResize(Which->win);
               for (Context = Seed; Context; Context = Context->next)
                  if (do_sync || Context == Which || Context == RootCaller ||
                      (do_dock && Context == Seed)) {
@@ -6040,7 +6053,7 @@ char **         argv;
 		
         /* Read the app-default config file */
         runlevel = READSYSRC;
-        if (readRC(app_default)) exit(1);
+        if (readRC(app_default, 1)) exit(1);
 
         /* Check if user has provided another config file */
         runlevel = READUSERRC;
@@ -6054,7 +6067,7 @@ char **         argv;
                "Unable to get path to ~/.sunclockrc\n");
 	}
 
-	if (p && *p) (void) readRC(p);
+	if (p && *p) (void) readRC(p, 0);
 
         runlevel = PARSECMDLINE;
         (void) parseArgs(argc, argv);
