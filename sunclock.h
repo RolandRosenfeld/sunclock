@@ -32,6 +32,7 @@
 #define	FAILFONT	"fixed"
 #define EARTHRADIUS_KM  6378.125
 #define EARTHRADIUS_ML  3963.180
+#define SUN_APPDIAM     0.533      /* Sun apparent diameter, in degrees */
 
 #define SP		"         "
 

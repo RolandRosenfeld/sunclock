@@ -3,6 +3,14 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
+Version 3.03, September 5, 2000.
+
+- Corrected local timezone bug (wasn't correctly initialized nor reset) 
+- Added "1 minute" as one of possible values of progression time
+- The value of the sun apparent diameter was wrong (too large) and thus 
+  produced slightly inaccurate day length values!
+- Fix for SunPro compiler
+
 Version 3.02, September 4, 2000.
 
 - Corrected segmentation fault problem, occurring when environment variable 

@@ -267,6 +267,24 @@ usage()
 	exit(1);
 }
 
+/*
+ *  Set the timezone of selected location
+ */
+
+void
+setTZ(cptr)
+City	*cptr;
+{
+	char buf[80];
+
+	if (cptr)
+	        sprintf(buf, "TZ=%s", cptr->tz);
+	else
+	        strcpy(buf, "TZ");
+	putenv(buf);
+	tzset();
+}
+
 void
 initValues()
 {
@@ -285,6 +303,7 @@ initValues()
 	mark1.status = 0;
 	mark2.city = NULL;
 	mark2.status = 0;
+	setTZ(NULL);
 }
 
 char *
@@ -736,6 +755,7 @@ int				num;
 	XStoreName(dpy, win, ProgName);
 	XSetCommand(dpy, win, argv, argc);
        	XSelectInput(dpy, win, ExposureMask | ButtonPressMask | KeyPressMask);
+
 }
 
 /*
@@ -1014,8 +1034,9 @@ register struct tm *		gmtp;
 	if (progress_mode) {
 	  sprintf(s, " G   %s %ld %s   %s %.3f %s  | %s", 
 		  Label[L_PROGRESS], 
-                  (time_progress>24)? time_progress/24 : time_progress, 
-                  (time_progress>24)? Label[L_DAYS] : Label[L_HOURS],
+                  (time_progress>=1440)? time_progress/1440 : 1, 
+                  (time_progress>=1440)? Label[L_DAYS] : 
+                  ((time_progress>=60)? Label[L_HOUR] : Label[L_MIN]),
                   Label[L_GLOBALSHIFT], global_shift/86400.0,
 		  Label[L_DAYS], Label[L_ENTER]);
           l = strlen(s);
@@ -1076,7 +1097,7 @@ register struct tm *		gmtp;
                 Label[L_SUNRISE],
 		mark1.sr.tm_hour, mark1.sr.tm_min, mark1.sr.tm_sec,
                 Label[L_SUNSET], 
-		mark1.ss.tm_hour, mark1.ss.tm_min, mark1.ss.tm_min);
+		mark1.ss.tm_hour, mark1.ss.tm_min, mark1.ss.tm_sec);
 	        else
            if ((mark1.city) && !mark1.full)
 	   sprintf(s,
@@ -1231,24 +1252,6 @@ int				txy;
 
 	return (s);
 }	
-
-/*
- *  Set the timezone of selected location
- */
-
-void
-setTZ(cptr)
-City	*cptr;
-{
-	char buf[80];
-
-	if (cptr)
-	        sprintf(buf, "TZ=%s", cptr->tz);
-	else
-	        strcpy(buf, "TZ");
-	putenv(buf);
-	tzset();
-}
 
 void
 SwitchWindows()
@@ -1847,22 +1850,22 @@ double	gt, lat;
 	double			sundec;
 	double			sunrv;
 	double			sunlong;
-	double                  sinsun, sinpos, num;
+	double                  sinsun, sinpos, num, corr;
 
         /* Get sun position */
 
 	sunpos(gt, False, &sunra, &sundec, &sunrv, &sunlong);       
         sinpos = sin(dtr(lat));
 
-        /* The sun apparent diameter is 2*0.77 degrees, correct for it */
+        /* Correct for the sun apparent diameter */
 
-        if (lat>0) sundec += 0.77*sinpos;
-        if (lat<=0) sundec -= 0.77*sinpos;
+        if (lat>0) sundec += 0.5 * SUN_APPDIAM * sinpos;
+        if (lat<=0) sundec -= 0.5 * SUN_APPDIAM * sinpos;
 
         sinsun = sin(dtr(sundec));
 
         if (sinsun==0 || sinpos==0)
-	  duration = 12.0 + 0.10267/cos(dtr(lat));
+	  duration = 12.0 + SUN_APPDIAM/(15.0 * cos(dtr(lat)));
 	else {
           num = 1 - sinsun*sinsun - sinpos*sinpos;
           if (num<=0) {
@@ -1872,7 +1875,7 @@ double	gt, lat;
 	      duration = 0.0;
 	  } else
 	      duration = 12.0 + 24.0*atan(sinsun*sinpos/sqrt(num))/PI
-			      + 0.10267*cos(dtr(lat));
+			      + SUN_APPDIAM/(15.0 * cos(dtr(lat)));
 	}
 	return duration*3600;
 }
@@ -2080,11 +2083,11 @@ char	key;
 	       --label_shift;
 	     break;
 	   case 'a': 
-	     global_shift += (time_progress * 3600);
+	     global_shift += (time_progress * 60);
 	     setDayParams(mark1.city);
 	     break;
 	   case 'b': 
-	     global_shift -= (time_progress * 3600);
+	     global_shift -= (time_progress * 60);
 	     setDayParams(mark1.city);
 	     break;
 	   case 'c': 
@@ -2105,13 +2108,15 @@ char	key;
 	   case 'g': 
 	     if (!do_map) break;
 	     if (progress_mode) {
-		     if (time_progress == 1) time_progress = 24;
+		     if (time_progress == 1) time_progress = 60;
 		       else
-		     if (time_progress == 24) time_progress = 168;
+		     if (time_progress == 60) time_progress = 1440;
 		       else
-		     if (time_progress == 168) time_progress = 720;
+		     if (time_progress == 1440) time_progress = 10080;
+		       else
+		     if (time_progress == 10080) time_progress = 43200;
 	       	       else
-		     if (time_progress == 720) time_progress = 1;
+		     if (time_progress == 43200) time_progress = 1;
 	     } else {
 		     progress_mode = 1;
 	     	     do_help = 0;
@@ -2398,7 +2403,6 @@ register char **		argv;
 	createWindows(argc, argv);
 	makeGCs();
 	makeMapContexts();
-
 	eventLoop();
 	exit(0);
 }

@@ -10,7 +10,7 @@ char    Month_name[12][10] = {
 enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME, L_DAYLENGTH,
       L_SUNRISE, L_SUNSET, L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, 
       L_KEY, L_CONTROLS, L_CANCEL, 
-      L_PROGRESS, L_GLOBALSHIFT, L_HOURS, L_DAYS, L_ENTER, L_END};
+      L_PROGRESS, L_GLOBALSHIFT, L_MIN, L_HOUR, L_DAYS, L_ENTER, L_END};
 
 char	Label[L_END][60] = {
 	"Point", "GMT time", "Solar time", "Legal time", "Day length",
@@ -23,7 +23,8 @@ char	Label[L_END][60] = {
 	"Escape",
 	"Progress value =",
         "Global time shift =",
-	"hours",
+	"minute",
+	"hour",
 	"days",
         "Type A,B,G,Z or Enter"
 };
@@ -54,6 +55,13 @@ char	Help[N_OPTIONS][80] = {
 "Quit program"
 };
 
-char	ShortHelp[512] = "\
-Sunclock has a number of internal procedures which can be accessed
-through mouse clicks or key controls:";
+char	ShortHelp[512] = 
+"Sunclock has a number of internal procedures which can be accessed\n"
+"through mouse clicks or key controls:";
+
+
+
+
+
+
+
