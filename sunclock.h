@@ -23,7 +23,7 @@
 
 /* num of bitmaps to accomodate 1 mark and 2 spatial objets (Sun, Moon) */
 #define SPECIALBITMAPS 3
-#define CITYBITMAPS 4
+#define CITYBITMAPS 5
 
 #define MENU_WIDTH 38
 #define SEL_WIDTH 28
@@ -79,7 +79,7 @@ enum {
   CLOCKBGCOLOR=0, MAPBGCOLOR, MENUBGCOLOR, CLOCKSTRIPBGCOLOR, MAPSTRIPBGCOLOR, 
   ZOOMBGCOLOR, OPTIONBGCOLOR, STARCOLOR,
   CLOCKFGCOLOR, MAPFGCOLOR, MENUFGCOLOR, CLOCKSTRIPFGCOLOR, MAPSTRIPFGCOLOR,
-  ZOOMFGCOLOR, OPTIONFGCOLOR,
+  ZOOMFGCOLOR, OPTIONFGCOLOR, WEAKCOLOR, ROOTCOLOR,
   CARETCOLOR, CHANGECOLOR, CHOICECOLOR, DIRCOLOR, IMAGECOLOR, CITYNAMECOLOR, 
   CITYCOLOR0, CITYCOLOR1, CITYCOLOR2, MARKCOLOR1, MARKCOLOR2, 
   SUNCOLOR, MOONCOLOR, LINECOLOR, MERIDIANCOLOR, PARALLELCOLOR, TROPICCOLOR, 
@@ -112,6 +112,8 @@ typedef struct Flags {
         short darkness;                 /* level of darkness in shading */
         short map_mode;                 /* are we in C, D, E, L, S mode? */
         short clock_mode;               /* clock mode */
+        short animate;                  /* start/stop animation */
+        short animperiod;               /* animation periodicity 0,1..5 sec */
         short progress;                 /* special progress time ?*/
         short shading;                  /* shading mode */
         short dms;                      /* degree, minute, second mode */
@@ -121,6 +123,7 @@ typedef struct Flags {
         short meridian;                 /* meridians mode */
         short parallel;                 /* parallels/tropics mode */
   /* Internal switches */
+        short mapped;                   /* is window mapped ? */
         short update;                   /* update image (=-1 full update) */
         short bottom;                   /* bottom strip to be cleaned */
         short hours_shown;              /* hours in extension mode shown? */
@@ -220,6 +223,8 @@ typedef struct Sundata {
         int             ncolors;        /* number of colors in day pixels */
 	long		time;		/* time - real or fake, see flags */
 	long		projtime;	/* last time projected illumination */
+	long		roottime;	/* last time written to root */
+	long		animtime;	/* last time of animation */
         long            jump;           /* time jump (in sec) */
         double          sundec;         /* Sun declination */
         double          sunlon;         /* Sun longitude */
@@ -234,9 +239,10 @@ typedef struct Sundata {
 	int		count;	        /* number of time iterations */
         struct City     pos1;           /* first position */
         struct City     pos2;           /* second position */
+        struct City     *lastmarked;    /* last marked city */
         struct Mark     mark1;          /* first mark */
         struct Mark     mark2;          /* second mark */
-        struct Sundata *next;           /* pointer to next structure */
+        struct Sundata  *next;          /* pointer to next structure */
 } Sundata;
 
 /* Which OS are we using ? */

@@ -80,7 +80,7 @@ addcity 2|Manila|14.617|+121.000|Asia/Manila
 addcity 2|KualaLumpur|3.133|101.700|PST-8
 addcity 2|Brunei|4.950|114.937|Asia/Brunei
 addcity 2|Jakarta|-6.183|106.833|PST-7
-addcity 2|HongKong|21.75|115.000|Hongkong
+addcity 2|HongKong|22.250|114.166|CST-8
 addcity 2|Casablanca|33.533|-7.683|Africa/Casablanca
 addcity 2|Alger|36.700|3.217|Africa/Algiers
 addcity 2|Tunis|36.850|10.217|Africa/Tunis
@@ -92,7 +92,7 @@ addcity 2|Bamako|12.650|-8.000|Africa/Bamako
 addcity 2|Nairobi|-1.283|36.817|Africa/Nairobi
 addcity 2|Brazzaville|-4.200|15.300|Africa/Brazzaville
 addcity 2|Djibouti|11.567|43.000|Africa/Djibouti
-addcity 2|CapeTown|-33.800|18.467|Africa/Johannesburg
+addcity 2|CapeTown|-33.933|18.371|SAT-2
 addcity 2|Antananarivo|-18.520|48.300|Indian/Antananarivo
 addcity 2|Perth|-31.833|116.167|Australia/Perth
 addcity 2|Darwin|-12.416|130.881|CST-9:30
@@ -184,7 +184,6 @@ addcity 3|Cambridge|42.367|-71.106|EST5EDT
 addcity 3|Camden|39.945|-75.121|EST5EDT
 addcity 3|CanberraACT|-35.240|149.120|EST-10EST,M10.5.0,M3.5.0
 addcity 3|Canton|40.797|-81.377|EST5EDT
-addcity 3|Capetown|-33.933|18.371|SAT-2
 addcity 3|CarsonCity|39.167|-119.767|PST8PDT
 addcity 3|CedarRapids|41.967|-91.665|CST6CDT
 addcity 3|CentralIslip|40.790|-73.200|EST5EDT

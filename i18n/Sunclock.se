@@ -54,12 +54,17 @@ Timezone
 Latitude
 Longitude
 Size
-Warning: %s, lat = %s lon = %s already in list of cities !!
+Warning: %s, lat = %s lon = %s%salready in list of cities !!
+Overriding previous entry for %s
 #
 Option
 Activating selected option...
 Option incorrect or not available at runtime !!
 Options: strike <Ctrl><Space> for blank space within an item
+(once)
+(periodically, period %d seconds)
+(with starry sky)
+(blank root window)
 with the following rather long list of options:
 Starting from **, options are runtime configurable.
 Calculating new image...
@@ -109,6 +114,7 @@ Erase the option command line
 Synchronize windows or not
 Copy map to root window
 Erase map from root window
+Start/stop animation
 # Urban window help
 Use degrees, minutes, seconds, or decimal degrees
 Search/select city

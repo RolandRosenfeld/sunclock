@@ -58,10 +58,10 @@ install.man::
 	   then gzip -f $(DESTDIR)$(MANDIR)/sunclock.1x ; fi
 
 install:: install.man
-	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
+	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
 	cd i18n ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
-	mkdirhier $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
+	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
 

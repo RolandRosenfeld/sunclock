@@ -1,8 +1,8 @@
 #define N_MENU 28
 #define N_ZOOM 13
-#define N_OPTION 8
+#define N_OPTION 11
 #define N_URBAN 12
-#define N_HELP 47
+#define N_HELP 48
 
 #define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
 
@@ -17,9 +17,11 @@ enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_PROGRESS, L_TIMEJUMP,
 
       L_CITYNAME, L_TIMEZONE, L_LATITUDE, L_LONGITUDE, L_CITYSIZE, 
-      L_CITYWARNING, 
+      L_CITYWARNING1, L_CITYWARNING2, 
 
       L_OPTION, L_ACTIVATE, L_INCORRECT, L_OPTIONINTRO,
+      L_ONCE, L_PERIODIC, L_STARRYSKY, L_BLANKSCREEN,
+
       L_LISTOPTIONS, L_CONFIG, L_NEWIMAGE, L_SHORTHELP,
 
       L_END
@@ -52,11 +54,17 @@ char	* Label[L_END] = {
 	"Longitude",
 	"Size",
 	"Warning: %s, lat=%s lon=%s already in list of cities !!",
+	"Overriding previous entry for %s",
 
 	"Option",
         "Activating selected option...",
         "Option incorrect or not available at runtime !!",
 	"Options: strike <Ctrl><Space> for blank space within an item",
+	"(once)",
+	"(periodically, period %d seconds)",
+	"(with starry sky)",
+	"(blank root window)",
+
 	"with the following rather long list of options:",
         "Starting from **, options are runtime configurable.",
 	"Calculating new image...",
@@ -71,13 +79,13 @@ char    ZoomKey[2*N_ZOOM] =
 "*,#,/;&,+,-,1,.;>,<,!,W,K;";
 
 char    OptionKey[2*N_OPTION] = 
-"@,%;=;[,];!,W,K;";
+"@,%;=;[,];G,J,';!,W,K;";
 
 char    UrbanKey[2*N_URBAN] = 
 "U,°,§,%;C,S;~,(,);!,W,K;";
 
 char    CommandKey[N_HELP] = 
-"HFZUOCSDELABGJNYMPTWKIR><!XQ*#/&+-1.\"@%=[]°§~()";
+"HFZUOCSDELABGJNYMPTWKIR><!XQ*#/&+-1.\"@%=[]'°§~()";
 
 char  * Help[N_HELP] = {
 
@@ -128,6 +136,7 @@ char  * Help[N_HELP] = {
 "Synchronize windows or not",
 "Copy map to root window",
 "Erase map from root window",
+"Start/stop animation",
 
 /* Urban window help */
 "Use degree, minute, seconds, or decimal degrees",

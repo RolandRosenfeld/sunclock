@@ -10,6 +10,10 @@ xglobe/xplanet home sites
 A bundled package of Earth maps is also provided on
    ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock_jpg_maps.tgz
 
+More information on geographic names, city coordinates, timezones can be 
+obtained from
+   http://gnpswww.nima.mil/geonames/GNS/
+
 This version has A POWERFUL ZOOM IMPLEMENTATION !!
 If you want to get the full power of it, you can use the huge 11Mb jpeg 
 Earth map from 
@@ -34,6 +38,8 @@ In 3.44, the syntax of ALL COLOR OPTIONS HAS CHANGED. A unique option
 -setcolor field|color is to be used instead.  Similarly, options
 -monochrome, -invertcolors and -fullcolors have been replaced by a single 
 option -colorlevel <value> (0, 1, 2, 3)
+
+3.44/3.45 have introduced the ability to DISPLAY MAPS ON THE ROOT WINDOW
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

@@ -913,7 +913,7 @@ H
           "Hollywood,FL"        +26.01000        -80.15000      89LQ MB1H
             "Holyoke,MA"        +42.20810        -72.61000      8XG7 Q116
               "Homer,AK"        +59.65000       -151.52000      2C5Z SX7H
-               Hong_Kong        +21.75000       +115.00000      SKH0 LLQH
+               Hong_Kong        +22.25000       +114.16600      SKH0 LLQH
    "Honiara,Guadalcanal"         -9.24990       +159.75000      X9C7 FFQH
      "Honington,England"        +52.33300         +0.76700      H1WH RPMX
            "Honolulu,HI"        +21.30610       -157.86000      1TBG LJHW

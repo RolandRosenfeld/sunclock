@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "June 22, 2001"
+.TH SUNCLOCK 1 "June 28, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -33,7 +33,8 @@ where the list of licit options is the following long list
 [-placementshift x y] [-extrawidth value] \
 [-decimal] [-dms] [-city name] [-position latitude|longitude] \
 [-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)] \
-[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]] \
+[-rootperiod value(in sec)] [-animateperiod value(in sec)] \
+[-progress number[s,m,h,d,M,Y]] [-jump number[s,m,h,d,M,Y]] \
 [-aspect mode] [-colorlevel level=0,1,2,3] \
 [-fillmode number=0,1,2] [-coastlines] [-contour] [-landfill] \
 [-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
@@ -41,7 +42,7 @@ where the list of licit options is the following long list
 [-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
 [-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
 [-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)] \
-[-sizelimits w1|w2|w3|... (wi = zoom width values)] \
+[-sizelimits w1|w2|w3|... (wi = zoom width values, 1<=i<=citycategories)] \
 [-citymode mode=0,1,2,3] \
 [-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3] \
 [-meridianspacing value] [-parallelspacing value] \
@@ -237,12 +238,6 @@ Start sunclock with an Earth map image loaded in the clock window.
 The same maps can be used used for the map and clock windows, but
 in the latter case they will tend to be scaled down.
 .TP
-.B "\-fullcolors "
-Use full color mode (default). This mode is needed to load jpeg or 
-other colorful images. Day and night can be drawn with various shading
-parameters. This is the recommended option if you have a reasonably
-recent machine with enough video RAM, otherwise see below.
-.TP
 .B "\-colorlevel " level=0,1,2,3
 Sets the color level (0=monochrome, 1=few colors, 2=many colors,
 3=full colors). With the "monochrome" setting, day and night appear 
@@ -259,9 +254,8 @@ inversion of colors is used to set colors of all points in the map.
 Monochrome mode can be useful for very slow CPUs, such as those 
 in use in PDAs with black and white screen. The full color mode (level=3)
 allows to load jpeg or other colorful images; day and night can be drawn 
-with various shading parameters. This is the recommended mode 
+with various shading parameters. This is the default and recommended mode 
 if you have a reasonably recent machine with enough video RAM.
-The default mode is the full color mode.
 .TP
 .B "\-dock "
 This option is meant to give sunclock the ability to be docked in the
@@ -536,6 +530,20 @@ is understood to be expressed by default in seconds. Useful to get sunclock
 progress by other steps than the predefined ones (by default the steps 
 cycle between the values 1 mn, 1 hour, 1 day, 7 days, 30 days).
 .TP
+.BI "\-rootperiod " "value (in seconds, between 1 and 120 sec)"
+Set the period for refreshing the root window. Default is 30 seconds.
+This takes effect only when writing the map onto the root window is active
+(strike twice on '[' or hit the relevant box in the Option window).
+Writing onto the root window is disabled by using the ']' key.
+.TP
+.BI "\-animateperiod " "value (in seconds, between 0 and 5 sec)"
+Set the period for animating the map. Default is 0 seconds, which means that
+images are switched as fast as sunclock can compute them. Otherwise time
+is shifted by the current progress value (as set by the -progess option)
+after waiting the number of seconds prescribed by the animateperiod value.
+This takes effect only when the animation is active (strike on the ' key 
+or hit the relevant box in the Option window).
+.TP
 .BI "\-addcity " size|name|latitude|longitude|timezone
 .PP
 where name is the ascii name of the place to be shown on the map.
@@ -553,7 +561,7 @@ incorrect timezones cause the clock to display GMT. It is also possible to
 reference a file in a directory relative to /usr/share/zoneinfo for example
 Canada/Eastern instead of EST5EDT.
 .TP
-.BI "\-city " name "(name|lat|lon)"
+.BI "\-city " "name (name|lat|lon)"
 Initialize program so as to display data of city 'name', respectively
 (name, with latitude and longitude specified). This becomes effective only 
 if the above mentioned city is listed in the systemwide RC file Sunclockrc
@@ -575,29 +583,39 @@ the group of parameters (but there shouldn't be any blank characters
 in the other parameters). In the RC config file, blank characters should
 be replaced by the octal character 037 (i.e. Ctrl-Q Ctrl-_ within emacs).
 .TP
-.BI "\-removecity " name ("name|lat|lon")
+.BI "\-removecity " "name (name|lat|lon)"
 Removes name (respectively name|lat|lon) from the list of cities to be
 displayed. Same remarks as above for blank characters.
 .TP
 .BI "\-citycategories " value
 Specifies the maximal number of city categories: categories range from 1 
-(highest rank, i.e. major city) to some maximum number. The option
+(highest catgory, i.e. major city) to some maximum number. The option
 -citycategories specifies that maximum number. It can only be used
-at start-up, not at runtime. The default value is 4.
+at start-up, not at runtime. The default value is 5.
 .TP
-.BI "\-spotsizes " s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)
-With this setting, major cities (rank 1) will have size s1, rank 2 cities
-will have size s2, etc. The default setting is -spotsize 4|3|2|1. Assigning
-size si=0 means that the corresponding category of cities (rank i) will not 
-be displayed.
+.BI "\-spotsizes " "s1|s2|s3|... (0<=si<=5, 1<=i<=citycategories)"
+With this setting, major cities (category 1) will be represented by the 
+symbol of size s1, category 2 cities by the symbol off size s2, etc. 
+The default setting is -spotsize 1|2|3|4|5. Assigning size si=0 means that 
+the corresponding category of cities (rank i) will not be displayed. 
+If there are less data than the number of city categories (5 by default), 
+the last given data is repeated as many times as needed, e.g.
+-spotsizes 2 is equivalent to -spotsizes 2|2|2|2|2.
+Example: specifying -spotsizes 0|2|0|3|0 will let appear only city
+categories 2 and 4, but those of category 4 will appear with the symbol
+normally allocated to cities of category 3. This is useful in combination
+with the option -sizelimits (see below).
 .TP
-.BI "\-sizelimits " w1|w2|w3|... (wi = zoom width values, 1<=i<=citycategories)
+.BI "\-sizelimits " w1|w2|w3|... 
+(wi = zoom width values, 1<=i<=citycategories)
 With this setting, cities of rank i=1,2,3,... will appear if (and only if) 
 the width of the zoomed map is at least equal to wi (as it would appear 
 if the Earth would be entirely displayed...) . The default is
-0|580|2500|8000 (no constraint for major cities, rank 4 cities appear
-only if the width is at least 8000 pixels, e.g. if an original window
-of width 800, say, has been applied a zoom at least equal to 10).
+0|580|2500|6000|12000 (no constraint for major cities, rank 4 cities appear
+only if the width is at least 6000 pixels, e.g. if an original window
+of width 800, say, has been applied a zoom at least equal to 7.5).
+Thus -sizelimits 0 is equivalent to -sizelimits 0|0|0|0|0, -sizelimits 0|400
+is equivalent to -sizelimits 0|400|400|400|400.
 .TP
 .BI "\-shading " mode=0,1,2,3,4,5
 Start sunclock with the specified shading mode. Mode 0 means that the night
@@ -719,6 +737,8 @@ menubg (menu text background color; Grey92)
 .PP
 menufg (menu text foreground color; Black)
 .PP
+weak (color for disabled menu commands; Red)
+.PP
 clockstripbg (background color of bottom strip in clock window; Grey92)
 .PP
 clockstripfg (foreground color of bottom strip in clock window; Black)
@@ -772,6 +792,8 @@ sun (color of Sun; Yellow)
 moon (color of Moon; Khaki)
 .PP
 star (color of Stars; White)
+.PP
+root (color of Root window on which stars will be drawn; Black)
 .PP
 .SH PRIVATE CONFIGURATION FILE
 Users may keep a file in their home directory called ~/.sunclockrc. This

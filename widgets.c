@@ -49,7 +49,7 @@ extern TextEntry        option_entry, urban_entry[5];
 
 extern struct Sundata   *Seed;
 extern struct Sundata   *MenuCaller, *FileselCaller, 
-                        *ZoomCaller, *OptionCaller, *UrbanCaller;
+                        *ZoomCaller, *OptionCaller, *UrbanCaller, *RootCaller;
 extern struct Geometry	ClockGeom, MapGeom;
 extern struct Geometry  MenuGeom, FileselGeom, ZoomGeom, OptionGeom, UrbanGeom;
 
@@ -83,7 +83,7 @@ extern int              num_cat;
 extern int              *city_spotsizes;
 extern int              *city_sizelimits;
 extern int		do_menu, do_filesel, do_zoom, do_option, do_urban;
-extern int              do_dock, do_sync, do_zoomsync;
+extern int              do_dock, do_sync, do_zoomsync, do_root;
 
 extern int              placement;
 extern int              place_shiftx;
@@ -92,6 +92,7 @@ extern int              place_shifty;
 extern int              verbose;
 extern int		button_pressed;
 extern int              option_changes;
+extern int              root_period;
 
 extern int              horiz_drift, vert_drift;
 extern int              label_shift, filesel_shift, zoom_shift;
@@ -157,6 +158,7 @@ unsigned int *w, *h;
       fprintf(stderr, "Window drift (%d,%d)\n", horiz_drift, vert_drift);
    */
 
+   XFlush(dpy);
    return 0;
 }
 
@@ -498,21 +500,14 @@ Sundata * Context;
 }
 
 void
-showMenuHint()
+helpHint(Context, key, hint)
+Sundata * Context;
+char key;
+char *hint;
 {
-        char key;
-	char hint[128], more[128], prog_str[60];
 	int i,j,k,l;
+        char more[128], prog_str[60];
 
-	if (!do_menu) return;
-	if (!MenuCaller) return;
-
-        if (menu_newhint == XK_Shift_L || menu_newhint == XK_Shift_R) return;
-	key = toupper((char) menu_newhint);
-
-	if (key == menu_lasthint) return;
-
-        menu_lasthint = key;
 	if (key=='\033')
            sprintf(hint, " %s", Label[L_ESCMENU]); 
 	else
@@ -525,11 +520,14 @@ showMenuHint()
 	   else
 	      sprintf(hint, " %s", Label[L_UNKNOWN]);
         }
-        *more = '\0';
+
+        more[0] = more[1] = ' ';
+        more[2] = '\0';
+
 	if (index("CDS", key))
 	   sprintf(more, " (%s)", Label[L_DEGREE]);
-	if (index("ABGJ", key)) {
-           switch(MenuCaller->flags.progress) {
+	if (index("ABGJ'", key)) {
+           switch(Context->flags.progress) {
               case 0: sprintf(prog_str, "1 %s", Label[L_MIN]); break;
 	      case 1: sprintf(prog_str, "1 %s", Label[L_HOUR]); break;
 	      case 2: sprintf(prog_str, "1 %s", Label[L_DAY]); break;
@@ -541,25 +539,52 @@ showMenuHint()
            sprintf(more, " ( %s %s%s   %s %.3f %s )", 
 		  Label[L_PROGRESS], 
                   (key=='A')? "+":((key=='B')? "-":""), prog_str, 
-                  Label[L_TIMEJUMP], MenuCaller->jump/86400.0,
+                  Label[L_TIMEJUMP], Context->jump/86400.0,
 		  Label[L_DAYS]);
 	}
 	if (key == 'H') {
 	    sscanf(RELEASE, "%d %d %d", &i, &j, &k);
-	    sprintf(more, " (%s %s, %d %s %d, %s)", 
+	    sprintf(more+1, "(%s %s, %d %s %d, %s)", 
                       ProgName, VERSION, i, Month_name[j-1], k, COPYRIGHT);
 	}
 	if (key == 'X') {
-	    sprintf(more, " : %s", (ExternAction)? ExternAction : "(null)");
+	    sprintf(more+1, ": %s", (ExternAction)? ExternAction : "(null)");
 	}
+
 	if (key == '=')
-	    sprintf(more, "  (%c)", (do_sync)? '+' : '-');
-        if (*more) strncat(hint, more, 120 - strlen(hint));
+	    sprintf(more+2, "(%c)", (do_sync)? '+' : '-');
+	if (key == '[' && do_root <= 0)
+	    sprintf(more+2, Label[L_ONCE]);
+	if (key == '[' && do_root >= 1)
+	    sprintf(more+2, Label[L_PERIODIC], root_period);
+	if (key == ']' && do_root <= 0)
+	    sprintf(more+2, Label[L_BLANKSCREEN]);
+	if (key == ']' && do_root >= 1)
+	    sprintf(more+2, Label[L_STARRYSKY]);
+        if (more[2])
+	   strncat(hint, more, 120 - strlen(hint));
         l = strlen(hint);
 	if (l<120)
 	    for (i=l; i<120; i++) hint[i] = ' ';
 	hint[120] = '\0';
+}
 
+void
+showMenuHint()
+{
+        char key;
+	char hint[128];
+
+	if (!do_menu) return;
+	if (!MenuCaller) return;
+
+        if (menu_newhint == XK_Shift_L || menu_newhint == XK_Shift_R) return;
+	key = toupper((char) menu_newhint);
+
+	if (key == menu_lasthint) return;
+	helpHint(MenuCaller, key, hint);
+
+        menu_lasthint = key;
         BasicSettings(MenuCaller);
 	XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 4, 
               MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
@@ -571,22 +596,23 @@ void
 setupMenu()
 {
 	char s[2];
-	char which[] = "CDEMPSTUK><!Q";
+	char which[] = "QCDEMPSTUK><!";
 	int i, j, j0, b, d;
 
 	if (!do_menu) return;
 
+	d = strlen(which);
         if (MenuCaller->wintype) {
 	   if (do_dock)
-              strcpy(which, "Q");
+              which[1] = '\0';
            else 
               which[0] = '\0';
 	} else {
 	   if (do_dock) {
-	      if (MenuCaller != Seed) 
-	         which[strlen(which)-1] = '\0';
+	      if (MenuCaller != Seed)
+                 which[d-4] = '\0';
 	   } else
-	         which[strlen(which)-5] = '\0';
+	         which[d-5] = '\0';
 	}
 
         BasicSettings(MenuCaller);
@@ -607,7 +633,7 @@ setupMenu()
 	      s[0] = MenuKey[2*i];
 	      if (index(which,s[0])) 
                  XSetForeground(dpy, MenuCaller->gdata->wingc, 
-                                MenuCaller->gdata->pixel[IMAGECOLOR]);
+                                MenuCaller->gdata->pixel[WEAKCOLOR]);
 	      XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 
                   d+i*MenuCaller->gdata->charspace, 
                   MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, s, 1);
@@ -1542,18 +1568,13 @@ showOptionHint()
 	if (option_newhint=='?')
            strcpy(hint, Label[L_INCORRECT]);
 	else {
-	   l = getNumCmd(option_newhint);
-	   if (l>=0 && l<N_HELP) strcpy(hint, Help[l]);
+	   if (option_newhint == 'G' || option_newhint == 'J') 
+              option_lasthint = ' ';
+	   helpHint(OptionCaller, option_newhint, hint);
 	}
 
 	l = strlen(hint);
 
-	if (option_newhint=='=') {
-	   strcat(hint, "  ( )");
-	   l += 5;
-	   hint[l-2] = (do_sync)? '+' : '-';
-	}
-	 
 	BasicSettings(OptionCaller);
         XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixel[MENUBGCOLOR]);
 
@@ -1719,7 +1740,8 @@ struct Sundata * Context;
 	}
         setSizeHints(NULL, 5);
         XMoveWindow(dpy, Option, x, y);
-        XMapWindow(dpy, Option);
+        XResizeWindow(dpy, Zoom, OptionGeom.width, OptionGeom.height);
+        XMapRaised(dpy, Option);
         XMoveWindow(dpy, Option, x, y);
         XSync(dpy, True);
 	usleep(2*TIMESTEP);
@@ -1755,10 +1777,9 @@ activateOption()
 	   option_newhint = '?';
 	   showOptionHint();
 	   return;
-	} else {
+	} else
 	   option_newhint = '\n';
-	   showOptionHint();
-	}	     
+
         showOptionHint();
      /* Set runlevel=IMAGERECYCLE if previous image/pixmap can be recycled */
 	if (option_changes<4 && gflags.colorlevel==oldflags.colorlevel && 
@@ -1843,8 +1864,8 @@ int x, y, button, evtype;
 	   if (evtype==ButtonRelease) {
 	      if (click_pos<N_OPTION) {
 		 key = (KeySym)tolower(option_newhint);
-		 showOptionHint();
 	         processKey(Option, key);
+		 showOptionHint();
 	      } else
 	         PopOption(Context);
 	   }
@@ -2062,7 +2083,8 @@ struct Sundata * Context;
 	}
         setSizeHints(NULL, 6);
         XMoveWindow(dpy, Urban, x, y);
-        XMapWindow(dpy, Urban);
+        XResizeWindow(dpy, Urban, UrbanGeom.width, UrbanGeom.height);
+        XMapRaised(dpy, Urban);
         XMoveWindow(dpy, Urban, x, y);
         XSync(dpy, True);
 	usleep(2*TIMESTEP);
@@ -2141,42 +2163,56 @@ struct Sundata * Context;
 }
 
 void
-remapAuxilWins(Context)
+remapAuxilWins(Context, mode)
 struct Sundata * Context;
+int mode;
 {
       int i;
 
       if (do_menu || do_filesel || do_zoom || do_option || do_urban) {
 	 XFlush(dpy);
 	 usleep(2*TIMESTEP);
-         if (verbose)
+         if (verbose && mode)
 	    fprintf(stderr, "Remapping auxiliary widgets...\n");
       } else
 	 return;
 
-      if (do_menu) { 
-	 do_menu = 1;
-	 menu_lasthint = '\0';
-         for (i=0; i<=1; i++) PopMenu(Context); 
-      }
       if (do_filesel) {
-         do_filesel = 1;
-         for (i=0; i<=1; i++) PopFilesel(Context);
+	 if (mode>0 || Context==FileselCaller) {
+            do_filesel = 1;
+            for (i=0; i<=mode; i++) PopFilesel(Context);
+	 }
       }
       if (do_zoom) {
-	 do_zoom = 1;
-	 zoom_lasthint = '0';
-         for (i=0; i<=1; i++) PopZoom(Context);
+	 if (mode>0 || Context==ZoomCaller) {
+	    do_zoom = 1;
+	    zoom_lasthint = '0';
+            for (i=0; i<=mode; i++) PopZoom(Context);
+	 }
       }
       if (do_option) {
-	 do_option = 1;
-	 option_lasthint = ' ';
-         for (i=0; i<=1; i++) PopOption(Context);
+	 if (mode>0 || Context==OptionCaller) {
+	    do_option = 1;
+	    option_lasthint = ' ';
+            for (i=0; i<=mode; i++) PopOption(Context);
+	 }
       }
       if (do_urban) {
-	 do_urban = 1;
-         for (i=0; i<=1; i++) PopUrban(Context);
+	 if (mode>0 || Context==UrbanCaller) {
+	    do_urban = 1;
+            for (i=0; i<=mode; i++) PopUrban(Context);
+	 }
       }
+      if (do_menu) { 
+	 if (mode>0 || Context==MenuCaller) {
+	    do_menu = 1;
+	    menu_lasthint = '\0';
+            for (i=0; i<=mode; i++) PopMenu(Context); 
+	 }
+      }
+
+      XFlush(dpy);
+
 }
 
 void
@@ -2194,11 +2230,6 @@ Sundata * Context;
       } else
 	return;
 
-      if (do_menu) {
-         MenuCaller = Context;
-	 menu_lasthint = '\0';
-	 setupMenu();
-      }
       if (do_filesel) { 
          FileselCaller = Context;
 	 do_filesel = 1;
@@ -2218,6 +2249,11 @@ Sundata * Context;
          UrbanCaller = Context;
          do_urban = 1; 
 	 setupUrban(-1);
+      }
+      if (do_menu) {
+         MenuCaller = Context;
+	 menu_lasthint = '\0';
+	 setupMenu();
       }
 }
 
@@ -2324,6 +2360,10 @@ int all;
 	      if (do_zoom && Context == ZoomCaller) PopZoom(Context);
 	      if (do_option && Context == OptionCaller) PopOption(Context);
 	      if (do_urban && Context == UrbanCaller) PopUrban(Context);
+	      if (Context == RootCaller) {
+                 RootCaller = NULL;
+		 do_root = 0;
+	      }
 	      XDestroyWindow(dpy, Context->win);
   	      Context->win = 0;
 	   }

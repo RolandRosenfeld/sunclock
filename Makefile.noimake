@@ -7,6 +7,9 @@ XAPPLOADDIR=/lib/X11/app-defaults
 XBINDIR=/bin/X11
 
 #
+MKDIRHIER=mkdir -p
+
+#
 # Compile options:
 #
 # Set -DSYSV if on System V
@@ -48,12 +51,12 @@ sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 
 install: install.man sunclock
-	mkdirhier $(DESTDIR)/$(XBINDIR)
+	$(MKDIRHIER) $(DESTDIR)/$(XBINDIR)
 	install -s -c sunclock $(DESTDIR)/$(XBINDIR)
-	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
+	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
 	cd i18n ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
-	mkdirhier $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
+	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
 

@@ -5,16 +5,62 @@ Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 
 Planned versions 3.4x, 3.5x... (features to appear in some order)
 
-- Find a second vector map showing time zones
+- Produce other vector maps, especially one showing time zones
 - Spherical representation of Earth
 - Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 
   database would be great...)
 
+Version 3.45v2, June 28, 2001
+
+- Severe bug corrected: sunclock-3.45 was segfaulting after any 
+  click on a random point of the map (in solar time mode)
+  Thanks to David Ronis <ronis@ronispc.chem.mcgill.ca> for
+  tracking down that bug.
+- Another less severe bug fixed: the root window refresh procedure now
+  works even when the main window is iconified (it is actually
+  recommended to iconify any window which is to be mapped on the
+  root window...)
+- The background color of the root window on which stars are drawn 
+  can now be chosen at will. For instance
+    -setcolor "star|yellow" -setcolor "root|grey20"
+  sets yellow stars on a grey20 sky. This thing also corrects possible
+  garbage that would otherwise have been drawn in the Pixmap texture.
+- Any city which is preselected via the -city <name> option still appears
+  even if its category is a priori to small to let it being displayed
+  for the given -sizelimits (suggestion by François Massonneau).
+- The -addcity option now tolerates the modification of a city (any city
+  already listed with the same name and coordinates up to 0.5 degree
+  is replaced from the list - a warning is issued, however - that warning
+  disappears if the city is first removed with -removecity).
+  Change suggested by Ted Rolle <ted@acacia.datacomm.com>
+
+Version 3.45, June 27, 2001
+
+- Sunclock can write periodically onto the root window with a specified
+  frequency (related new option -rootperiod <value>)
+- A new animation mode has been introduced to modify the speed of
+  time evolution (this is handled by a new option -animateperiod <value>).
+- The keys G J [ ] ' are used to handle these new features from the
+  Option window.
+- Hong Kong coordinates have been fixed to their correct values,
+  thanks to Stefan Recksiegel <stefan@post.kek.jp>
+- Urban and Option windows no longer have erratic sizes when switching
+  the map/clock modes, and the Menu window should be correctly refreshed.
+- A 5th city category has been introduced (suggestion by F.Massonneau,
+  <frmas@free.fr>). By default, spotsizes now range from 1 (largest cities) 
+  to 5 (towns or villages), instead of from 4 to 1 (the illogical ordering 
+  has been reversed - users who haven't tweaked their city parameters 
+  shouldn't see the change).
+- When a small city is selected (beyond the category of cities normally
+  displayed on the map), it is now shown, whatever the size is.
+- Some XEvent fixes (e.g. in clear bottom strip routine, and when
+  iconifying/deiconifying windows).
+
 Version 3.44, June 22, 2001
 
 - Sunclock is now able to write the map to the root window, and presents
-  a starry sky beyond the size of the map.
+  a starry sky beyond the limits of the map.
 - The syntax of color options has changed. A unique option 
   "-setcolor field|color" can be used instead. This single change reduced
   the size of the binary code by 1.5 kB !!

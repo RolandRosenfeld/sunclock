@@ -54,12 +54,17 @@ Fuso orario
 Latitudine
 Longitudine
 Dimensione
-Attenzione: %s, lat = %s lon = %s è già nella lista delle città!
+Attenzione: %s, lat = %s lon = %s%sè già nella lista delle città!
+Overriding previous entry for %s
 #
 Opzione
 Attivo l'opzione selezionata...
 Opzione scorretta o non disponibile durante l'esecuzione!
 Opzioni: premi <Ctrl><Spazio> per uno spazio in un elemento
+(una volta)
+(ciclicamente, ogni %d secondi)
+(con cielo stellato)
+(finestra di sfondo vuota)
 con la seguente lista di opzioni abbastanza lunga:
 A partire da **, le opzioni sono configurabili durante l'esecuzione.
 Calcolo la nuova immagine...
@@ -107,8 +112,9 @@ Sincronizza l'operazione di zoom
 Attiva l'opzione
 Cancella la linea comandi dell'opzione
 Finestre sincronizzati o no
-Copy map to root window
-Erase map from root window
+Copia la mappa alla finestra di sfondo
+Cancella la mappa dalla finestra di sfondo
+Inizia/Ferma l'animazione
 # Urban window help
 Usa gradi, minuti, secondi, oppure gradi decimali
 Cerca/scegli città

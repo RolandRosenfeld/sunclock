@@ -54,12 +54,17 @@ Zone horaire
 Latitude
 Longitude
 Taille
-Attention: %s, lat = %s lon = %s déjà dans la liste des villes !!
+Attention: %s, lat = %s lon = %s%sdéjà dans la liste des villes !!
+Modification des données pour la localité %s
 #
 Option
 Activation de l'option sélectionnée...
 Option incorrecte ou non disponible en exécution !!
 Options: taper <Ctrl><Espace> pour un blanc situé dans une chaîne
+(une fois)
+(périodiquement, période %d secondes)
+(avec fond de ciel étoilé)
+(avec fond d'écran vide)
 avec la liste d'options assez longue suivante :
 A partir de **, les options sont configurables pendant l'exécution.
 Calcul de la nouvelle image...
@@ -109,6 +114,7 @@ Effacer les commandes et paramètres
 Synchroniser les fenêtres entre elles ou non
 Reproduire la carte en fond d'écran
 Effacer la carte du fond d'écran
+Démarrer/arrêter l'animation
 # Urban window help
 Utiliser degrés, minutes, secondes, ou degrés décimaux
 Chercher/sélectionner une localité
