@@ -36,6 +36,7 @@ Tastatur/Maus Steuerung
 Abbruch
 Schrittweite =
 Zeitverschiebung =
+Sekunden
 Minute
 Stunde
 Tag
@@ -59,7 +60,7 @@ Zeige die Hilfe und Optionen an
 Iconifiziere das Fenster
 Kartenfenster auffrischen
 Wechsle zwischen Uhr- und Kartenfenster
-Aktiviere Kommando (-cmd Option)
+Aktiviere Kommando (-command Option)
 Beende Programm
 Abbruch Menü
 # Short help

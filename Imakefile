@@ -8,20 +8,24 @@
 # Pick -O or -g
 #
 
+SHAREDIR=/usr/share/sunclock
+
 #ifdef HPArchitecture
-CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #else
 # SunOS
-#CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+#CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 # Solaris, Linux
-CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
-SRCS=sunclock.c bitmaps.c astro.c tildepath.c
-OBJS=sunclock.o bitmaps.o astro.o tildepath.o
+SRCS=sunclock.c astro.c tildepath.c
+OBJS=sunclock.o astro.o tildepath.o
 LOCAL_LIBRARIES=$(XLIB) -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
 InstallAppDefaults(Sunclock)
-	cp -f i18n/Sunclock_* $(DESTDIR)$(XAPPLOADDIR)
+	mkdirhier $(DESTDIR)$(SHAREDIR)
+	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)
+	cat WARNING

@@ -36,6 +36,7 @@ Tastatur/Mus kontroll
 Escape
 Tids-variabel =
 Global tid variabel =
+sekunden
 minut
 timme
 dag
@@ -59,7 +60,7 @@ Visa hjälp och alternativ
 Ikonifiera fönster
 Förnya kartfönster
 Växla tidszon och kartfönster
-Aktivera kommando (-cmd option)
+Aktivera kommando (-command option)
 Avsluta program
 Escape menu
 # Short help

@@ -1,0 +1,17 @@
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+If you are upgrading from a version of sunclock prior to 3.10, notice
+that the language files Sunclock_** were installed in the app-defaults
+directory 
+  /usr/lib/X11/app-defaults/ 
+or possibly in
+  /usr/X11R6/lib/X11/app-defaults/
+
+Starting with 3.11, this is no longer the case, they are rather installed
+in /usr/share/sunclock/ as Sunclock.** Moreover, the format changed between
+versions 3.10 and 3.11. You should probably remove the older files 
+Sunclock_** from the app-defaults directory...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+

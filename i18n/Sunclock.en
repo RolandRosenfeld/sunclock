@@ -36,6 +36,7 @@ Key/Mouse controls
 Escape
 Progress value =
 Global time shift =
+seconds
 minute
 hour
 day
@@ -59,7 +60,7 @@ Show help and options
 Iconify window
 Refresh map window
 Switch clock and map windows
-Activate command (-cmd option)
+Activate command (-command option)
 Quit program
 Escape menu
 # Short help

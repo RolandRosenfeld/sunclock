@@ -19,9 +19,11 @@ The map window can work in five different modes:
 (latitude, longitude) of that city, legal time and sunrise/sunset.
 - "Solar" mode: by clicking on a point of the map (either a city or 
 another point), solar time and day length are shown.
+- "Hour Extension" mode: displays solar times from 00:00 to 23:00 in bottom
+strip, according to the Sun position.
 - "Distance" mode: shows distances in km and miles between two arbitrary
 locations.
-- "Progress" mode: allows to speed up the evolution of time, so as to
+- "Progress" mode: allows to accelerate the evolution of time, so as to
 observe the evolution of day/night periods and seasons.
 
 Meridians, Parallels, Equator, Tropics and Arctic circles can also be

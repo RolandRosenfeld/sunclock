@@ -14,7 +14,8 @@
 #include <math.h>
 #include <time.h>
 #include "version.h"
-#include "bitmaps.h"
+
+#define DEFINE_BITS
 
 #define abs(x) ((x) < 0 ? (-(x)) : x)			  /* Absolute value */
 #define sgn(x) (((x) < 0) ? -1 : ((x) > 0 ? 1 : 0))	  /* Extract sign */
@@ -32,7 +33,7 @@
 #define	FAILFONT	"fixed"
 #define EARTHRADIUS_KM  6378.125
 #define EARTHRADIUS_ML  3963.180
-#define SUN_APPDIAM     0.533      /* Sun apparent diameter, in degrees */
+#define SUN_APPRADIUS   0.266      /* Sun apparent radius, in degrees */
 
 #define SP		"         "
 

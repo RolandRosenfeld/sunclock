@@ -1,6 +1,7 @@
 # Installation options
 #
 DESTDIR=/usr
+SHAREDIR=/share/sunclock
 XAPPLOADDIR=/lib/X11/app-defaults
 XBINDIR=/bin/X11
 
@@ -15,21 +16,21 @@ XBINDIR=/bin/X11
 #
 
 # For HP
-#CFLAGS=-Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+#CFLAGS=-Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # For SunOS
-#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME
+#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # For Solaris
-#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #LFLAGS=-L/usr/openwin/lib
 
 # For Linux
-CFLAGS=-I/usr/include/X11 -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\"
+CFLAGS=-I/usr/include/X11 -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 LFLAGS=-L/usr/X11/lib
 
-OFILES=sunclock.o bitmaps.o astro.o tildepath.o
-HFILES=bitmaps.h clock.bits.h map.bits.h langdef.h sunclock.h version.h
+OFILES=sunclock.o astro.o tildepath.o
+HFILES=langdef.h sunclock.h version.h
 
 sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
@@ -37,7 +38,9 @@ sunclock: $(OFILES) $(HFILES)
 install: sunclock
 	install -c -s sunclock $(DESTDIR)/$(XBINDIR)
 	cp -f Sunclock.ad $(DESTDIR)$(XAPPLOADDIR)/Sunclock
-	cp -f i18n/Sunclock_* $(DESTDIR)$(XAPPLOADDIR)
+	mkdirhier $(DESTDIR)$(SHAREDIR)
+	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)
+	cat WARNING
 
 clean:
 	rm -f core *.o *~ sunclock

@@ -24,7 +24,7 @@ Déc
 Point
 Heure GMT
 Heure solaire
-Heure légale
+Heure légale 
 Durée du jour
 Lever
 Coucher
@@ -36,6 +36,7 @@ Contrôles Clavier/Souris
 Echap
 Progression =
 Décalage temporel =
+secondes
 minute
 heure
 jour
@@ -59,7 +60,7 @@ Afficher l'aide et les options
 Iconifier la fenêtre
 Rafraîchir la fenêtre
 Commuter les fenêtres carte/horloge
-Activer la commande spécifiée par l'option -cmd
+Activer la commande spécifiée par l'option -command
 Quitter le programme
 Sortir du menu
 # Short help

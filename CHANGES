@@ -3,41 +3,76 @@ All revisions from version 1.4 to version 3.xx are by
 Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 ==============================================================================
 
+Planned Version 3.20, ???
+
+- Implementation of vector maps, using the xearth routines.
+- Resizing routines for map and clock windows.
+
+Version 3.11, October 8, 2000.
+
+- Italian localization by Alessio Bragadini <alessio@sevenseas.org>
+  Spanish localization by Pedro Gimeno <pgimeno@iname.com>
+- Improved window placement, as suggested by 
+  Pascal Jermini <Pascal.Jermini@epfl.ch>
+- Merged patch by Pedro Gimeno, implementing the wm_delete_window
+  protocol.
+- Corrected calculation of solartime, sunrise and sunset, which was
+  sometimes inaccurate by 10-15 minutes or more.
+  Notified by Orn E. Hansen <oe.hansen@gamma.telenordia.se>
+- Fix in setTZ routine, related to the putenv/setenv duality
+  Thanks to Roland Rosenfeld <roland@spinnaker.de> for this.
+  Hopefully this fixes the persistent problems with timezones...
+- Merged window-manager icons from the Debian sources.
+- New command line options added (-rcfile -language -jump -progress -menu 
+  among others). Time progress and configuration file can now be set 
+  arbitrarily.
+- The command line options can now also be set through the configuration 
+  file, and the version number appears in the tips of 'H' option
+  Suggestions by François Massonneau <island@worldnet.fr>
+
 Version 3.10, October 3, 2000.
 
-- Interface has been improved and should be substantially easier to use
+- Interface has been improved and should be substantially easier to use,
+  following some suggestions by François Massonneau <island@worldnet.fr>
 - Added Sun position functionality
 - Added "hour extension" mode
-- Swedish localization
-- Other small changes, including bug fixes (timezone problems...)
+- Swedish localization by <janoh@telia.com>
+- Fixes in monochrome mode
+- Other small changes, including bug fixes ( timezone problem, notified by
+  Dimitri Papadopoulos-Orfanos <papadopo@shfj.cea.fr> )
 
 Version 3.04, September 7, 2000.
 
 - Fixed tzset() problems on some systems (Linux-Mandrake...) by always
   calling tzset() before each localtime() call.
+  Notified by Andy Barlak <andyb@eskimo.com> and
+  <dicw@kalevanet.sointula.bc.ca> )
 
 Version 3.03, September 5, 2000.
 
 - Corrected local timezone bug (wasn't correctly initialized nor reset) 
+  Problem notified by Philippe Le Hegaret <plh@w3.org>
 - Added "1 minute" as one of possible values of progression time
 - The value of the sun apparent diameter was wrong (too large) and thus 
   produced slightly inaccurate day length values!
-- Fix for SunPro compiler
+- Fix for SunPro compiler 
+  by Dimitri Papadopoulos-Orfanos <papadopo@shfj.cea.fr>
 
 Version 3.02, September 4, 2000.
 
 - Corrected segmentation fault problem, occurring when environment variable 
-  LANG was not set
+  LANG was not set (patch from Joerg Plate <Joerg@Plate.cx>)
 - Fixed behaviour of window placement, which was somewhat unsatisfactory
 - Slight code change for the sake of Solaris compatibility
 - Improved sunclock.man, Imakefile and Makefile.noimake
 - Added horizontal scroll for bottom text line
-- Merged German app-default file provided by users
+- Merged German app-default file provided by several German users
+  (including the Debian maintainer Roland Rosenfeld <roland@spinnaker.de>)
 
 Version 3.01, August 31, 2000.
 
-- Added command line options -mapmode and -clockmode
-- A lot of compilation fixes
+- Added command line options -map and -clock
+- A lot of compilation fixes, notified by Andy Barlak <andyb@eskimo.com>
 - Makefile.noimake improved
 
 Version 3.00, August 26, 2000.

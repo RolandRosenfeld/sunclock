@@ -11,7 +11,7 @@ enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_DAYLENGTH, L_SUNRISE, L_SUNSET, 
       L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, 
       L_KEY, L_CONTROLS, L_ESCAPE, 
-      L_PROGRESS, L_GLOBALSHIFT, L_MIN, L_HOUR, L_DAY, L_DAYS, L_END};
+      L_PROGRESS, L_TIMEJUMP, L_SEC, L_MIN, L_HOUR, L_DAY, L_DAYS, L_END};
 
 char	Label[L_END][60] = {
 	"Point", "GMT time", "Solar time", "Legal time", 
@@ -24,6 +24,7 @@ char	Label[L_END][60] = {
 	"Escape",
 	"Progress value =",
         "Global time shift =",
+	"seconds",
 	"minute",
 	"hour",
 	"day",

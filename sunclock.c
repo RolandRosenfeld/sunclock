@@ -90,8 +90,8 @@
                        mouse controls), new functions, resulting in a much 
                        more powerful program.
 
-       3.01  09/01/00  Additional command line improvements and a lot of
-       		       compilation fixes.
+       3.10  10/03/00  Menu window and a lot of new improvements as well.
+       3.11  10/08/00  Many clean-ups and bug fixes.
 
 */
 
@@ -102,6 +102,11 @@
 
 #include "sunclock.h"
 #include "langdef.h"
+
+#ifdef	DEFINE_BITS
+#include "clock_icon.xbm"
+#include "map_icon.xbm"
+#endif
 
 /* 
  *  external routines
@@ -115,6 +120,7 @@ extern char *	timezone();
 extern double	jtime();
 extern double	gmst();
 extern void	sunpos();
+extern long	jdate();
 
 struct sunclock {
 	int		s_width;	/* size of pixmap */
@@ -174,7 +180,10 @@ typedef struct Mark {
 struct sunclock *	makeMapContext();
 Bool			evpred();
 
-char app_default[] = APPDEF"/Sunclock***";
+char share_file[] = SHAREDIR"/Sunclock.**";
+char app_default[] = APPDEF"/Sunclock";
+char *rc_file = NULL;
+char *Language = NULL;
 
 struct geom {
 	int	mask;
@@ -192,6 +201,9 @@ Color	BgColor, FgColor, TextBgColor, TextFgColor,
 char *		Display_name = "";
 Display *	dpy;
 int		scr;
+
+Atom		wm_delete_window;
+Atom		wm_protocols;
 
 XFontStruct *	SmallFont;
 XFontStruct *	BigFont;
@@ -226,11 +238,13 @@ int		label_shift = 0;
 
 int             time_count = PRECOUNT;
 int		force_proj = 0;
-int             firstime = 1;
+int             first_time = 1;
+int             last_hint = -1;
+int             switched = 1;
 
 int             do_map = 0;
 int             do_hint = 0;
-int		do_menu = 0;
+int		do_menu = 1;
 
 int		do_sunpos = 1;
 int		do_cities = 1;
@@ -242,11 +256,11 @@ int		do_bottom = 0;
 
 int		clock_mode = 0;
 char            map_mode = LEGALTIME;
-char *		CityInit = NULL;
+char		CityInit[80] = "";
 
-long		local_shift = 0;
-long		global_shift = 0;
-long		time_progress = 1;
+long		time_jump = 0;
+long		time_progress = 60;
+long		time_progress_init = 0;
 
 double		sun_long = 0.0;
 double		sun_decl = 200.0;
@@ -262,21 +276,23 @@ usage()
   	int	i;
 
 	fprintf(stderr, "%s: version %s\nUsage:\n"
-         "%s [-display dispname] [-cmd command]\n"
-         SP"[-version] [-help] [-mono]\n"
-	 SP"[-clock] [-clockgeom +x+y] [-seconds]\n"
-         SP"[-map] [-mapgeom +x+y] [-mapmode * <c,d,l,s>]\n"
-         SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
-         SP"[-vertshift h (between map & menu)]\n"
-         SP"[-spot size(0,1,2,3)] [-shift timeshift(sec)]\n"
-         SP"[-city name] [-position latitude longitude]\n"
-         SP"[-nocities] [-nosunpos] [-meridians] [-parallels] [-tropics]\n"
-         SP"[-bg color] [-fg color] [-textbg color] [-textfg color]\n"
-         SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
-         SP"[-markcolor1 color] [-markcolor2 color]\n"
-         SP"[-linecolor color] [-tropiccolor color] [-suncolor color]\n"
-           "\n%s\n", 
-         ProgName, VERSION, ProgName, ShortHelp);
+        "%s [-display dispname] [-rcfile file] [-command string]\n"
+        SP"[-language name] [-version] [-help] [-mono] [-menu] [-nomenu]\n"
+	SP"[-clock] [-clockgeom +x+y] [-date] [-seconds]\n"
+        SP"[-map] [-mapgeom +x+y] [-mapmode * <C,D,E,L,S>]\n"
+        SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
+        SP"[-vertshift h (between map & menu)] [-spot size(0,1,2,3)]\n"
+        SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
+        SP"[-city name] [-position latitude longitude]\n"
+        SP"[-cities] [-sunpos] [-meridians] [-parallels] [-tropics]\n"
+        SP"[-nocities] [-nosunpos] [-nomeridians] [-noparallels] [-notropics]"
+	  "\n"
+        SP"[-bg color] [-fg color] [-textbg color] [-textfg color]\n"
+        SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
+        SP"[-markcolor1 color] [-markcolor2 color]\n"
+        SP"[-linecolor color] [-tropiccolor color] [-suncolor color]\n"
+          "\n%s\n", 
+        ProgName, VERSION, ProgName, ShortHelp);
 
 	for (i=0; i<N_OPTIONS; i++)
 	fprintf(stderr, "%s %c : %s\n", Label[L_KEY], Option[2*i], Help[i]);
@@ -319,159 +335,6 @@ register int			nbytes;
 	return (p);
 }
 
-/*
- * readrc() - Read the user's ~/.sunclockrc file and app-defaults
- */
-
-int 
-readrc()
-{
-    /*
-     * Local Variables
-     */
-
-    char *fname;	/* Path to .sunclockrc file */
-    FILE *rc;		/* File pointer for rc file */
-    char buf[128];	/* Buffer to hold input lines */
-    char language[4];   /* String to hold language identifier */
-    char *city, *lat, *lon, *tz; /* Information about a place */
-    City *crec;		/* Pointer to new city record */
-    int  i;		/* index */
-
-    /*
-     * External Functions
-     */
-
-    char *tildepath();	/* Returns path to ~/<file> */
-
-    /*
-     * Initialize ListOptions
-     */
-
-    for (i=0; i<N_OPTIONS; i++) {
-      ListOptions[4*i+1] = Option[2*i];
-      ListOptions[4*i] = ListOptions[4*i+2] = ListOptions[4*i+3] = ' ';
-    }
-    ListOptions[4*N_OPTIONS] = '\0';
-
-    /*
-     * Read language files
-     */
-
-    fname = app_default;
-
-    i = strlen(app_default);
-    app_default[i-3] = '_';
-
-    if (getenv("LANG")) {
-       strncpy(language, getenv("LANG"), 2);
-    } else {
-       strcpy (language,"en");
-    }
-    app_default[i-2] = language[0];
-    app_default[i-1] = language[1];
-
-    if ((rc = fopen(fname, "r")) != NULL) {
-      int j=0, k=0, l=0, m=0, n=0, p;
-      while (fgets(buf, 128, rc)) {
-        if (buf[0] != '#') {
-	        p = strlen(buf)-1;
-        	if (p>=0 && buf[p]=='\n') buf[p] = '\0';
-	        if (j<7) { strcpy(Day_name[j], buf); j++; } else
-        	if (k<12) { strcpy(Month_name[k], buf); k++; } else
-		if (l<L_END) { strcpy(Label[l], buf); l++; } else 
-		if (m<=N_OPTIONS) { strcpy(Help[m], buf); m++; } else 
-                {
-                   if (n==0) *ShortHelp = '\0';
-		   strcat(ShortHelp, buf); 
-                   strcat(ShortHelp, "\n"); 
-                   n++;
-                }
-	}
-      }
-      fclose(rc);
-    } else
-        fprintf(stderr, 
-             "Unable to open language in %s\n", app_default);
-
-    /*
-     * Get the path to the rc file
-     */
-
-    app_default[i-3] = '\0';
-
-    if ((fname = tildepath("~/.sunclockrc")) == NULL) {
-        fprintf(stderr, 
-             "Unable to get path to ~/.sunclockrc\n");
-        return(1);
-    }
-
-    
-    /* Open the RC file */
-
-    if ((rc = fopen(fname, "r")) == NULL) {
-        fname = app_default;
-        if ((rc = fopen(fname, "r")) == NULL)
-	  {
-          fprintf(stderr, 
-             "Unable to find ~/.sunclockrc or app-default Sunclock\n");
-	  return(1);
-	  }
-    }
-
-    /* Read and parse lines from the file */
-
-    while (fgets(buf, 128, rc)) {
-
-	/* Get the city name looking for blank lines and comments */
-
-	if (((city = strtok(buf, ":\n")) == NULL) ||
-	    (city[0] == '#') || (city[0] == '\0'))
-	    continue;
-
-	/* Get the latitude, longitude and timezone */
-
-	if ((lat = strtok(NULL, " 	\n")) == NULL) {
-	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
-	    continue;
-	}
-
-	if ((lon = strtok(NULL, " 	\n")) == NULL) {
-	    fprintf(stderr, "Error in .sunclockrf for city %s\n", city);
-	    continue;
-	}
-
-	if ((tz = strtok(NULL, " 	\n")) == NULL) {
-	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
-	    continue;
-	}
-
-	/* Create the record for the city */
-
-	if ((crec = (City *) calloc(1, sizeof(City))) == NULL) {
-	    fprintf(stderr, "Memory allocation failure\n");
-	    return(1);
-	}
-
-	/* Set up the record */
-
-	crec->name = strdup(city);
-	crec->lat = atof(lat);
-	crec->lon = atof(lon);
-	crec->mode = 0;
-	crec->tz = strdup(tz);
-
-	/* Link it into the list */
-
-	crec->next = cities;
-	cities = crec;
-    }
-
-    /* Done */
-
-    return(0);
-}
-
 void
 needMore(argc, argv)
 register int			argc;
@@ -506,18 +369,47 @@ register struct geom *		g;
 }
 
 void
-parseArgs(argc, argv)
+checkRCfile(argc, argv)
 register int			argc;
 register char **		argv;
 {
+	int i;
+
+	for (i=1; i<argc-1; i++) {
+           if (strcasecmp(argv[i], "-rcfile") == 0)
+	      rc_file = argv[i+1];
+           if (strcasecmp(argv[i], "-language") == 0)
+	      Language = argv[i+1];
+	}
+	   
+}
+
+int
+parseArgs(argc, argv, cond)
+register int			argc;
+register char **		argv;
+register int			cond;
+{
+	int	opt;
+
 	while (--argc > 0) {
 		++argv;
-		if (strcmp(*argv, "-display") == 0 && argc>1) {
+		if (strcasecmp(*argv, "-display") == 0 && argc>1) {
 			needMore(argc, argv);
 			Display_name = *++argv;
 			--argc;
+		} 
+		if (strcasecmp(*argv, "-language") == 0 && argc>1) {
+			needMore(argc, argv);
+			if (!Language) Language = *++argv;
+			--argc;
+		} 
+                else if (strcasecmp(*argv, "-rcfile") == 0 && argc>1) {
+			needMore(argc, argv);
+			++argv;  /* already done in checkRCfile */
+			--argc;
 		}
-		else if (strcmp(*argv, "-clockgeom") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-clockgeom") == 0 && argc>1) {
 			needMore(argc, argv);
 			getGeom(*++argv, &ClockGeom);
 			if (placement <= RANDOM) placement = FIXED;
@@ -525,7 +417,7 @@ register char **		argv;
                            getGeom(*argv, &MapGeom);
 			--argc;
 		}
-		else if (strcmp(*argv, "-mapgeom") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-mapgeom") == 0 && argc>1) {
 			needMore(argc, argv);
 			placement = FIXED;
 			getGeom(*++argv, &MapGeom);
@@ -534,42 +426,46 @@ register char **		argv;
 	                   getGeom(*argv, &ClockGeom);
 			--argc;
 		}
-		else if (strcmp(*argv, "-mapmode") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-mapmode") == 0 && argc>1) {
 			needMore(argc, argv);
                         if (!strcasecmp(*++argv, "c")) map_mode = COORDINATES;
                         if (!strcasecmp(*argv, "d")) map_mode = DISTANCES;
-                        if (!strcasecmp(*argv, "l")) map_mode = LEGALTIME;
+                        if (!strcasecmp(*argv, "e")) map_mode = EXTENSION;
+                        if (!strcasecmp(*argv, "l")) {
+			  *CityInit = '\0';
+			  map_mode = LEGALTIME;
+			}
                         if (!strcasecmp(*argv, "s")) map_mode = SOLARTIME;
 			--argc;
 		}
-		else if (strcmp(*argv, "-spot") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-spot") == 0 && argc>1) {
 			needMore(argc, argv);
 			spot_size = atoi(*++argv);
                         if (spot_size<0) spot_size = 0;
                         if (spot_size>3) spot_size = 3;
                         --argc;
 		}
-		else if (strcmp(*argv, "-bg") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-bg") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(BgColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-fg") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-fg") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(FgColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-textbg") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-textbg") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(TextBgColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-textfg") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-textfg") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(TextFgColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-position") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-position") == 0 && argc>1) {
 			needMore(argc, argv);
 			pos1.lat = atof(*++argv);
 	                --argc;
@@ -578,61 +474,62 @@ register char **		argv;
 			mark1.city = &pos1;
 			--argc;
 		}
-		else if (strcmp(*argv, "-city") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-city") == 0 && argc>1) {
 			needMore(argc, argv);
-			CityInit = *++argv;
+			strcpy(CityInit, *++argv);
+	                map_mode = COORDINATES;
 			--argc;
 		}
-		else if (strcmp(*argv, "-citycolor0") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-citycolor0") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(CityColor0.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-citycolor1") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-citycolor1") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(CityColor1.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-citycolor2") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-citycolor2") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(CityColor2.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-markcolor1") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-markcolor1") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(MarkColor1.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-markcolor2") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-markcolor2") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(MarkColor2.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-linecolor") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-linecolor") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(LineColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-tropiccolor") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-tropiccolor") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(TropicColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-suncolor") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-suncolor") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(SunColor.name, *++argv);
 			--argc;
 		}
-		else if (strcmp(*argv, "-placement") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-placement") == 0 && argc>1) {
 			needMore(argc, argv);
-			if (strcmp(*++argv, "random")==0)
+			if (strcasecmp(*++argv, "random")==0)
                            placement = RANDOM;
-			if (strcmp(*argv, "fixed")==0) {
+			if (strcasecmp(*argv, "fixed")==0) {
                            placement = FIXED;
 	                   MapGeom.mask = XValue | YValue;
 	                   ClockGeom.mask = XValue | YValue;
 			}
-			if (strcmp(*argv, "center")==0)
+			if (strcasecmp(*argv, "center")==0)
                            placement = CENTER;
 			if (strcasecmp(*argv, "nw")==0)
                            placement = NW;
@@ -644,59 +541,300 @@ register char **		argv;
                            placement = SE;
 			--argc;
 		}
-		else if (strcmp(*argv, "-vertshift") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-vertshift") == 0 && argc>1) {
 			needMore(argc, argv);
                         vert_shift = atoi(*++argv);
 			if (vert_shift<6) vert_shift = 6;
 			--argc;
 		}
-		else if (strcmp(*argv, "-cmd") == 0 && argc>1) {
+		else if (strcasecmp(*argv, "-command") == 0 && argc>1) {
 			needMore(argc, argv);
 			Command = *++argv;
 			--argc;
 		}
-		else if (strcmp(*argv, "-shift") == 0 && argc>1) {
+		else if (((opt = (strcasecmp(*argv, "-progress") == 0)) ||
+                          (strcasecmp(*argv, "-jump") == 0)) && argc>1) {
+		        char *str, c;
+			long value;
 			needMore(argc, argv);
-			global_shift= atol(*++argv);
+			value = atol(str=*++argv);
+			c = str[strlen(str)-1];
+                        if (c>='0' && c<='9') c='s';
+			switch(c) {
+			  case 's': break;
+			  case 'm': value *= 60 ; break;
+			  case 'h': value *= 3600 ; break;
+			  case 'd': value *= 86400 ; break;
+			  case 'M': value *= 2592000 ; break;
+			  case 'y':
+			  case 'Y': value *= 31536000 ; break;
+			  default : c = ' '; break;
+			}
+			if (c == ' ') usage();
+			if (opt) {
+                           time_progress = value; 
+                           time_progress_init = value; 
+			} else 
+			   time_jump = value;
 			--argc;
 		}
-		else if (strcmp(*argv, "-clock") == 0)
+		else if (strcasecmp(*argv, "-clock") == 0)
 			do_map = 0;
-		else if (strcmp(*argv, "-map") == 0)
+		else if (strcasecmp(*argv, "-map") == 0)
 			do_map = 1;
-		else if (strcmp(*argv, "-mono") == 0) {
+		else if (strcasecmp(*argv, "-menu") == 0)
+			do_menu = 0;
+		else if (strcasecmp(*argv, "-nomenu") == 0)
+			do_menu = 1;
+		else if (strcasecmp(*argv, "-mono") == 0) {
                         strcpy(TextBgColor.name, "White");
                         spot_size = 3;
 			mono = 1;
 		}
-		else if (strcmp(*argv, "-seconds") == 0)
+		else if (strcasecmp(*argv, "-date") == 0)
+                        clock_mode = 0;
+		else if (strcasecmp(*argv, "-seconds") == 0)
                         clock_mode = 1;
-		else if (strcmp(*argv, "-parallels") == 0) {
+		else if (strcasecmp(*argv, "-parallels") == 0) {
 			do_parall = 1;
 		}
-		else if (strcmp(*argv, "-nocities") == 0) {
+		else if (strcasecmp(*argv, "-cities") == 0) {
+			do_cities = 1;
+		}
+		else if (strcasecmp(*argv, "-sunpos") == 0) {
+			do_sunpos = 1;
+		}
+		else if (strcasecmp(*argv, "-nomeridians") == 0) {
+			do_merid = 0;
+		}
+		else if (strcasecmp(*argv, "-notropics") == 0) {
+			do_tropics = 0;
+		}
+		else if (strcasecmp(*argv, "-noparallels") == 0) {
+			do_parall = 0;
+		}
+		else if (strcasecmp(*argv, "-nocities") == 0) {
 			do_cities = 0;
 		}
-		else if (strcmp(*argv, "-nosunpos") == 0) {
+		else if (strcasecmp(*argv, "-nosunpos") == 0) {
 			do_sunpos = 0;
 		}
-		else if (strcmp(*argv, "-meridians") == 0) {
+		else if (strcasecmp(*argv, "-meridians") == 0) {
 			do_merid = 1;
 		}
-		else if (strcmp(*argv, "-tropics") == 0) {
+		else if (strcasecmp(*argv, "-tropics") == 0) {
 			do_tropics = 1;
 		}
-		else if (strcmp(*argv, "-version") == 0) {
+		else if (strcasecmp(*argv, "-version") == 0) {
 			fprintf(stderr, "%s: version %s\n",
 				ProgName, VERSION);
-			exit(0);
+			if (cond) 
+			  exit(0);
+			else
+			  return(0);
+		} else {
+                  if (cond)
+		    usage();
+		  else
+		    return(1);
 		}
-		else
-			usage();
+	}
+	return(0);
+}
+
+/*
+ * readrc() - Read the user's ~/.sunclockrc file and app-defaults
+ */
+
+int 
+readrc()
+{
+    /*
+     * Local Variables
+     */
+
+    char *fname;	/* Path to .sunclockrc file */
+    FILE *rc;		/* File pointer for rc file */
+    char buf[128];	/* Buffer to hold input lines */
+    char language[4]=""; /* String to hold language identifier */
+    char option[3][128]; /* Pointers to options */
+    char *args[3];      /* Pointers to options */
+    char *city, *lat, *lon, *tz; /* Information about a place */
+    City *crec;		/* Pointer to new city record */
+    int  first_step=1;  /* Are we parsing options in rc file ? */
+    int  i, j;		/* indices */
+
+    /*
+     * External Functions
+     */
+
+    char *tildepath();	/* Returns path to ~/<file> */
+
+    /*
+     * Initialize ListOptions
+     */
+
+    for (i=0; i<N_OPTIONS; i++) {
+      ListOptions[4*i+1] = Option[2*i];
+      ListOptions[4*i] = ListOptions[4*i+2] = ListOptions[4*i+3] = ' ';
+    }
+    ListOptions[4*N_OPTIONS] = '\0';
+
+    /*
+     * Get the path to the rc file
+     */
+
+    if (rc_file) fname = rc_file;
+        else
+    if ((fname = tildepath("~/.sunclockrc")) == NULL) {
+        fprintf(stderr, 
+             "Unable to get path to ~/.sunclockrc\n");
+        return(1);
+    }
+
+    
+    /* Open the RC file */
+
+    if ((rc = fopen(fname, "r")) == NULL) {
+        char *def_name = app_default;
+        if ((rc = fopen(def_name, "r")) == NULL) {
+          fprintf(stderr, 
+             "Unable to find %s or %s\n", fname, def_name);
+	  return(1);
+	} else {
+	  if (fname == rc_file)
+          fprintf(stderr, 
+             "Unable to find %s, returning to app-default\n   %s\n", 
+             fname, def_name);
+	  fname = app_default;
+	} 
+    }
+
+    /* Read and parse lines from the file */
+
+    option[0][0] = '-';
+    for (i=0; i<=2; i++) args[i] = option[i];
+
+    while (fgets(buf, 128, rc)) {
+
+        /* Look for blank lines or comments */
+
+        if ((buf[0] == '#') || (buf[0] == '\0')) continue;
+
+        if (strstr(buf, "[Cities]")) {
+           first_step = 0;
+	   continue;
 	}
 
-	if (placement<0)
-	  placement = NW;
+        if (strstr(buf, "[Options]")) {
+	   first_step = 1;
+	   continue;
+	}
+
+	if (first_step) {
+	   i = sscanf(buf, "%s %s %s\n", option[0]+1, option[1], option[2]);
+           j = strlen(option[0])-1;
+	   if (i==1 || option[0][j]==':') {
+           fflush(stdout);
+	     if (option[0][j]==':') option[0][j]='\0';
+	     i = parseArgs(i+1, args-1, 0);
+	   }
+	   if (i>0) {
+	     fprintf(stderr, 
+                     "Error in %s at line %s in [options] !!\n\n", 
+                     fname, option[0]+1);
+	     usage();
+	   }
+	   continue;
+	}
+
+	/* Get the city name looking for blank lines and comments */
+
+	if (((city = strtok(buf, ":\n")) == NULL))
+	    continue;
+
+	/* Get the latitude, longitude and timezone */
+
+	if ((lat = strtok(NULL, " 	\n")) == NULL) {
+	    fprintf(stderr, "Error in %s for city %s\n", fname, city);
+	    continue;
+	}
+
+	if ((lon = strtok(NULL, " 	\n")) == NULL) {
+	    fprintf(stderr, "Error in %s for city %s\n", fname, city);
+	    continue;
+	}
+
+	if ((tz = strtok(NULL, " 	\n")) == NULL) {
+	    fprintf(stderr, "Error in %s for city %s\n", fname, city);
+	    continue;
+	}
+
+	/* Create the record for the city */
+
+	if ((crec = (City *) calloc(1, sizeof(City))) == NULL) {
+	    fprintf(stderr, "Memory allocation failure\n");
+	    return(1);
+	}
+
+	/* Set up the record */
+
+	crec->name = strdup(city);
+	crec->lat = atof(lat);
+	crec->lon = atof(lon);
+	crec->mode = 0;
+	crec->tz = strdup(tz);
+
+	/* Link it into the list */
+
+	crec->next = cities;
+	cities = crec;
+    }
+
+    /*
+     * Read language files
+     */
+
+    fname = share_file;
+
+    i = strlen(share_file);
+       
+    if (!Language)
+       Language = getenv("LANG");
+    if (Language)
+       strncpy (language, Language, 2);
+    else
+       strcpy (language,"en");
+
+    share_file[i-2] = language[0];
+    share_file[i-1] = language[1];
+
+    if ((rc = fopen(fname, "r")) != NULL) {
+      int j=0, k=0, l=0, m=0, n=0, p;
+      while (fgets(buf, 128, rc)) {
+        if (buf[0] != '#') {
+	        p = strlen(buf)-1;
+        	if (p>=0 && buf[p]=='\n') buf[p] = '\0';
+	        if (j<7) { strcpy(Day_name[j], buf); j++; } else
+        	if (k<12) { strcpy(Month_name[k], buf); k++; } else
+		if (l<L_END) { strcpy(Label[l], buf); l++; } else 
+		if (m<=N_OPTIONS) { strcpy(Help[m], buf); m++; } else 
+                {
+                   if (n==0) *ShortHelp = '\0';
+		   strcat(ShortHelp, buf); 
+                   strcat(ShortHelp, "\n"); 
+                   n++;
+                }
+	}
+      }
+      fclose(rc);
+    } else
+        fprintf(stderr, 
+             "Unable to open language in %s\n", share_file);
+
+    /* Done */
+
+    return(0);
 }
 
 /*
@@ -798,6 +936,7 @@ int				num;
        	XSelectInput(dpy, win, mask);
 	XSetCommand(dpy, win, argv, argc);
 	XSetNormalHints(dpy, win, &xsh);
+	XSetWMProtocols(dpy, win, &wm_delete_window, 1);
 }
 
 /*
@@ -866,6 +1005,7 @@ int num;
 	xswa.background_pixel = TextBgColor.pix;
 	xswa.border_pixel = FgColor.pix;
 	xswa.backing_store = WhenMapped;
+
 	mask = CWBackPixel | CWBorderPixel | CWBackingStore;
 
         switch (num) {
@@ -874,7 +1014,7 @@ int num;
 		fixGeometry(&ClockGeom, clock_icon_width, clock_height);
 		Clock = XCreateWindow(dpy, root,
 			     ClockGeom.x, ClockGeom.y,
-			     clock_icon_width, clock_height, 1, 
+			     clock_icon_width, clock_height, 3,
 			     CopyFromParent, InputOutput, 
 			     CopyFromParent, mask, &xswa);
 		break;
@@ -891,7 +1031,7 @@ int num;
            case 2:
 	        Menu = XCreateWindow(dpy, root,
 			     MapGeom.x, MapGeom.y + map_height + vert_shift,
-			     map_icon_width, 2*map_strip_height, 0,
+			     map_icon_width, 2*map_strip_height, 3,
 			     CopyFromParent, InputOutput, 
 			     CopyFromParent, mask, &xswa);
 		break;
@@ -907,6 +1047,9 @@ createWindows(argc, argv)
 int				argc;
 register char **		argv;
 {
+        wm_protocols = XInternAtom(dpy, "WM_PROTOCOLS", False);
+        wm_delete_window = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
+
         map_strip_height = BigFont->max_bounds.ascent + 
                        BigFont->max_bounds.descent + 4;
 	map_height = map_icon_height + map_strip_height;
@@ -918,11 +1061,13 @@ register char **		argv;
 	createWindow(do_map);
 	setAllHints(argc, argv, do_map);
 	XMapWindow(dpy, (do_map)? Map:Clock);
+	XFlush(dpy);
+	usleep(20000);
         AdjustGeom();
 	createWindow(1-do_map);
 	setAllHints(argc, argv, 1-do_map);
 	createWindow(2);
-	setAllHints(argc, argv, 2);
+        setAllHints(argc, argv, 2);
 }
 
 void
@@ -1075,11 +1220,87 @@ updateMap()
         exposeMap();
 }
 
-char *
-bigtprint(ltp, gmtp)
-register struct tm *		ltp;
-register struct tm *		gmtp;
+/*
+ *  Set the timezone of selected location
+ */
+
+void
+setTZ(cptr)
+City	*cptr;
 {
+#ifndef linux
+	char buf[80];
+#endif
+
+   	if (cptr && cptr->tz && do_map) {
+#ifdef linux
+           setenv("TZ", cptr->tz, 1);
+#else
+	   sprintf(buf, "TZ=%s", cptr->tz);
+ 	   putenv(buf);
+#endif
+	   } 
+	else
+#ifdef linux
+           unsetenv("TZ");
+#else
+	   {
+	   /* This is supposed to reset timezone to default localzone */
+	   strcpy(buf, "TZ");
+	   /* Another option would be to set LOCALZONE adequately and put:
+           strcpy(buf, "TZ="LOCALZONE); */
+	   putenv(buf);
+	   }
+#endif
+	tzset();
+}
+
+/*
+ *   Sets sun position (longitude, declination) and returns
+ *   solartime at given city
+ *   CAUTION: sunlong is in fact given as longitude+180 in interval 0..360
+ */
+
+time_t
+sunParams(gtime, sunlong, sundec, city)
+time_t gtime;
+double *sunlong;
+double *sundec;
+City *city;
+{
+	struct tm		ctp, stp;
+	time_t			stime;
+	double                  jt, gt;
+	double			sunra, sunrv;
+	long                    diff;
+
+	ctp = *gmtime(&gtime);
+	jt = jtime(&ctp);
+	sunpos(jt, False, &sunra, sundec, &sunrv, sunlong);
+	gt = gmst(jt);
+        *sunlong = fixangle(180.0 + (sunra - (gt * 15))); 
+	
+	if (city) {
+           stime = (long) ((city->lon - *sunlong)*240.0);
+           stp = *gmtime(&stime);
+           diff = stp.tm_sec-ctp.tm_sec
+                  +60*(stp.tm_min-ctp.tm_min)+3600*(stp.tm_hour-ctp.tm_hour);
+	   if (city->lon>0.0) while(diff<-40000) diff += 86400;
+	   if (city->lon<0.0) while(diff>40000) diff -= 86400;
+	   stime = gtime+diff;
+	} else
+	   stime = 0;
+	return(stime);
+}
+
+char *
+bigtprint(gtime)
+time_t gtime;
+{
+	register struct tm 	ltp;
+	register struct tm 	gtp;
+	register struct tm 	stp;
+	time_t                  stime;
  	int			i, l;
 	static char		s[128];
         static double           dist;
@@ -1093,39 +1314,46 @@ register struct tm *		gmtp;
 	}
 #endif
 
+	if (!do_map) return "";
+
         switch(map_mode) {
 
 	case LEGALTIME:
+           gtp = *gmtime(&gtime);
+           setTZ(mark1.city);
+	   ltp = *localtime(&gtime);
 	   sprintf(s,
-		" %s  %02d:%02d:%02d %s %s %02d %s %04d    %s  %02d:%02d:%02d UTC %s %02d %s %04d",
-                Label[L_LEGALTIME], ltp->tm_hour, ltp->tm_min,
-		ltp->tm_sec,
+		" %s %02d:%02d:%02d %s %s %02d %s %04d    %s %02d:%02d:%02d UTC %s %02d %s %04d",
+                Label[L_LEGALTIME], ltp.tm_hour, ltp.tm_min,
+		ltp.tm_sec,
 #ifdef NEW_CTIME
-		ltp->tm_zone,
+		ltp.tm_zone,
 #else
-		tzname[ltp->tm_isdst],
+		tzname[ltp.tm_isdst],
 #endif
-		Day_name[ltp->tm_wday], ltp->tm_mday,
-		Month_name[ltp->tm_mon], 1900 + ltp->tm_year ,
+		Day_name[ltp.tm_wday], ltp.tm_mday,
+		Month_name[ltp.tm_mon], 1900 + ltp.tm_year ,
                 Label[L_GMTTIME],
-		gmtp->tm_hour, gmtp->tm_min,
-		gmtp->tm_sec, Day_name[gmtp->tm_wday], gmtp->tm_mday,
-		Month_name[gmtp->tm_mon], 1900 + gmtp->tm_year);
+		gtp.tm_hour, gtp.tm_min,
+		gtp.tm_sec, Day_name[gtp.tm_wday], gtp.tm_mday,
+		Month_name[gtp.tm_mon], 1900 + gtp.tm_year);
 	   break;
 
 	case COORDINATES:
+           setTZ(mark1.city);
+	   ltp = *localtime(&gtime);
            if ((mark1.city) && mark1.full)
 	   sprintf(s,
 		" %s (%.2f,%.2f)  %02d:%02d:%02d %s %s %02d %s %04d   %s %02d:%02d:%02d   %s %02d:%02d:%02d",
                 mark1.city->name, mark1.city->lat, mark1.city->lon,
-		ltp->tm_hour, ltp->tm_min, ltp->tm_sec,
+		ltp.tm_hour, ltp.tm_min, ltp.tm_sec,
 #ifdef NEW_CTIME
-		ltp->tm_zone,
+		ltp.tm_zone,
 #else
-		tzname[ltp->tm_isdst],
+		tzname[ltp.tm_isdst],
 #endif
-		Day_name[ltp->tm_wday], ltp->tm_mday,
-		Month_name[ltp->tm_mon], 1900 + ltp->tm_year ,
+		Day_name[ltp.tm_wday], ltp.tm_mday,
+		Month_name[ltp.tm_mon], 1900 + ltp.tm_year ,
                 Label[L_SUNRISE],
 		mark1.sr.tm_hour, mark1.sr.tm_min, mark1.sr.tm_sec,
                 Label[L_SUNSET], 
@@ -1135,14 +1363,14 @@ register struct tm *		gmtp;
 	   sprintf(s,
 		" %s (%.2f,%.2f)  %02d:%02d:%02d %s %s %02d %s %04d   %s %02d:%02d:%02d",
                 mark1.city->name, mark1.city->lat, mark1.city->lon,
-		ltp->tm_hour, ltp->tm_min, ltp->tm_sec,
+		ltp.tm_hour, ltp.tm_min, ltp.tm_sec,
 #ifdef NEW_CTIME
-		ltp->tm_zone,
+		ltp.tm_zone,
 #else
-		tzname[ltp->tm_isdst],
+		tzname[ltp.tm_isdst],
 #endif
-		Day_name[ltp->tm_wday], ltp->tm_mday,
-		Month_name[ltp->tm_mon], 1900 + ltp->tm_year ,
+		Day_name[ltp.tm_wday], ltp.tm_mday,
+		Month_name[ltp.tm_mon], 1900 + ltp.tm_year ,
                 Label[L_DAYLENGTH],
 		mark1.dl.tm_hour, mark1.dl.tm_min, mark1.dl.tm_sec);
 	        else
@@ -1150,16 +1378,19 @@ register struct tm *		gmtp;
 	        break;
 
 	case SOLARTIME:
-           if (mark1.city)
-	   sprintf(s, " %s (%.2f,%.2f)  %s %02d:%02d:%02d   %s %02d %s %04d   %s %02d:%02d:%02d", 
+	   if (mark1.city) {
+	     double junk;
+	     stime = sunParams(gtime, &junk, &junk, mark1.city);
+	     stp = *gmtime(&stime);
+	     sprintf(s, " %s (%.2f,%.2f)  %s %02d:%02d:%02d   %s %02d %s %04d   %s %02d:%02d:%02d", 
                   mark1.city->name, mark1.city->lat, mark1.city->lon,
                   Label[L_SOLARTIME],
-                  gmtp->tm_hour, gmtp->tm_min, gmtp->tm_sec,
-                  Day_name[gmtp->tm_wday], gmtp->tm_mday,
-		  Month_name[gmtp->tm_mon], 1900 + gmtp->tm_year,
+                  stp.tm_hour, stp.tm_min, stp.tm_sec,
+                  Day_name[stp.tm_wday], stp.tm_mday,
+		  Month_name[stp.tm_mon], 1900 + stp.tm_year,
                   Label[L_DAYLENGTH], 
  		  mark1.dl.tm_hour, mark1.dl.tm_min, mark1.dl.tm_sec);
-           else
+           } else
                   sprintf(s," %s", Label[L_CLICKLOC]);
 	   break;
 
@@ -1195,25 +1426,30 @@ register struct tm *		gmtp;
 }
 
 char *
-smalltprint(ltp, gmtp)
-register struct tm *		ltp;
-register struct tm *		gmtp;
+smalltprint(gtime)
+time_t gtime;
 {
+        register struct tm	ltp;
 	int			i, l;
 	static char		s[80];
 
+	if (do_map) return "";
+
+	setTZ(NULL);
+	ltp = *localtime(&gtime);
+
 	if (clock_mode)
 	   sprintf(s, "%02d:%02d:%02d %s", 
-                ltp->tm_hour, ltp->tm_min, ltp->tm_sec,
+                ltp.tm_hour, ltp.tm_min, ltp.tm_sec,
 #ifdef NEW_CTIME
-		ltp->tm_zone);
+		ltp.tm_zone);
 #else
-		tzname[ltp->tm_isdst]);
+		tzname[ltp.tm_isdst]);
 #endif
         else
-	   sprintf(s, "%02d:%02d %s %02d %s %02d", ltp->tm_hour, ltp->tm_min,
-		Day_name[ltp->tm_wday], ltp->tm_mday, Month_name[ltp->tm_mon],
-		ltp->tm_year % 100);
+	   sprintf(s, "%02d:%02d %s %02d %s %02d", ltp.tm_hour, ltp.tm_min,
+		Day_name[ltp.tm_wday], ltp.tm_mday, Month_name[ltp.tm_mon],
+		ltp.tm_year % 100);
 
         l = strlen(s);
 	if (l<72) {
@@ -1296,8 +1532,7 @@ SwitchWindows()
 
 	time_count = PRECOUNT;
 
-        if (do_map == 0) 
-	  {
+        if (do_map == 0) {
           AdjustGeom();
           XUnmapWindow(dpy, Clock);
           xsh.x = MapGeom.x;
@@ -1306,9 +1541,9 @@ SwitchWindows()
       	  if (placement) XSetNormalHints(dpy, Map, &xsh);
           XMapWindow(dpy, Map);
 	  if (placement) XMoveWindow(dpy, Map, MapGeom.x, MapGeom.y);
-	  }
-        if (do_map == 1) 
-	  {
+	  switched = 1;
+	}
+        if (do_map == 1) {
           AdjustGeom();
           XUnmapWindow(dpy, Map);
           xsh.x = ClockGeom.x;
@@ -1317,7 +1552,7 @@ SwitchWindows()
       	  if (placement) XSetNormalHints(dpy, Clock, &xsh);
           XMapWindow(dpy, Clock);
 	  if (placement) XMoveWindow(dpy, Clock, ClockGeom.x, ClockGeom.y);
-          }
+        }
         do_map = 1 - do_map;
 }
 
@@ -1774,7 +2009,7 @@ show_hours()
 	    sprintf(s, "%d", i); 
    	    XDrawImageString(dpy, Map, BigFont_gc, 
               ((i*map_icon_width)/24 + 2*map_icon_width - CHWID*strlen(s)/8 +
-               (int)(sun_long*map_icon_width/360.0))%map_icon_width,
+               (int)(sun_long*map_icon_width/360.0))%map_icon_width +1,
               BigFont->max_bounds.ascent + map_icon_height + 2, 
               s, strlen(s));
 	}
@@ -1789,22 +2024,14 @@ register struct sunclock *	s;
 {
 	register int		i;
 	int			xl;
-	struct tm *		ct;
-	double			jt;
-	double			sunra;
-	double			sundec;
-	double			sunrv;
-	double			sunlong;
-	double			gt;
 	short *			wtab_swap;
-	time_t                  gtime;
 
 	/* If this is a full repaint of the window, force complete
 	   recalculation. */
 
-        if (mono && firstime) {
+        if (mono && first_time) {
 	  drawAll();
-	  firstime = 0;
+	  first_time = 0;
 	}
 
 	if (s->s_noon < 0) {
@@ -1822,12 +2049,9 @@ register struct sunclock *	s;
 	} else
 		time(&s->s_time);
 	
-  	gtime = s->s_time + global_shift;
-	ct = gmtime(&gtime);
-	jt = jtime(ct);
-	sunpos(jt, False, &sunra, &sundec, &sunrv, &sunlong);
-
-	gt = gmst(jt);
+  	(void) sunParams(s->s_time + time_jump, &sun_long, &sun_decl, NULL);
+	xl = sun_long * (s->s_width / 360.0);
+	sun_long -= 180.0;
 
 	/* Projecting the illumination curve  for the current seasonal
            instant is costly.  If we're running in real time, only  do
@@ -1837,15 +2061,12 @@ register struct sunclock *	s;
 	 || s->s_projtime < 0
 	 || (s->s_time - s->s_projtime) > PROJINT 
          || force_proj) {
-		projillum(s->s_wtab, s->s_width, s->s_height, sundec);
+		projillum(s->s_wtab, s->s_width, s->s_height, sun_decl);
 		wtab_swap = s->s_wtab;
 		s->s_wtab = s->s_wtab1;
 		s->s_wtab1 = wtab_swap;
 		s->s_projtime = s->s_time;
 	}
-
-	sunlong = fixangle(180.0 + (sunra - (gt * 15)));
-	xl = sunlong * (s->s_width / 360.0);
 
 	/* If the subsolar point has moved at least one pixel, update
 	   the illuminated area on the screen.	*/
@@ -1854,10 +2075,6 @@ register struct sunclock *	s;
 		moveterm(s->s_wtab1, xl, s->s_wtab, s->s_noon, s->s_width,
 			 s->s_height, s->s_pixmap);
                 if (mono && do_sunpos) draw_sun();
-          	sun_long  = sunlong - 180.00;
-		while (sun_long>180.00) sun_long -= 360.00 ;
-		while (sun_long<-180.00) sun_long += 360.00 ;
-		sun_decl = sundec;
 		s->s_noon = xl;
 		s->s_flags |= S_DIRTY;
 		force_proj = 0;
@@ -1874,53 +2091,16 @@ register struct sunclock *	s;
 			 s->s_texty, s->s_text, strlen(s->s_text));
 }
 
-/*
- *  Set the timezone of selected location
- */
-
-void
-setTZ(cptr)
-City	*cptr;
-{
-	char buf[80];
-
-   	if (cptr && cptr->tz && do_map) {
-	   sprintf(buf, "TZ=%s", cptr->tz);
- 	   putenv(buf);
-	   } 
-	else
-#ifdef linux
-           unsetenv("TZ");
-#else
-	   {
-	   /* This is supposed to reset timezone to default localzone */
-	   strcpy(buf, "TZ");
-	   /* Another option would be to set LOCALZONE adequately and put:
-              strcpy(buf, "TZ="LOCALZONE); */
-	   putenv(buf);
-	   }
-#endif
-	tzset();
-}
-
 void
 showImage(s)
 register struct sunclock *	s;
 {
 	register char *		p;
-	register struct tm *	gmtp;
-	struct tm		lt;
-	time_t                  ltime, gtime;
+	time_t                  gtime;
 
-        ltime = s->s_time + global_shift;
+        gtime = s->s_time + time_jump;
 
-	setTZ(mark1.city);
-	lt = *localtime(&ltime);
-
-        gtime = ltime + local_shift;
-	gmtp = gmtime(&gtime);
- 
-	p = (*s->s_tfunc)(&lt, gmtp);
+	p = (*s->s_tfunc)(gtime);
 
 	if (s->s_flags & S_DIRTY) {
 		XCopyPlane(dpy, s->s_pixmap, s->s_window, Store_gc, 0, 0,
@@ -1939,30 +2119,28 @@ register struct sunclock *	s;
    GMT time gt at that location */
 
 double
-dayLength(gt, lat)
-double	gt, lat;
+dayLength(gtime, lat)
+time_t  gtime;
+double	lat;
 {
 	double			duration;
-	double			sunra;
-	double			sundec;
-	double			sunrv;
-	double			sunlong;
+	double			sundec, junk;
 	double                  sinsun, sinpos, num;
 
-        /* Get sun position */
-
-	sunpos(gt, False, &sunra, &sundec, &sunrv, &sunlong);       
         sinpos = sin(dtr(lat));
 
-        /* Correct for the sun apparent diameter */
+        (void) sunParams(gtime, &junk, &sundec, NULL);
 
-        if (lat>0) sundec += 0.5 * SUN_APPDIAM * sinpos;
-        if (lat<=0) sundec -= 0.5 * SUN_APPDIAM * sinpos;
-
+        /* Correct sun declination with the sun apparent diameter 
+	   to take into account that diameter and atmospheric diffusion */
+        if (lat>0) 
+           sundec += SUN_APPRADIUS * sinpos;
+	else
+           sundec -= SUN_APPRADIUS * sinpos;
         sinsun = sin(dtr(sundec));
 
         if (sinsun==0 || sinpos==0)
-	  duration = 12.0 + SUN_APPDIAM/(15.0 * cos(dtr(lat)));
+	  duration = 12.0 + SUN_APPRADIUS/(7.5 * cos(dtr(lat)));
 	else {
           num = 1 - sinsun*sinsun - sinpos*sinpos;
           if (num<=0) {
@@ -1972,7 +2150,7 @@ double	gt, lat;
 	      duration = 0.0;
 	  } else
 	      duration = 12.0 + 24.0*atan(sinsun*sinpos/sqrt(num))/PI
-			      + SUN_APPDIAM/(15.0 * cos(dtr(lat)));
+			      + SUN_APPRADIUS/(7.5 * cos(dtr(lat)));
 	}
 	return duration*3600;
 }
@@ -1981,51 +2159,53 @@ void
 setDayParams(cptr)
 City *cptr;
 {
-        struct tm *             gtm;
-	struct tm *             ltm;
-	double			gt, lt;
-	double                  duration, shift, corr;
-	time_t			sr, ss, dl, ct;
+        struct tm               gtm, ltm;
+	double                  duration, junk;
+	time_t			gtime, stime, sr, ss, dl;
 
         time_count = PRECOUNT;
 	force_proj = 1;
+        last_hint = -1; 
 
 	if (!cptr) return;
 
-  	ct = Current->s_time + global_shift;
+  	gtime = Current->s_time + time_jump;
 
-        /* GMT time in julian days (and fraction of day) */
-        gtm = gmtime(&ct);
-	gt = jtime(gtm);
-
-	/* legal time in julian days (and fraction of day) */
+        /* Get local time at given location */
 	setTZ(cptr);
-        ltm = localtime(&ct);
-	lt = jtime(ltm);
-        /* Difference, in sec, between legal time and solar time */
-        shift = (lt -gt)*86400.0-cptr->lon*240.0;
+        ltm = *localtime(&gtime);
 
-        /* Correct GMT time so that we are at noon in solar time */ 
-        corr = ltm->tm_hour/24.0-0.5+(ltm->tm_min)/1440.0 + 
-              (ltm->tm_sec - shift)/86400.0;
-        gt  = gt - corr;
+        /* Get solar time at given location */
+        stime = sunParams(gtime, &junk, &junk, cptr);
+
+	/* Go to time when it is noon in solartime at cptr */
+        gtime += 43200 - (stime % 86400);
+        gtm = *gmtime(&gtime);
+
+        if (gtm.tm_mday < ltm.tm_mday) gtime +=86400;
+        if (gtm.tm_mday > ltm.tm_mday) gtime -=86400;
+       
+        /* Iterate, just in case of a day shift */
+        stime = sunParams(gtime, &junk, &junk, cptr);
+        gtime += 43200 - (stime % 86400);
 
         /* get day length at that time and location*/
-        duration = dayLength(gt, cptr->lat);
-
-        /* improve approximation by reiterating calculation with
-	   gt = approx sunrise or approx sunset */
-	sr = 43200 - 0.5*dayLength(gt-5.78704E-6*duration, cptr->lat) + shift;
-	ss = 43200 + 0.5*dayLength(gt+5.78704E-6*duration, cptr->lat) + shift;
+        duration = dayLength(gtime, cptr->lat);
+  
+	/* compute sunrise and sunset in legal time */
+	sr = gtime - (time_t)(0.5*duration);
+	ss = gtime + (time_t)(0.5*duration);
         dl = ss-sr;
         mark1.full = 1;
 	if (dl<=0) {dl = 0; mark1.full = 0;}
 	if (dl>86380) {dl=86400; mark1.full = 0;}
 
-	mark1.sr = *gmtime(&sr);
-	mark1.ss = *gmtime(&ss);
 	mark1.dl = *gmtime(&dl);
 	mark1.dl.tm_hour += (mark1.dl.tm_mday-1) * 24;
+
+	setTZ(cptr);
+	mark1.sr = *localtime(&sr);
+	mark1.ss = *localtime(&ss);
 }
 
 /*
@@ -2049,8 +2229,6 @@ int x, y;      /* Screen co-ordinates of mouse */
 
     /* Loop through the cities until on close to the pointer is found */
 
-    local_shift = 0;
-    
     for (cptr = cities; cptr; cptr = cptr->next) {
 
         /* Convert the latitude and longitude of the cities to integer */
@@ -2115,7 +2293,6 @@ int x, y;      /* Screen co-ordinates of mouse */
           pos1.lon = ((double)x/(double)map_icon_width)*360.0-180.0 ;
 	  mark1.city = &pos1;
 	}
-        local_shift = (long) (mark1.city->lon * 240.0);
         break;
 
       default:
@@ -2145,6 +2322,12 @@ PopMenu()
 {
 	Window root = RootWindow(dpy, scr);
 	Window win;
+	XSizeHints		xsh;
+
+	if (!do_map) {
+	  do_menu = 0;
+	  return;
+	}
 
 	do_menu = 1 - do_menu;
 
@@ -2154,12 +2337,17 @@ PopMenu()
 	  return;
 	  }
 
+        last_hint = -1;
 	XTranslateCoordinates(dpy, Map, root, 0, 0, 
                                        &MapGeom.x, &MapGeom.y, &win);
+	xsh.x = MapGeom.x;
+	xsh.y = (placement<=NE)? MapGeom.y + map_height + vert_shift :
+                MapGeom.y - 2*map_strip_height - vert_shift;
+	xsh.flags = USPosition;
+	  
+	XSetNormalHints(dpy, Menu, &xsh);
 	XMapWindow(dpy, Menu);
-        XMoveWindow(dpy, Menu, MapGeom.x, 
-           (placement<=NE)? MapGeom.y + map_height + vert_shift : 
-           MapGeom.y - 2*map_strip_height - vert_shift);
+        XMoveWindow(dpy, Menu, xsh.x, xsh.y);
         XClearArea(dpy, Menu, 0, 0, map_icon_width, 2*map_strip_height, True);
 }
 
@@ -2167,34 +2355,53 @@ void
 showMenuHint(num)
 int num;
 {
-	char s[128], ss[128];
-	int i,l;
+	char hint[128], more[128];
+	int i,j,k,l;
 
-        sprintf(s, " %s", Help[num]); 
+	if (num == last_hint) return;
+        last_hint = num;
+        sprintf(hint, " %s", Help[num]); 
+        *more = '\0';
 	if (num >=5 && num <=8) {
-            sprintf(ss, " ( %s %c%ld %s   %s %.3f %s )", 
-		  Label[L_PROGRESS], 
-		  (num==5)? '-':'+',
-                  (time_progress>=1440)? time_progress/1440 : 1, 
-                  (time_progress>=10080)? Label[L_DAYS] : 
-                  (time_progress>=1440)? Label[L_DAY] : 
-                  ((time_progress>=60)? Label[L_HOUR] : Label[L_MIN]),
-                  Label[L_GLOBALSHIFT], global_shift/86400.0,
+	    char prog_str[30];
+            if (time_progress == 60) 
+                sprintf(prog_str, "1 %s", Label[L_MIN]);
+	    else
+	    if (time_progress == 3600)
+                sprintf(prog_str, "1 %s", Label[L_HOUR]);
+	    else
+	    if (time_progress == 86400) 
+                sprintf(prog_str, "1 %s", Label[L_DAY]);
+	    else
+	    if (time_progress == 604800) 
+                sprintf(prog_str, "7 %s", Label[L_DAYS]);
+	    else
+	    if (time_progress == 2592000) 
+                sprintf(prog_str, "30 %s", Label[L_DAYS]);
+      	    else
+                sprintf(prog_str, "%ld %s", time_progress, Label[L_SEC]);
+            sprintf(more, " ( %s %c%s   %s %.3f %s )", 
+		  Label[L_PROGRESS], (num==5)? '-':'+', prog_str, 
+                  Label[L_TIMEJUMP], time_jump/86400.0,
 		  Label[L_DAYS]);
-            strcat(s, ss);
+	}
+	if (Option[2*num] == 'H') {
+	    sscanf(RELEASE, "%d %d %d", &i, &j, &k);
+	    sprintf(more, " ( sunclock %s, %d %s %d )", 
+                        VERSION, i, Month_name[j-1], k);
 	}
 	if (Option[2*num] == 'X') {
-	    sprintf(ss, " : %s", Command);
-	    strncat(s, ss, 120 - strlen(s));
+	    sprintf(more, " : %s", (Command)?Command:"(null)");
 	}
-        l = strlen(s);
+        if (*more) strncat(hint, more, 120 - strlen(hint));
+        l = strlen(hint);
 	if (l<120) {
-	    for (i=l; i<120; i++) s[i] = ' ';
-	    s[120] = '\0';
+	    for (i=l; i<120; i++) hint[i] = ' ';
+	    hint[120] = '\0';
 	}
 	XDrawImageString(dpy, Menu, BigFont_gc, 4, 
               BigFont->max_bounds.ascent + map_strip_height + 2, 
-              s, strlen(s));
+              hint, strlen(hint));
 }
 
 /*
@@ -2206,9 +2413,11 @@ processKey(win, key)
 Window  win;
 char	key;
 {
-	int i;
+	int i, old_mode;
 
         time_count = PRECOUNT;
+
+	old_mode = map_mode;
 
         switch(key) {
 	   case '\033':
@@ -2223,15 +2432,14 @@ char	key;
 	       --label_shift;
 	     break;
 	   case 'a': 
-	     global_shift += (time_progress * 60);
+	     time_jump += time_progress;
 	     setDayParams(mark1.city);
 	     break;
 	   case 'b': 
-	     global_shift -= (time_progress * 60);
+	     time_jump -= time_progress;
 	     setDayParams(mark1.city);
 	     break;
 	   case 'c': 
-	     local_shift = 0;
 	     map_mode = COORDINATES;
 	     if (mark1.city == &pos1 || mark2.city == &pos2) updateMap();
              if (mark1.city == &pos1) mark1.city = NULL;
@@ -2245,25 +2453,33 @@ char	key;
 	     break;
 	   case 'e': 
 	     map_mode = EXTENSION;
+	     old_mode = EXTENSION;
 	     show_hours();
 	     break;
 	   case 'g': 
 	     if (!do_map) break;
-	     if (!do_menu) 
+	     if (!do_menu)
 	       PopMenu();
              else {
-	       if (time_progress == 1) time_progress = 60;
+	       last_hint = -1; 
+	       if (time_progress == 60) time_progress = 3600;
 	         else
-	       if (time_progress == 60) time_progress = 1440;
+	       if (time_progress == 3600) time_progress = 86400;
 	         else
-	       if (time_progress == 1440) time_progress = 10080;
+	       if (time_progress == 86400) time_progress = 604800;
 	         else
-	       if (time_progress == 10080) time_progress = 43200;
-       	         else
-	       if (time_progress == 43200) time_progress = 1;
+	       if (time_progress == 604800) time_progress = 2592000;
+       	         else 
+	       if (time_progress == 2592000) {
+		 if (time_progress_init)
+		    time_progress = time_progress_init;
+		 else
+	            time_progress = 60;
+	       } else
+		    time_progress = 60;
 	     }
 	     break;
-	   case 'h': 
+	   case 'h':
 	     if (!do_menu) PopMenu();
 	     break;
 	   case 'i': 
@@ -2274,10 +2490,9 @@ char	key;
 	     if (mono && do_cities) drawCities();
 	     do_cities = 1 - do_cities;
 	     if (mono && do_cities) drawCities();
-             updateMap();
+             if (mono || !do_cities) exposeMap();
 	   case 'l':
 	     map_mode = LEGALTIME;
-	     local_shift = 0;
              if (mark1.city == &pos1 || mark2.city == &pos2) updateMap();
              if (mark1.city) mark1.city->mode = 0;
              if (mark2.city) mark2.city->mode = 0;
@@ -2287,16 +2502,17 @@ char	key;
 	   case 'm':
              do_merid = 1 - do_merid;
 	     if (mono) draw_meridians();
-	     exposeMap();
+	     if (mono || !do_merid) exposeMap();
 	     break;
 	   case 'o':
              do_sunpos = 1 - do_sunpos;
 	     if (mono) draw_sun();
-             exposeMap();
+	     if (mono || !do_sunpos) exposeMap();
              break;
 	   case 'p':
              do_parall = 1 - do_parall;
 	     if (mono) draw_parallels();
+	     if (mono || !do_parall) exposeMap();
 	     exposeMap();
 	     break;
 	   case 'q': 
@@ -2304,19 +2520,16 @@ char	key;
 	     exit(0);
 	   case 's': 
 	     map_mode = SOLARTIME;
-             if (mark2.city == &pos2) updateMap();
+             if (mark2.city == &pos2) exposeMap();
              if (mark2.city) mark2.city->mode = 0;
              mark2.city = NULL;
-	     if (mark1.city) {
-	       local_shift = (long)(mark1.city->lon*240.0);
+	     if (mark1.city)
 	       setDayParams(mark1.city);
-	     } else
-	       local_shift = 0;
 	     break;
 	   case 't':
              do_tropics = 1 - do_tropics;
 	     if (mono) draw_tropics();
-             updateMap();
+             if (mono || !do_tropics) exposeMap();
 	     break;
 	   case ' ':
 	   case 'w':
@@ -2330,7 +2543,7 @@ char	key;
 	     if (Command) system(Command);
 	     break;
 	   case 'z':
-	     global_shift = 0;
+	     time_jump = 0;
 	     setDayParams(mark1.city);
 	     break;
            default:
@@ -2340,6 +2553,8 @@ char	key;
 	     }
 	     break ;
 	}
+
+        if (old_mode == EXTENSION && map_mode != old_mode) clearStrip();
 
 	if (do_menu) {
           for (i=0; i<N_OPTIONS; i++)
@@ -2493,6 +2708,7 @@ register Window			w;
 		}
 		setTimeout(Current);
 	}
+
 	updateImage(Current);
 	Current->s_flags |= S_DIRTY;
 	showImage(Current);
@@ -2532,9 +2748,20 @@ eventLoop()
 			switch(ev.type) {
 		
 			case Expose:
+	                        if (map_mode == EXTENSION && switched) 
+                                        show_hours();
+				switched = 0;
 				if (ev.xexpose.count == 0)
 					doExpose(ev.xexpose.window);
 				break;
+
+			case ClientMessage:
+				if (ev.xclient.message_type == wm_protocols &&
+				    ev.xclient.format == 32 &&
+				    ev.xclient.data.l[0] == wm_delete_window) {
+					shutDown();
+					exit(0);
+				}
 
 			case KeyPress:
                                 key = XKeycodeToKeysym(dpy,ev.xkey.keycode,0);
@@ -2552,9 +2779,9 @@ eventLoop()
 			        break;
 
 			} else {
- 		        usleep(TIMESTEP);
-			doTimeout();
-		}
+			        usleep(TIMESTEP);
+				doTimeout();
+			}
 	}
 }
 
@@ -2562,21 +2789,15 @@ void checkLocation(name)
 char *	name;
 {
 City *c;
-int  i; 
-	if (CityInit)
+
+	if (*CityInit)
         for (c = cities; c; c = c->next)
 	    if (!strcasecmp(c->name, CityInit)) {
-		map_mode = COORDINATES;
-		mark1.city = NULL;
-		i = do_map;
-		do_map = 1;
-		setTZ(c);
-		doTimeout();
 		mark1.city = c;
                 if (mono) mark1.status = -1;
 		c->mode = 1;
+	        doExpose(Map);
 		setDayParams(c);
-		do_map = i;
 		return;
             }
 
@@ -2588,7 +2809,6 @@ int  i;
 		mark1.city = &pos1;
                 if (mono) mark1.status = -1;
 		pos1.name = Label[L_POINT];
-	        local_shift = (long) (pos1.lon * 240.0);
 		setDayParams(&pos1);
         }	
 }
@@ -2600,17 +2820,20 @@ register char **		argv;
 {
 	char *			p;
 
-	/* Read the ~/.sunclockrc file */
+	ProgName = *argv;
 
-	if (readrc())
-	    exit(1);
-
+	/* Set default values */
         initValues();
 
-	ProgName = *argv;
-	if ((p = strrchr(ProgName, '/')))
-		ProgName = ++p;
-	parseArgs(argc, argv);
+	/* Read the configuation file */
+
+        checkRCfile(argc, argv);
+	if (readrc()) exit(1);
+
+	if ((p = strrchr(ProgName, '/'))) ProgName = ++p;
+
+	(void) parseArgs(argc, argv, 1);
+	if (placement<0) placement = NW;
 
 	dpy = XOpenDisplay(Display_name);
 	if (dpy == (Display *)NULL) {
@@ -2627,6 +2850,7 @@ register char **		argv;
 	makeGCs();
 	makeMapContexts();
 	checkLocation(CityInit);
+	PopMenu();
 	eventLoop();
 	exit(0);
 }
