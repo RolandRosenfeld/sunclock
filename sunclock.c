@@ -214,9 +214,7 @@ int             pix_type;
 int      	chwidth;
 int		num_lines;
 int		color_scale = 16;
-int		shading;
 int		shading_level = 1;
-int		range;
 int		allocation_level;
 
 int             horiz_shift = 0;
@@ -246,7 +244,7 @@ int		do_menu = 0;
 int             do_memory = 0;
 int             do_private = 0;
 
-int		do_sunpos = 1;
+int		do_sun = 1;
 int		do_cities = 1;
 
 int		do_parall = 0;
@@ -293,9 +291,9 @@ usage()
      SP"[-map] [-mapgeom +x+y] [-mapmode * <L,C,S,D,E>] [-decimal] [-dms]\n"
      SP"[-city name] [-position latitude longitude]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
-     SP"[-night] [-nonight] [-shading mode=0,1,2,3,4]\n"
+     SP"[-nonight] [-night] [-terminator] [-twilight] [-luminosity]\n"
+     SP"[-shading mode=0,1,2,3,4] [-diffusion value] [-refraction value]\n"
      SP"[-darkness value<=1.0] [-colorscale number<=64]\n"
-     SP"[-diffusion value] [-refraction value]\n"
      SP"[-menu] [-nomenu] [-horizshift h (map<->menu)] [-vertshift v]\n"
      SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
      SP"[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians]\n"
@@ -721,14 +719,23 @@ register char **		argv;
 		else if (strcasecmp(*argv, "-cities") == 0) {
 			do_cities = 1;
 		}
-		else if (strcasecmp(*argv, "-night") == 0) {
-			shading_level = 1;
-		}
 		else if (strcasecmp(*argv, "-nonight") == 0) {
 			shading_level = 0;
 		}
-		else if (strcasecmp(*argv, "-sunpos") == 0) {
-			do_sunpos = 1;
+		else if (strcasecmp(*argv, "-night") == 0) {
+			shading_level = 1;
+		}
+		else if (strcasecmp(*argv, "-terminator") == 0) {
+			shading_level = 2;
+		}
+		else if (strcasecmp(*argv, "-twilight") == 0) {
+			shading_level = 3;
+		}
+		else if (strcasecmp(*argv, "-luminosity") == 0) {
+			shading_level = 4;
+		}
+		else if (strcasecmp(*argv, "-sun") == 0) {
+			do_sun = 1;
 		}
 		else if (strcasecmp(*argv, "-nomeridians") == 0) {
 			do_merid = 0;
@@ -742,8 +749,8 @@ register char **		argv;
 		else if (strcasecmp(*argv, "-nocities") == 0) {
 			do_cities = 0;
 		}
-		else if (strcasecmp(*argv, "-nosunpos") == 0) {
-			do_sunpos = 0;
+		else if (strcasecmp(*argv, "-nosun") == 0) {
+			do_sun = 0;
 		}
 		else if (strcasecmp(*argv, "-meridians") == 0) {
 			do_merid = 1;
@@ -983,7 +990,7 @@ unsigned int *w, *h;
    Window junk, root, parent, *children;
 
    XQueryTree(dpy, win, &root, &parent, &children, &n);
-	
+ 
    if (!parent) return 1;
 	
    XGetGeometry(dpy, parent, &root, x, y, w, h, &b, &d);
@@ -992,6 +999,7 @@ unsigned int *w, *h;
    if ((*x)+(*y) < *h) *h -= (*x) + (*y);
    XTranslateCoordinates(dpy, win, root, 0, 0, x, y, &junk);
    XTranslateCoordinates(dpy, parent, root, 0, 0, &xp, &yp, &junk);
+
    horiz_drift = *x - xp;
    vert_drift = *y - yp;
    return 0;
@@ -1005,7 +1013,7 @@ int bool;
 	struct geom * Geom = (do_map)? &MapGeom : &ClockGeom;     
 
         a = DisplayWidth(dpy, scr) - Geom->width - horiz_drift - 5;
-	b = DisplayHeight(dpy, scr) - Geom->height - vert_drift - 5;
+	b = DisplayHeight(dpy, scr) - Geom->height-Geom->strip-vert_drift - 5;
         if (Geom->x > a) Geom->x = a;
         if (Geom->y > b) Geom->y = b;
 	if (Geom->x < 0) Geom->x = 5;
@@ -1017,7 +1025,7 @@ void
 adjustGeom(which)
 int which;
 {
-        int x, y, dx=0, dy=0;
+        int x, y, dx=0, dy=0, diff;
         unsigned int w, h;
 	struct geom * Geom;
 
@@ -1031,11 +1039,11 @@ int which;
                  dx = 0; else dx = MapGeom.width - ClockGeom.width;
            }
 
-           if (placement == CENTER) 
-                 dy = (MapGeom.height - ClockGeom.height)/2; else
+	   diff= MapGeom.height+MapGeom.strip-ClockGeom.height-ClockGeom.strip;
+
+           if (placement == CENTER) dy = diff/2; else
            if (placement >= NW) {
-	      if (placement <= NE) 
-                 dy = 0; else dy = MapGeom.height - ClockGeom.height;
+	      if (placement <= NE) dy = 0; else dy = diff;
            }
 	}
 
@@ -1047,8 +1055,8 @@ int which;
 	    } else
                Geom = &ClockGeom;
 	    if (placement >= CENTER) {
-	        Geom->x = x - dx - horiz_drift;
-	        Geom->y = y - dy - vert_drift;
+	        Geom->x = x + dx - horiz_drift;
+	        Geom->y = y + dy - vert_drift;
 		checkGeom(1);
 	    }
 	}
@@ -1062,13 +1070,13 @@ void
 shutDown(all)
 int all;
 {
-        if (Earthmap.wtab) {
-           free(Earthmap.wtab);
-	   Earthmap.wtab = 0;
+        if (Earthmap.owtab) {
+           free(Earthmap.owtab);
+	   Earthmap.owtab = 0;
 	}
-	if (Earthmap.wtab1) {
-           free(Earthmap.wtab1);
-           Earthmap.wtab1 = 0;
+	if (Earthmap.nwtab) {
+           free(Earthmap.nwtab);
+           Earthmap.nwtab = 0;
 	}
         if (invert) {
            XFreeGC(dpy, Invert_gc);
@@ -1858,8 +1866,8 @@ makeMapContext()
 
 	Earthmap.flags = S_DIRTY;
 	Earthmap.noon = -1;
-	Earthmap.wtab = (short *)salloc((int)(Earthmap.height * sizeof (short *)));
-	Earthmap.wtab1 = (short *)salloc((int)(Earthmap.height * sizeof (short *)));
+	Earthmap.owtab = (short *)salloc((int)(Earthmap.height * sizeof (short *)));
+	Earthmap.nwtab = (short *)salloc((int)(Earthmap.height * sizeof (short *)));
 	Earthmap.increm = 0L;
 	Earthmap.time = 0L;
 	Earthmap.timeout = 0;
@@ -2058,7 +2066,7 @@ draw_sun()
 void
 drawSun()
 {
-	if (do_sunpos)
+	if (do_sun)
   	  draw_sun();
 }
 
@@ -2155,8 +2163,8 @@ int     done = 0;
 /*  PROJILLUM  --  Project illuminated area on the map.  */
 
 void
-projillum(wtab, dec)
-short *wtab;
+projillum(owtab, dec)
+short *owtab;
 double dec;
 {
 	int i, ftf = True, ilon, ilat, lilon = 0, lilat = 0, xt;
@@ -2166,10 +2174,10 @@ double dec;
 
 	if (shading_level)
    	   for (i = 0; i < Earthmap.height; i++)
-		wtab[i] = -1;
+		owtab[i] = -1;
 	else {
    	   for (i = 0; i < Earthmap.height; i++)
-		wtab[i] = Earthmap.width;
+		owtab[i] = Earthmap.width;
 	   return;
 	}
 
@@ -2211,12 +2219,12 @@ double dec;
 			/* Trace out the line and set the width table. */
 
 			if (lilat == ilat) {
-				wtab[(Earthmap.height - 1) - ilat] = (ilon == 0)? 1 : ilon;
+				owtab[(Earthmap.height - 1) - ilat] = (ilon == 0)? 1 : ilon;
 			} else {
 				m = ((double) (ilon - lilon)) / (ilat - lilat);
 				for (i = lilat; i != ilat; i += sgn(ilat - lilat)) {
 					xt = lilon + floor((m * (i - lilat)) + 0.5);
-					wtab[(Earthmap.height - 1) - i] = (xt == 0)? 1 : xt;
+					owtab[(Earthmap.height - 1) - i] = (xt == 0)? 1 : xt;
 				}
 			}
 			lilon = ilon;
@@ -2236,9 +2244,9 @@ double dec;
 	}
 
 	for (i = ilat; i != Earthmap.height / 2; i += lilat) {
-		if (wtab[i] != -1) {
+		if (owtab[i] != -1) {
 			while (True) {
-				wtab[i] = Earthmap.width;
+				owtab[i] = Earthmap.width;
 				if (i == ilat)
 					break;
 				i -= lilat;
@@ -2285,177 +2293,83 @@ register int t;
 	       bit 2: (0/1) draw line in dark/light (or invert).
 */
 
-int
-setpix(i, color)
-register int i;
-register int color;
-{
-  int j;
-
-  if (!shading) return 0;
-  j = ((i + shading) * color_scale)/shading - color_scale/2;
-  if (j < 0) j = 0;
-  if (j > color_scale) j = color_scale;
-  if (!color) j = color_scale-j;
-  if (j == color_scale) j = -1;
-  return j;
-}
-
-int
-setlight(v)
-double v;
-{
-  int j;
-
-  j = (int) (0.5*(1+v)*color_scale);
-  if (j >= color_scale) j = color_scale - 1;
-  return j;
-}
-
 void
-xspan(pline, leftp, npix, state)
+xspan(pline, orig, npix, color)
 register int	pline;
-register int	leftp;
+register int	orig;
 register int	npix;
-register int	state;
+register int	color;
 {
-        int i, a, b, c, shift, color;
+        int i;
 
-	if (!npix) return;
+        orig = (orig + Earthmap.width) % Earthmap.width;
 
-        leftp = (leftp + Earthmap.width) % Earthmap.width;
-	color = state/4;
-
-	if (shading_level >= 2) {
-	   if (npix == Earthmap.width) {
-	      for (i=0; i<Earthmap.width; i++)
-		 SwitchPixel(i, pline, -color);
-	      return;
-	      }
-           c = (npix - Earthmap.width)/2;
-           if (range <= -c) 
-	      c = -range;
-           if ((state & 3)==0)
-	      a = b = c;
-	   else {
-              switch((state & 3)) {
-	         case 1:
-	           a = npix-c;
-	           b = c;
-                   break;
-	         case 2:
-	           b = npix-c;
-	           a = c;
-	           break;
-	         case 3:
-	           if (range>npix/2) 
-                      a = b = npix/2;
-		   else
-	              a = b = range;
-	           break;
-	      }
-	   }
-	   shift = leftp+Earthmap.width;
-           if (state & 1)
-	      for (i=c; i<a; i++)
-	        SwitchPixel((i+shift)%Earthmap.width, pline, setpix(i, color));
-	   else
-	      for (i=c; i<a; i++)
-	        SwitchPixel((i+shift)%Earthmap.width, pline, -color);
-	   shift = npix+leftp+Earthmap.width - 1;
-           if (state & 2)
-	      for (i=c; i<b; i++)
-	        SwitchPixel((shift-i)%Earthmap.width, pline, setpix(i, color));
-	   else
-	      for (i=c; i<b; i++)
-                SwitchPixel((shift-i)%Earthmap.width, pline, -color);
-	   shift = leftp+Earthmap.width;
-	   for (i=a; i<npix-b; i++)
-	      SwitchPixel((i+shift)%Earthmap.width, pline, -color);
-	   return;
-	}
-
-	if (leftp + npix > Earthmap.width) {
+	if (orig + npix > Earthmap.width) {
 	  if (invert) {
 	    XDrawLine(dpy, Mappix, Invert_gc, 0, pline,
-		               (leftp + npix) - (Earthmap.width + 1), pline);
- 	    XDrawLine(dpy, Mappix, Invert_gc, leftp, pline, 
+		               (orig + npix) - (Earthmap.width + 1), pline);
+ 	    XDrawLine(dpy, Mappix, Invert_gc, orig, pline, 
                                               Earthmap.width - 1, pline);
 	  } else {
-            for (i=0; i<(leftp + npix) - Earthmap.width; i++)
+            for (i=0; i<(orig + npix) - Earthmap.width; i++)
 	        SwitchPixel(i, pline, -color);
-            for (i=leftp; i<Earthmap.width; i++)
+            for (i=orig; i<Earthmap.width; i++)
 	        SwitchPixel(i, pline, -color);
 	    }
 	}
 	else {
 	  if (invert)
-	     XDrawLine(dpy, Mappix, Invert_gc, leftp, pline,
-			  leftp + (npix - 1), pline);
+	     XDrawLine(dpy, Mappix, Invert_gc, orig, pline,
+			  orig + (npix - 1), pline);
 	  else {
-             for (i=leftp; i<leftp + npix ; i++)
+             for (i=orig; i<orig + npix ; i++)
 	        SwitchPixel(i, pline, -color);
 	  }
 	}
 }
 
-void
-setShade()
-{
-	if (shading_level == 2)
-           Earthmap.shade = 
-	      Earthmap.width * (SUN_APPRADIUS + atm_refraction)/180.0;
-	if (shading_level >= 3)
-           Earthmap.shade = 
-	      Earthmap.width * (SUN_APPRADIUS + atm_diffusion)/180.0;
-}
-
-int
-ShadingLevel(t)
-short t;
-{
-         int max, val, res;
-         double quot;
-       
-         if (t<0) return 0;
-         if (t>=Earthmap.width) return 0;
-	 if (t>Earthmap.width/2) 
-	    val = Earthmap.width - t;
-	 else
-	    val = t;
-	 max = val/2;
-	 if (!val) return 0;
-	 quot = ((double)Earthmap.width)/(double)(2*val);
-         res = (int) (0.5 + (Earthmap.shade * quot));
-	 if (res>max) res = max;
-	 return res;
-}
-
 /*  MOVETERM  --  Update illuminated portion of the globe.  */
 
 void
-moveterm(wtab, noon, otab, onoon)
-short *wtab, *otab;
+moveterm(ntab, noon, otab, onoon)
+short *ntab, *otab;
 int noon, onoon;
 {
-      int i, j, ol, oh, nl, nh;
-      double c, cp, sp;
+      int i, ol, or, nl, nr;
+
+      if (shading_level >= 2) {
+	 int j, k;
+         double light, cp, sp;
+         double f1 = 2.0*M_PI/(double)Earthmap.width;
+         double f2 = 1.0;
+
+	 if (shading_level == 2)
+            f2 = 180.0 / (M_PI * (SUN_APPRADIUS + atm_refraction));
+	 else
+            f2 = 180.0 / (M_PI * (SUN_APPRADIUS + atm_diffusion));
+
+	 for (i = 0; i < Earthmap.height; i++) {
+	    sp = M_PI*(double)(Earthmap.height/2-i)/((double) Earthmap.height);
+	    cp = cos(sp)*cos(dtr(sun_decl));
+            sp = sin(sp)*sin(dtr(sun_decl));
+            for (j=0; j<Earthmap.width; j++) {
+  	       light = cos(f1*(double)(j-noon))*cp+sp;
+	       if (shading_level<4 || light<0) light *= f2;
+               k = (int) (0.5*(1.0+light)*color_scale);
+               if (k < 0) k = 0; 
+               if (k >= color_scale) k = - 1;
+	       SwitchPixel(j, i, k);
+	    }
+	 }
+	 return;
+      }
 
       for (i = 0; i < Earthmap.height; i++) {
-
-	 if (shading_level >= 2) {
-            shading = ShadingLevel(wtab[i]);
-	    j = ShadingLevel(otab[i]);
-	    if (j<=shading) 
-               range = (shading+1)/2;
-	    else
-               range = (j+1)/2;
-	 }
 
 	     /* If line is off in new width table but is set in
 	        the old table, clear it. */
 
-	 if (wtab[i] < 0) {
+	 if (ntab[i] < 0) {
 	    if (otab[i] >= 0)
 	       xspan(i, ((onoon-otab[i]/2)+Earthmap.width)%Earthmap.width,
                         otab[i], 0);
@@ -2465,70 +2379,58 @@ int noon, onoon;
 	        the old width table, just draw it. */
 
 	    if (otab[i] < 0) {
-	       xspan(i, ((noon-wtab[i]/2)+Earthmap.width)%Earthmap.width,
-                        wtab[i], 7);
+	       xspan(i, ((noon-ntab[i]/2)+Earthmap.width)%Earthmap.width,
+                        ntab[i], 1);
 	    } else {
 	     /* If both the old and new spans were the entire
 	       screen, they're equivalent. */
-  	       if (otab[i] == wtab[i] && wtab[i] == Earthmap.width) continue;
+  	       if (otab[i] == ntab[i] && ntab[i] == Earthmap.width) continue;
 
 	     /* The line was on in both the old and new width
 	        tables.  We must adjust the difference in the span.  */
 
   	       ol = ((onoon - otab[i]/2) + Earthmap.width) % Earthmap.width;
-	       oh = ol + otab[i];
-	       nl = ((noon - wtab[i]/2) + Earthmap.width) % Earthmap.width;
-	       nh = nl + wtab[i];
+	       or = ol + otab[i];
+	       nl = ((noon - ntab[i]/2) + Earthmap.width) % Earthmap.width;
+	       nr = nl + ntab[i];
 
 	     /* Check whether old or new line spans the entire screen */
 
-               if (wtab[i] == Earthmap.width) {
-		  xspan(i, oh, Earthmap.width - otab[i], 4);
+               if (ntab[i] == Earthmap.width) {
+		  xspan(i, or, Earthmap.width - otab[i], 1);
                   goto done;
 	       }
+
                if (otab[i] == Earthmap.width) {
-		  xspan(i, nh, (int) Earthmap.width - wtab[i], 3);
+		  xspan(i, nr, Earthmap.width - ntab[i], 0);
 		  goto done;
 	       }
 	      
 	     /* If spans are disjoint, erase old span and set new span. */
 
-	       if (oh <= nl || nh <= ol) {
-	          xspan(i, ol, oh - ol, 0);
-		  xspan(i, nl, nh - nl, 7);
+	       if (or <= nl || nr <= ol) {
+	          xspan(i, ol, or - ol, 0);
+		  xspan(i, nl, nr - nl, 1);
 	       } else {
 
                /* Clear portion(s) of old span that extend 
                   beyond end of new span. */
-	          if (ol < nl)
-	             xspan(i, ol, nl - ol, 2);
-	          if (oh > nh)
-	             xspan(i, nh, oh - nh, 1);
+		  if (ol < nl)
+		     xspan(i, ol, nl - ol, 0);
+	          if (or > nr)
+	             xspan(i, nr, or - nr, 0);
 
 	       /* Extend existing (possibly trimmed) span to
 		  correct new length. */
 	          if (nl < ol)
-	             xspan(i, nl, ol - nl, 5);
-	          if (nh > oh)
-	             xspan(i, oh, nh - oh, 6);
+	             xspan(i, nl, ol - nl, 1);
+	          if (nr > or)
+		     xspan(i, or, nr - or, 1);
 	       }
 	    }
 	 }
        done:
-	 otab[i] = wtab[i];
-      }
-
-      if (shading_level == 4) {
-	 for (i = 0; i < Earthmap.height; i++) if (wtab[i] >= 0) {
-	    nl = noon - wtab[i]/2 + Earthmap.width;
-	    sp = M_PI*(double)(Earthmap.height/2-i)/((double) Earthmap.height);
-	    cp = cos(sp)*cos(dtr(sun_decl));
-            sp = sin(sp)*sin(dtr(sun_decl));
-            for (j=0; j<wtab[i]; j++) {
-  	     c = cos(2.0*M_PI*(double)(j-wtab[i]/2)/((double) Earthmap.width));
-	     SwitchPixel((j+nl)%Earthmap.width, i, setlight(c*cp+sp));
-	    }
-	 }
+	 otab[i] = ntab[i];
       }
 }
 
@@ -2571,10 +2473,10 @@ updateImage()
 		Earthmap.projtime = 0;
 		if (invert)
 		for (i = 0; i < Earthmap.height; i++)
-			Earthmap.wtab1[i] = -1;
+			Earthmap.nwtab[i] = -1;
 		  else
 		for (i = 0; i < Earthmap.height; i++)
-			Earthmap.wtab1[i] = Earthmap.width;
+			Earthmap.nwtab[i] = Earthmap.width;
 	}
 
 	if (Earthmap.flags & S_FAKE) {
@@ -2608,10 +2510,10 @@ updateImage()
 	 || Earthmap.projtime < 0
 	 || (Earthmap.time - Earthmap.projtime) > PROJINT 
          || force_proj) {
-		projillum(Earthmap.wtab, sun_decl);
-		wtab_swap = Earthmap.wtab;
-		Earthmap.wtab = Earthmap.wtab1;
-		Earthmap.wtab1 = wtab_swap;
+		projillum(Earthmap.owtab, sun_decl);
+		wtab_swap = Earthmap.owtab;
+		Earthmap.owtab = Earthmap.nwtab;
+		Earthmap.nwtab = wtab_swap;
 		Earthmap.projtime = Earthmap.time;
 	}
 
@@ -2619,7 +2521,7 @@ updateImage()
 	   the illuminated area on the screen.	*/
 
 	if ((Earthmap.flags & S_FAKE) || Earthmap.noon != xl || force_proj) {
-		moveterm(Earthmap.wtab1, xl, Earthmap.wtab, Earthmap.noon);
+		moveterm(Earthmap.nwtab, xl, Earthmap.owtab, Earthmap.noon);
 		Earthmap.noon = xl;
 		Earthmap.flags |= S_DIRTY;
 		force_proj = 0;
@@ -3083,10 +2985,9 @@ void
 setDarkPixels(a, b)
 int a, b;
 {
-     int i, j, k, full=1, depth;
+     int i, j, k, full=1, depth=0;
      XColor color, colorp, approx;
      unsigned int red[256], green[256], blue[256];
-     char name[15];
      double steps[COLORSTEPS];
 
      if (invert || a==b) return;
@@ -3109,10 +3010,9 @@ int a, b;
 	      else {
 		 if (full) {
 		   int l;
-		   printf("%d\n", color.pixel);
                    fprintf(stderr, 
                       "Colormap full: cannot allocate color series %d/%d!\n"
-		      "Trying to allocate other sufficiently close color.\n",
+		      "Trying to allocate other sufficiently close color.\n"
 		      "You'll get a pretty ugly shading anyway...\n",
                       j, color_scale);
 		   full = 0;
@@ -3189,7 +3089,6 @@ buildMap()
    createGCs();
    createWorkImage();
    checkAuxilWins();
-   setShade();
 }
 
 void RaiseAndFocus(win)
@@ -3413,16 +3312,15 @@ char	key;
 		   allocation_level = color_scale;
 		}
 		for (i = 0; i < Earthmap.height; i++)
-		    Earthmap.wtab1[i] = Earthmap.width;
+		    Earthmap.nwtab[i] = Earthmap.width;
                 size = CurXIM->width*CurXIM->height*(CurXIM->bitmap_pad/8);
                 memcpy(CurXIM->data, ImageData, size); 
-                setShade();
 	     }
 	     force_proj = 1;
 	     exposeMap();
 	     break;
 	   case 'o':
-             do_sunpos = 1 - do_sunpos;
+             do_sun = 1 - do_sun;
 	     if (mono) draw_sun();
 	     exposeMap();
              break;

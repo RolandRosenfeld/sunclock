@@ -251,6 +251,12 @@ there is still substantial luminosity left after sunset (depending on
 the diffusion parameter below). Mode 4 additionally represents the 
 luminosity in the full illuminated area.
 .TP
+.BI "\-night "
+Start sunclock with the night region displayed in mode 1 (it's the default).
+.TP
+.BI "\-terminator \-twilight \-luminosity " 
+Start sunclock with the night region displayed in mode 2, 3, 4 respectively.
+.TP
 .BI "\-diffusion " value (degrees)
 Sets the amplitude of the area in which diffusion of light in the
 atmosphere is still sufficient to keep some luminosity after sunset.
@@ -261,9 +267,6 @@ Sets the value of the refraction angle for tangential sun rays at sunset.
 This is related to the fact that the sun sometimes looks bigger at sunset.
 Changing the refraction degree slightly affects the computation of sunrise
 and sunset times. Default is 0.1 degree.
-.TP
-.BI "\-night "
-Start sunclock with the night region displayed (by default, it is).
 .TP
 .BI "\-cities "
 Start sunclock with the cities displayed (by default, they are).

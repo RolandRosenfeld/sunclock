@@ -59,7 +59,7 @@ install: sunclock genmap
 	./check_i18n $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
 
 clean:
-	rm -f core *.o *~ sunclock mapgen
+	rm -f core *.bak *.o *~ sunclock mapgen
 
 realclean: clean
 	rm -f *.xpm *.xbm Makefile 

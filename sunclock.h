@@ -67,9 +67,8 @@ struct earthmap {
 	char *		bits;           /* pointer to char * bitmap bits */
 	int		flags;		/* see below */
 	int		noon;		/* position of noon */
-	double		shade;		/* average width of shade area */
-	short *		wtab1;		/* current width table (?) */
-	short *		wtab;		/* previous width table (?) */
+	short *		nwtab;		/* current width table (?) */
+	short *		owtab;		/* previous width table (?) */
 	long		increm;		/* increment for fake time */
 	long		time;		/* time - real or fake, see flags */
 	GC		gc;		/* GC for writing text into window */
