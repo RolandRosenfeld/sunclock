@@ -44,7 +44,7 @@
        Usenet: {sun,well,uunet}!acad!kelvin
 	   or: kelvin@acad.uu.net
 
-    modified for interactice maps by
+    modified for interactive maps by
 
 	Stephen Martin
 	Fujitsu Systems Business of Canada
@@ -64,17 +64,25 @@
 	1.1   8/31/94  Version with interactive map.
 	1.2  10/12/94  Fixes for HP and Solaris, new icon bitmap
 	1.3  11/01/94  Timezone now shown in icon
+	1.4  03/29/98  Fixed city drawing, added icon animation
 
 */
 
 #define	FAILFONT	"fixed"
 
-#define	VERSION		"1.3"
+#define	VERSION		"1.4"
 
 #include "sunclock.h"
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <string.h>
+#include <unistd.h>
+
+#ifdef __STDC__
+#define CONST	const
+#else
+#define CONST
+#endif
 
 struct sunclock {
 	int		s_width;	/* size of pixmap */
@@ -94,15 +102,16 @@ struct sunclock {
 	int		s_texty;	/* where to draw the text */
 	long		s_projtime;	/* last time we projected illumination */
 	int		s_timeout;	/* time until next image update */
+	int		s_win_offset;	/* offset for drawing into window */
 	struct sunclock * s_next;	/* pointer to next clock context */
 };
 
 /* Records to hold cities */
 
 typedef struct City {
-    char *city;		/* Name of the city */
+    CONST char *city;	/* Name of the city */
     double lat, lon;	/* Latitude and longtitude of city */
-    char *tz;		/* Timezone of city */
+    CONST char *tz;	/* Timezone of city */
     struct City *next;	/* Pointer to next record */
 } City;
 
@@ -117,15 +126,25 @@ City *cities = NULL;
 #define	S_DIRTY		04		/* pixmap -> window copy required */
 #define	S_ICON		010		/* this is the icon window */
 
-void                            SetIconName();
+#ifdef NEED_SYSTEM_DECLARATIONS
 char *				strdup();
 char *				strrchr();
 char *				strtok();
+char *				malloc();
 long				time();
 #ifdef NEW_CTIME
 char *				timezone();
 #endif
+#endif
 
+
+/*
+ * External Functions
+ */
+char *				tildepath(); /* Returns path to ~/<file> */
+
+void				usage();
+void                            SetIconName();
 double				jtime();
 double				gmst();
 char *				salloc();
@@ -133,11 +152,36 @@ char *				bigtprint();
 char *				smalltprint();
 struct sunclock *		makeClockContext();
 Bool				evpred();
+int				readrc();
+void				parseArgs();
+void				getColors();
+void				getFonts();
+void				getGeom();
+void				fixGeometry();
+void				makePixmaps();
+void				makeWindows();
+void				makeGCs();
+void				setAllHints();
+void				makeClockContexts();
+void				place_city();
+void				eventLoop();
+void				shutDown();
+void				needMore();
+void				doExpose();
+void				doTimeout();
+void				setTimeout();
+void				updimage();
+void				showImage();
+void				set_timezone();
+void				showText();
+void				sunpos();
+void				moveterm();
+void				projillum();
 
-char *				Wdayname[] = {
+CONST char * CONST		Wdayname[] = {
         "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
 };
-char *				Monname[] = {
+CONST char * CONST		Monname[] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
 	"Aug", "Sep", "Oct", "Nov", "Dec"
 };
@@ -148,8 +192,8 @@ struct geom {
 	int			y;
 };
 
-char *				Name;
-char *				Display_name = "";
+CONST char *			Name;
+CONST char *			Display_name = "";
 Display *			dpy;
 int				scr;
 unsigned long			Black;
@@ -167,9 +211,11 @@ Window				Icon;
 Window				Clock;
 struct sunclock *		Current;
 int				Iconic = 0;
+int                             AnimateIcon = 0;
 struct geom			Geom = { 0, 0, 0 };
 struct geom			Icongeom = { 0, 0, 0 };
 
+int
 main(argc, argv)
 int				argc;
 register char **		argv;
@@ -182,7 +228,7 @@ register char **		argv;
 	if (readrc())
 	    exit(1);
 	Name = *argv;
-	if (p = strrchr(Name, '/'))
+	if ((p = strrchr(Name, '/')))
 		Name = ++p;
 	parseArgs(argc, argv);
 
@@ -207,8 +253,9 @@ register char **		argv;
 	for (c = cities; c; c = c->next)
 	    place_city(c->lat, c->lon, c->city);
 
-	XSelectInput(dpy, Clock, ExposureMask | ButtonPressMask);
-	XSelectInput(dpy, Icon, ExposureMask);
+	XSelectInput(dpy, Clock,
+		     ExposureMask | ButtonPressMask | StructureNotifyMask);
+	XSelectInput(dpy, Icon, ExposureMask | StructureNotifyMask);
 	XMapWindow(dpy, Clock);
 
 	eventLoop();
@@ -222,6 +269,7 @@ register char **		argv;
 	exit(0);
 }
 
+void
 parseArgs(argc, argv)
 register int			argc;
 register char **		argv;
@@ -235,6 +283,9 @@ register char **		argv;
 		}
 		else if (strcmp(*argv, "-iconic") == 0)
 			Iconic++;
+		else if (strcmp(*argv, "-animateicon") == 0
+			 || strcmp(*argv, "-a") == 0)
+			AnimateIcon++;
 		else if (strcmp(*argv, "-geometry") == 0) {
 			needMore(argc, argv);
 			getGeom(*++argv, &Geom);
@@ -255,6 +306,7 @@ register char **		argv;
 	}
 }
 
+void
 needMore(argc, argv)
 register int			argc;
 register char **		argv;
@@ -266,6 +318,7 @@ register char **		argv;
 	}
 }
 
+void
 getGeom(s, g)
 register char *			s;
 register struct geom *		g;
@@ -281,7 +334,8 @@ register struct geom *		g;
 		exit(1);
 	}
 	if ((mask & WidthValue) || (mask & HeightValue))
-		fprintf(stderr, "%s: warning: width/height in geometry `%s' ignored\n",
+		fprintf(stderr,
+			"%s: warning: width/height in geometry `%s' ignored\n",
 			Name, s);
 	g->mask = mask;
 }
@@ -290,6 +344,7 @@ register struct geom *		g;
  * Free resources.
  */
 
+void
 shutDown()
 {
 	XFreeGC(dpy, GC_store);
@@ -306,10 +361,13 @@ shutDown()
 	XCloseDisplay(dpy);
 }
 
+void
 usage()
 {
 	fprintf(stderr,
-		"usage: %s [-display dispname] [-geometry +x+y] [-icongeometry +x+y] [-iconic] [-version]\n",
+		"usage: %s [-display dispname] [-geometry +x+y] "
+		"[-icongeometry +x+y] [-iconic] [-version] "
+		"[-animateicon] [-a]\n",
 		Name);
 	exit(1);
 }
@@ -319,6 +377,7 @@ usage()
  * before mapping window, but after creating it.
  */
 
+void
 setAllHints(argc, argv)
 int				argc;
 char **				argv;
@@ -327,7 +386,7 @@ char **				argv;
 	XSizeHints		xsh;
 	XWMHints		xwmh;
 
-	xch.res_name = Name;
+	xch.res_name = (char *)Name;
 	xch.res_class = "Sunclock";
 	XSetClassHint(dpy, Clock, &xch);
 	XStoreName(dpy, Clock, Name);
@@ -358,6 +417,7 @@ char **				argv;
 	XSetWMHints(dpy, Clock, &xwmh);
 }
 
+void
 makeWindows()
 {
 	register int		ht;
@@ -382,6 +442,7 @@ makeWindows()
 			     CopyFromParent, mask, &xswa);
 }
 
+void
 fixGeometry(g, w, h)
 register struct geom *		g;
 register int			w;
@@ -393,6 +454,7 @@ register int			h;
 		g->y = DisplayHeight(dpy, scr) - h + g->y;
 }
 
+void
 makeGCs(w, p)
 register Window			w;
 register Pixmap			p;
@@ -403,16 +465,18 @@ register Pixmap			p;
 	gcv.background = White;
 	GC_store = XCreateGC(dpy, w, GCForeground | GCBackground, &gcv);
 	gcv.function = GXinvert;
-	GC_invert = XCreateGC(dpy, p, GCForeground | GCBackground | GCFunction, &gcv);
+	gcv.fill_style = FillSolid;
+	GC_invert = XCreateGC(dpy, p, GCForeground | GCBackground | GCFunction | GCFillStyle, &gcv);
 
 	gcv.font = BigFont->fid;
 	GC_bigf = XCreateGC(dpy, w, GCForeground | GCBackground | GCFont, &gcv);
 	gcv.font = SmallFont->fid;
 	GC_smallf = XCreateGC(dpy, w, GCForeground | GCBackground | GCFont, &gcv);
 	gcv.function = GXcopyInverted;
-	GC_xor = XCreateGC(dpy, p, GCForeground | GCBackground | GCFunction, &gcv);
+	GC_xor = XCreateGC(dpy, p, GCForeground | GCBackground | GCFunction | GCFont, &gcv);
 }
 
+void
 getColors()
 {
 	XColor			c;
@@ -436,6 +500,7 @@ getColors()
 		White = c.pixel;
 }
 
+void
 getFonts()
 {
 	BigFont = XLoadQueryFont(dpy, BIGFONT);
@@ -462,17 +527,19 @@ getFonts()
 	}
 }
 
+void
 makePixmaps()
 {
 	Mappix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
-				 large_map_bits, large_map_width,
+				 (char *)large_map_bits, large_map_width,
 				 large_map_height, 0, 1, 1);
 
 	Iconpix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
-				 icon_map_bits, icon_map_width,
+				 (char *)icon_map_bits, icon_map_width,
 				 icon_map_height, 0, 1, 1);
 }
 
+void
 makeClockContexts()
 {
 	register struct sunclock * s;
@@ -520,6 +587,7 @@ int				txy;
 	s->s_text[0] = '\0';
 	s->s_textx = txx;
 	s->s_texty = txy;
+	s->s_win_offset = 0;
 
 	return (s);
 }	
@@ -538,6 +606,7 @@ int				txy;
  * types of events, notably ClientMessage and Selection events.  Sigh.
  */
 
+void
 eventLoop()
 {
 	XEvent			ev;
@@ -549,6 +618,11 @@ eventLoop()
 			case Expose:
 				if (ev.xexpose.count == 0)
 					doExpose(ev.xexpose.window);
+				break;
+
+			case UnmapNotify:
+				if(ev.xunmap.window == Current->s_window)
+					Current = Current->s_next;
 				break;
 
 			/* Set the timezone on a button press */
@@ -578,24 +652,28 @@ register char *			a;
  * currently the one we're displaying.
  */
 
+void
 doExpose(w)
 register Window			w;
 {
-	if (w != Current->s_window) {
-		Current = Current->s_next;
-		if (w != Current->s_window) {
-			fprintf(stderr,
-				"%s: expose event for unknown window, id = 0x%08lx\n",
-				Name, w);
-			exit(1);
-		}
-		setTimeout(Current);
+	register struct sunclock * s = Current;
+
+	if (w != s->s_window) {
+	     s = s->s_next;
+	     if (w != s->s_window) {
+		  fprintf(stderr,
+			  "%s: expose event for unknown window, id = 0x%08lx\n",
+			  Name, w);
+		  exit(1);
+	     }
+	     setTimeout(s);
 	}
-	updimage(Current);
-	Current->s_flags |= S_DIRTY;
-	showImage(Current);
+	updimage(s);
+	s->s_flags |= S_DIRTY;
+	showImage(s);
 }
 
+void
 doTimeout()
 {
 	if (QLength(dpy))
@@ -607,19 +685,28 @@ doTimeout()
 	}
 }
 
+void
 setTimeout(s)
 register struct sunclock *	s;
 {
 	long			t;
 
 	if (s->s_flags & S_ICON) {
-		time(&t);
-		s->s_timeout = 60 - localtime(&t)->tm_sec;
+		if(!AnimateIcon) {
+			time(&t);
+			s->s_timeout = 60 - localtime(&t)->tm_sec;
+		} else {
+			if((s->s_win_offset += 5) >= s->s_width)
+				s->s_win_offset -= s->s_width;
+			s->s_flags |= S_DIRTY;
+			s->s_timeout = 10;
+		}
 	}
 	else
 		s->s_timeout = 1;
 }
 
+void
 showImage(s)
 register struct sunclock *	s;
 {
@@ -632,8 +719,17 @@ register struct sunclock *	s;
 	p = (*s->s_tfunc)(&lt, gmtp);
 
 	if (s->s_flags & S_DIRTY) {
-		XCopyPlane(dpy, s->s_pixmap, s->s_window, GC_store, 0, 0,
-			   s->s_width, s->s_height, 0, 0, 1);
+		if (s->s_win_offset > 0) {
+			XCopyPlane(dpy, s->s_pixmap, s->s_window, GC_store,
+				   s->s_win_offset, 0,
+				   s->s_width-s->s_win_offset, s->s_height,
+				   0, 0, 1);
+			XCopyPlane(dpy, s->s_pixmap, s->s_window, GC_store,
+				   0, 0, s->s_win_offset, s->s_height,
+				   s->s_width-s->s_win_offset, 0, 1);
+		} else
+			XCopyPlane(dpy, s->s_pixmap, s->s_window, GC_store,
+				   0, 0, s->s_width, s->s_height, 0, 0, 1);
 		if (s->s_flags & S_ICON)
 			XClearArea(dpy, s->s_window, 0, s->s_height + 1,
 				   0, 0, False);
@@ -643,6 +739,7 @@ register struct sunclock *	s;
 	showText(s);
 }
 
+void
 showText(s)
 register struct sunclock *	s;
 {
@@ -653,6 +750,7 @@ register struct sunclock *	s;
 /* --- */
 /*  UPDIMAGE  --  Update current displayed image.  */
 
+void
 updimage(s)
 register struct sunclock *	s;
 {
@@ -698,8 +796,8 @@ register struct sunclock *	s;
 	   it every PROJINT seconds.  */
 
 	if ((s->s_flags & S_FAKE)
-	 || s->s_projtime < 0
-	 || (s->s_time - s->s_projtime) > PROJINT) {
+	    || s->s_projtime < 0
+	    || (s->s_time - s->s_projtime) > PROJINT) {
 		projillum(s->s_wtab, s->s_width, s->s_height, sundec);
 		wtab_swap = s->s_wtab;
 		s->s_wtab = s->s_wtab1;
@@ -723,6 +821,7 @@ register struct sunclock *	s;
 
 /*  PROJILLUM  --  Project illuminated area on the map.  */
 
+void
 projillum(wtab, xdots, ydots, dec)
 short *wtab;
 int xdots, ydots;
@@ -815,6 +914,7 @@ double dec;
 	       the   number   of   pixels   to	 complement.   Handles
 	       wrap-around at the right edge of the screen.  */
 
+void
 xspan(pline, leftp, npix, xdots, p)
 register int			pline;
 register int			leftp;
@@ -836,6 +936,7 @@ register Pixmap			p;
 
 /*  MOVETERM  --  Update illuminated portion of the globe.  */
 
+void
 moveterm(wtab, noon, otab, onoon, xdots, ydots, pixmap)
 short *wtab, *otab;
 int noon, onoon, xdots, ydots;
@@ -940,7 +1041,8 @@ register struct tm *		gmtp;
 	}
 #endif
 	sprintf(s,
-		"%02d:%02d:%02d %s %s %02d %s %02d     %02d:%02d:%02d UTC %s %02d %s %02d",
+		"%02d:%02d:%02d %4s %s %02d %s %02d     "
+		"%02d:%02d:%02d UTC %s %02d %s %02d",
 		ltp->tm_hour, ltp->tm_min,
 		ltp->tm_sec,
 #ifdef NEW_CTIME
@@ -988,12 +1090,6 @@ int readrc()
     City *crec;		/* Pointer to new city record */
 
     /*
-     * External Functions
-     */
-
-    char *tildepath();	/* Returns path to ~/<file> */
-
-    /*
      * Get the path to the rc file
      */
 
@@ -1014,23 +1110,23 @@ int readrc()
 
 	/* Get the city name looking for blank lines and comments */
 
-	if (((city = strtok(buf, " 	\n")) == NULL) ||
+	if (((city = strtok(buf, " \t\n")) == NULL) ||
 	    (city[0] == '#') || (city[0] == '\0'))
 	    continue;
 
 	/* Get the latitude, longitude and timezone */
 
-	if ((lat = strtok(NULL, " 	\n")) == NULL) {
+	if ((lat = strtok(NULL, " \t\n")) == NULL) {
 	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
 	    continue;
 	}
 
-	if ((lon = strtok(NULL, " 	\n")) == NULL) {
-	    fprintf(stderr, "Error in .sunclockrf for city %s\n", city);
+	if ((lon = strtok(NULL, " \t\n")) == NULL) {
+	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
 	    continue;
 	}
 
-	if ((tz = strtok(NULL, " 	\n")) == NULL) {
+	if ((tz = strtok(NULL, " \t\n")) == NULL) {
 	    fprintf(stderr, "Error in .sunclockrc for city %s\n", city);
 	    continue;
 	}
@@ -1064,6 +1160,10 @@ int readrc()
  * place_city() - Put a city on the map.
  */
 
+#define R1 2
+#define R2 4
+
+void
 place_city(lat, lon, name)
 double lat, lon;		/* Latitude and longtitude of the city */
 char *name;			/* Name of the city */
@@ -1073,20 +1173,20 @@ char *name;			/* Name of the city */
      */
 
     int ilat, ilon; 		/* Screen coordinates of the city */
-    int twidth,theight;         /* Width and height of the text */
+    int twidth /*,theight*/;    /* Width and height of the text */
     int tx, ty;                 /* Position of the text */
     int aboveflg = 0;           /* Flag to put text above dot */
     ilat = large_map_height - (lat + 90) * (large_map_height / 180.0);
     ilon = (180.0 + lon) * (large_map_width / 360.0);
- 
-    XDrawArc(dpy, Mappix, GC_xor, ilon-5, ilat-5, 10, 10, 0, 360 * 64);
-    XFillArc(dpy, Mappix, GC_xor, ilon-3, ilat-3, 6, 6, 0, 360 * 64);
+
+    XDrawArc(dpy, Mappix, GC_invert, ilon-R2, ilat-R2, 2*R2, 2*R2, 0, 360*64);
+    XFillArc(dpy, Mappix, GC_invert, ilon-R1, ilat-R1, 2*R1, 2*R1, 0, 360*64);
 
     if (name[0] == '+') {
       aboveflg = 1;
       name++;
     }
-    twidth = BigFont->max_bounds.width * strlen(name);
+    twidth = SmallFont->max_bounds.width * strlen(name);
     if ((tx = ilon - (twidth / 2)) <= 0)
       tx = 0;
     else if ((tx + twidth) > large_map_width)
@@ -1095,14 +1195,14 @@ char *name;			/* Name of the city */
     /* Figure out where to put the text */
 
     if (aboveflg || 
-	((ilat + BigFont->max_bounds.ascent + BigFont->max_bounds.descent) 
+	((ilat + SmallFont->max_bounds.ascent + SmallFont->max_bounds.descent) 
              > large_map_height))
-        ty = ilat - (BigFont->max_bounds.ascent + BigFont->max_bounds.descent);
+        ty = ilat - (SmallFont->max_bounds.ascent + SmallFont->max_bounds.descent);
     else if (!aboveflg || 
 	     (aboveflg && 
 	      ((ilat - 
-                 (BigFont->max_bounds.ascent + BigFont->max_bounds.descent + 10)) < 0)))
-        ty = ilat + (BigFont->max_bounds.ascent + BigFont->max_bounds.descent + 10);
+                 (SmallFont->max_bounds.ascent + SmallFont->max_bounds.descent + 10)) < 0)))
+        ty = ilat + (SmallFont->max_bounds.ascent + SmallFont->max_bounds.descent + 10);
     XDrawImageString(dpy, Mappix, GC_xor, tx, ty, name, strlen(name));
 }
 
@@ -1113,6 +1213,7 @@ char *name;			/* Name of the city */
  *                  is called to reset the system.
  */
 
+void
 set_timezone(x, y)
 int x, y;      /* Screen co-ordinates of mouse */
 {
@@ -1122,7 +1223,6 @@ int x, y;      /* Screen co-ordinates of mouse */
 
     City *cptr;    /* Used to search for a city */
     int cx, cy;    /* Screen coordinates of the city */
-    static char buf[64];  /* Used to set the env variable */
 
     /* Loop through the cities until on close to the pointer is found */
 
@@ -1140,8 +1240,13 @@ int x, y;      /* Screen co-ordinates of mouse */
 
 	    /* We are at this city, lets set the timezone */
 
+#if USE_PUTENV
+	    static char buf[64];  /* Used to set the env variable */
             sprintf(buf, "TZ=%s", cptr->tz);
 	    putenv(buf);
+#else
+	    setenv("TZ", cptr->tz, 1);
+#endif
 	    tzset();
 	    SetIconName();
 	}
@@ -1163,10 +1268,6 @@ SetIconName()
     long c;        /* Current time on the clock */
     struct tm *lt; /* Used to get timezone name */
 
-    strcpy(name, Name);
-    strcpy(name, VERSION);
-    strcpy(name, " - ");
-
     /* Change the timesone displayed in the icon */ 
 
     time(&c);
@@ -1180,3 +1281,10 @@ SetIconName()
 
     XSetIconName(dpy, Clock, name);
 }
+
+/*
+ * Local variables:
+ * tab-width:8
+ * c-basic-offset:8
+ * End:
+ */

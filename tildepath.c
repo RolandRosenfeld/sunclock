@@ -39,6 +39,7 @@ static char SccsId[] = { "@(#) tildepath.c 1.1@(#)" };
 #include <pwd.h>
 #include <malloc.h>
 #include <string.h>
+#include <unistd.h>
 
 /*
  * Define Statements
@@ -85,7 +86,7 @@ char *path;		/* Path starting with ~ */
 
     if ((username = strdup(++path)) == NULL)
 	return(NULL);
-    if (rest = strchr(username, '/')) {
+    if ((rest = strchr(username, '/'))) {
 	*rest = '\0';
 	rest++;
     }

@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "Aug 31, 1994"
+.TH SUNCLOCK 1 "Mar 30, 1998"
 .SH NAME
 sunclock \- show illuminated portion of Earth
 .SH SYNOPSIS
@@ -35,6 +35,13 @@ information given is ignored.
 .BI "\-icongeometry " +x+y
 Specify the position of the icon.  Only the position is used; any size
 information given is ignored.
+.TP
+.BI "\-animateicon"
+.TP
+.BI "\-a"
+Animate the icon by continuous scrolling.  Many window managers permit
+only a fixed icon size of 64x64 pixels.  This option makes the whole
+icon map visible over time.
 .RE
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This

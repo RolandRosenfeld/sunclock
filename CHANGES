@@ -1,3 +1,10 @@
+Version 1.4
+- Packaged files into subdirectory
+- Fixed timeout handling for modern window managers (e.g. WindowMaker)
+- Fixed city drawing; use small font for cities
+- Added -animateicon / -a option to animate icon
+- Uploaded by Wolfram Gloger (wmglo@Dent.MED.Uni-Muenchen.DE)
+
 Version 1.3
 - Timezone now displayed in icon. Suggested by Rich Gonzalez
     (gonzo@u.washington.edu)

@@ -68,6 +68,7 @@ double m, ecc;
 		or apparent, as desired) is  returned  as  degrees  in
 		SLONG.	*/
 
+void
 sunpos(jd, apparent, ra, dec, rv, slong)
 double jd;
 int apparent;
