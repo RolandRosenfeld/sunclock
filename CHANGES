@@ -12,6 +12,16 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
+Version 3.33, March 21, 2001
+
+- Improvements in the zoom widget, following suggestions by François
+  Massonneau <frmas@free.fr> and Ted Rolle <ted@acacia.datacomm.com>
+  (there is now a special mode allowing to keep control on the aspect
+  when changing the zoom area location)
+- Update of Dutch localization by Henry Verdonschot <henry@procura.nl>
+  and of Italian localization by Alessio F. Bragadini <alessio@sevenseas.org>
+- Minor bug fixes
+
 Version 3.32, March 19, 2001
 
 - Fully functional zoom widget; all images are now zoomable in the

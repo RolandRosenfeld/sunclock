@@ -85,7 +85,8 @@ Select language to be used in the sunclock menu and help.
 Select the big font (used in the bottom line of the map window, in the 
 menu and file selection windows). Default is 6x13
 .TP
-.B "\-smallfont " name (used in the bottom line of the clock window).
+.B "\-smallfont " name 
+Select the small font (used in the bottom line of the clock window).
 Default is 6x10.
 .TP
 .B "\-rcfile " filename
@@ -99,13 +100,13 @@ a higher priority.
 Set the directory where system wide shared Earthmaps are located.
 Default is /usr/share/sunclock/earthmaps.
 .TP
-.B "\-mapimage " file.xpm.(gz)
+.B "\-mapimage " file.jpg (or file.vmf, file.xpm, file.xpm.gz)
 Start sunclock with an Earth map image loaded in the map window.
 .TP
-.B "\-clockimage " file.xpm.(gz)
-Start sunclock with an Earth map image loaded in the clock window. Those
-maps are supposed to be somewhat smaller than for the map window, but 
-sunclock will still accept large ones in the clock window...
+.B "\-clockimage " file.jpg (or file.vmf, file.xpm, file.xpm.gz)
+Start sunclock with an Earth map image loaded in the clock window. 
+The same maps can be used used for the map and clock windows, but
+in the latter case they will tend to be scaled down.
 .TP
 .B "\-mono "
 Use monochrome settings (recommended only for monochrome screens!).
@@ -209,6 +210,17 @@ Raise the zoom window along with the main (map, clock) window.
 .B "\-nozoom "
 Don't raise the zoom window along with the main (map, clock) window.
 This is the default.
+.TP
+.B "\-aspect " mode
+Sets the aspect mode, i.e. the way by which zooming behaves with 
+respect to horizontal and vertical directions. Mode = 0 means that no 
+synchronizations are made, mode = 1 means that the zoom factors are
+always made to be equal, mode = 2 (the more subtle one) means that 
+the horizontal and vertical zoom factors are adjusted so that the
+region located near the central point of the zoomed area will be
+conformal to its actual geometry on Earth, i.e. will not appear to be
+distorted horizontally or vertically.  This won't be true elsewhere,
+though, especially if the zoomed area is large.
 .TP
 .BI "\-mapmode * (single character = C, D, E, L or S)"
 Start the map functions in mode (C)oordinates, (D)istances, hour (E)xtension,
