@@ -18,6 +18,7 @@ extern void             processKey();
 extern int              readVMF();
 extern void             buildMap();
 extern int              parseArgs();
+extern void             correctValues();
 extern void             readLanguage();
 extern void             getFonts();
 
@@ -1581,6 +1582,7 @@ activateOption()
 	strncpy(oldlang, language, 2);
 	runtime = 1;
 	i = parseArgs(i+1, args-1);
+	correctValues();
         if (i>0 || runtime<0) {
 	   option_newhint = '?';
 	   showOptionHint();
@@ -1591,9 +1593,7 @@ activateOption()
 	}	     
 	if (strncmp(language, oldlang, 2)) readLanguage();
         showOptionHint();
-        /* Set runtime=2 if previous image/pixmap can be recycled 
-           Only for color_depth>8 because of quantization effects
-           in pseudocolor mode ... */
+        /* Set runtime=2 if previous image/pixmap can be recycled */
 	if (gflags.mono==oldflags.mono && 
             gflags.fillmode==oldflags.fillmode) {
            runtime = 2;
@@ -1610,8 +1610,6 @@ activateOption()
 	   }
 	}
 	shutDown(Context, 0);
-	if (gflags.mono && gflags.shading>=2) gflags.shading = 1;
-        gflags.darkness = (unsigned int) ((1.0-darkness) * 255.25);
 	ptr = (short *) &gflags;
 	oldptr = (short *) &oldflags;
 	newptr = (short *) &Context->flags;

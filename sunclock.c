@@ -330,9 +330,9 @@ usage()
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)] [-dock]\n"
      SP"[-decimal] [-dms] [-city name] [-position latitude longitude]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
-     SP"[-nonight] [-night] [-terminator] [-twilight] [-luminosity]\n"
-     SP"[-shading mode=0,1,2,3,4] [-diffusion value] [-refraction value]\n"
-     SP"[-darkness value<=1.0] [-colorscale number<=256]\n"
+     SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
+     SP"[-night] [-terminator] [-twilight] [-luminosity] [-lightgradient]\n"
+     SP"[-nonight] [-darkness value<=1.0] [-colorscale number>=1]\n"
      SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
      SP"[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value]\n"
      SP"[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians]\n"
@@ -341,6 +341,7 @@ usage()
      SP"[-textbgcolor color] [-textfgcolor color]\n"
      SP"[-mapbgcolor color] [-mapfgcolor color]\n"
      SP"[-zoombgcolor color] [-zoomfgcolor color]\n"
+     SP"[-optionbgcolor color] [-optionfgcolor color] [-caretcolor]\n"
      SP"[-changecolor color] [-choicecolor color]\n"
      SP"[-dircolor color] [-imagecolor color]\n"
      SP"[-linecolor color] [-suncolor color] [-mooncolor color]\n"
@@ -447,6 +448,21 @@ initValues()
 	for (i=0; i<N_HELP; i++) Help[i] = strdup(Help[i]);
 	Configurability = strdup(Configurability);
 	ShortHelp = strdup(ShortHelp);
+}
+
+void
+correctValues() 
+{
+	if (color_depth<=8 && gflags.colorscale>256) 
+           gflags.colorscale = 256;
+
+        if (gflags.mono && (gflags.shading>=2)) 
+           gflags.shading = 1;
+
+        if (color_depth<=16) 
+           gflags.darkness = (unsigned short) ((1.0-darkness) * 255.25);
+	else
+           gflags.darkness = (unsigned short) ((1.0-darkness) * 32767.25);
 }
 
 void
@@ -737,9 +753,10 @@ register char **                argv;
                 }
                 else if (strcasecmp(*argv, "-colorscale") == 0) {
                         needMore(argc, argv);
-                        gflags.colorscale = atoi(*++argv);
-                        if (gflags.colorscale<=0) gflags.colorscale = 1;
-                        if (gflags.colorscale>256) gflags.colorscale = 256;
+			opt = atoi(*++argv);
+			if (opt<=0) opt = 1;
+			if (opt>32767) opt = 32767;
+                        gflags.colorscale = opt;
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-textbgcolor") == 0) {
@@ -926,7 +943,7 @@ register char **                argv;
                         needMore(argc, argv);
                         gflags.shading = atoi(*++argv);
                         if (gflags.shading < 0) gflags.shading = 0;
-                        if (gflags.shading > 4) gflags.shading = 4;
+                        if (gflags.shading > 5) gflags.shading = 5;
                         --argc;
                 }
                 else if ((opt = (strcasecmp(*argv, "-progress") == 0)) ||
@@ -1008,6 +1025,8 @@ register char **                argv;
                         gflags.shading = 3;
                 else if (strcasecmp(*argv, "-luminosity") == 0)
                         gflags.shading = 4;
+                else if (strcasecmp(*argv, "-lightgradient") == 0)
+                        gflags.shading = 5;
                 else if (strcasecmp(*argv, "-parallels") == 0)
                         gflags.parallel = 1;
                 else if (strcasecmp(*argv, "-meridians") == 0)
@@ -2140,37 +2159,44 @@ struct Sundata * Context;
 {
       int i;
 
-      if (Context->flags.shading != 2 && Context->flags.shading != 3) {
+      if (Context->flags.shading <2) 
+         Context->shadefactor = 1.0;
+      else {
+         if (Context->flags.shading == 2)
+            Context->shadefactor = 180.0/(M_PI*(SUN_APPRADIUS+atm_refraction));
+         else
+            Context->shadefactor = 180.0/(M_PI*(SUN_APPRADIUS+atm_diffusion));
+      }
+
+      Context->shadescale = 0.5 * ((double)Context->flags.colorscale + 0.5);
+
+      if (Context->flags.shading == 0 || Context->flags.shading >= 4) {
+         if (Context->tr1) {
+            free(Context->tr1);
+            Context->tr1 = NULL;
+         }
+      }
+
+      if (Context->flags.shading <= 1 && Context->flags.shading >= 4) {
          if (Context->tr2) {
             free(Context->tr2);
             Context->tr2 = NULL;
          }
       }
-      if (Context->flags.shading == 0 || Context->flags.shading == 4) {
-         if (Context->tr1) {
-            free(Context->tr1);
-            Context->tr1 = NULL;
-         }
-         return;
-      }
 
-      if (!Context->tr1)  
-         Context->tr1 = (short *) 
+      if (Context->flags.shading >= 1 && Context->flags.shading <= 3) {
+         if (!Context->tr1)  
+            Context->tr1 = (short *) 
                      salloc(Context->geom.width*sizeof(short));
-      for (i=0; i< (int)Context->geom.width; i++) Context->tr1[i] = 0;
-
-      if (Context->flags.shading <2) 
-         Context->shadefactor = 1.0;
-      else {
+         for (i=0; i< (int)Context->geom.width; i++) Context->tr1[i] = 0;
+      }
+      
+      if (Context->flags.shading >= 2 && Context->flags.shading <= 3) {
          if (!Context->tr2)  
             Context->tr2 = (short *) 
                      salloc(Context->geom.width*sizeof(short));
          for (i=0; i< (int)Context->geom.width; i++) 
-            Context->tr2[i] = -1; /* (short)(Context->geom.height-1); */
-         if (Context->flags.shading == 2)
-            Context->shadefactor = 180.0/(M_PI*(SUN_APPRADIUS+atm_refraction));
-         else
-            Context->shadefactor = 180.0/(M_PI*(SUN_APPRADIUS+atm_diffusion));
+            Context->tr2[i] = -1; 
       }
 
       Context->south = -1;
@@ -2615,10 +2641,11 @@ int t;
            v = Context->ximdata[i+1];
            w = Context->ximdata[i+2];
            if (t>=0) {
-              factor = Context->flags.darkness + (t * (255-Context->flags.darkness))/Context->flags.colorscale;
-              u = (u * factor)/255;
-              v = (v * factor)/255;
-              w = (w * factor)/255;
+              factor = Context->flags.darkness + (t * (MAXSHORT-
+                  Context->flags.darkness))/Context->flags.colorscale;
+              u = (u * factor)/MAXSHORT;
+              v = (v * factor)/MAXSHORT;
+              w = (w * factor)/MAXSHORT;
            }
            Context->xim->data[i] = u;
            Context->xim->data[i+1] = v;
@@ -2633,7 +2660,8 @@ int t;
               v = Context->ximdata[i+1];
            }
            if (t>=0) {
-              factor = Context->flags.darkness + (t * (255-Context->flags.darkness))/Context->flags.colorscale;
+              factor = Context->flags.darkness + (t * (255 -
+                 Context->flags.darkness))/Context->flags.colorscale;
               r = v>>3;
               g = ((v&7)<<3) | (u>>5);
               b = u&31;
@@ -2660,7 +2688,8 @@ int t;
               v = Context->ximdata[i+1];
 	   }
            if (t>=0) {
-              factor = Context->flags.darkness + (t * (255-Context->flags.darkness))/Context->flags.colorscale;
+              factor = Context->flags.darkness + (t * (255 - 
+                 Context->flags.darkness))/Context->flags.colorscale;
               r = v>>2;
               g = (v&3)<<3 | (u>>5);
               b = u&31;
@@ -2679,7 +2708,8 @@ int t;
 	   }
         } else {
            if (t>=0) {
-             if ((277*x+359*y) % Context->flags.colorscale < Context->flags.colorscale-t)
+             if ((277*x+359*y) % Context->flags.colorscale < 
+                 Context->flags.colorscale-t)
                Context->xim->data[i] = 
                  Context->nightpixel[(unsigned char)Context->ximdata[i]];
              else
@@ -2702,9 +2732,10 @@ int i, j;
       if (Context->flags.shading == 1) {
          if (light >= 0) k = -1; else k = 0;
       } else {
-         if (Context->flags.shading<=3 || light<0) 
+         if (Context->flags.shading<=3 || 
+             (Context->flags.shading==4 && light<0))
              light *= Context->shadefactor;
-         k = (int) (0.5*(1.0+light)*(Context->flags.colorscale+0.4));
+         k = (int) ((1.0+light)*Context->shadescale);
          if (k < 0) k = 0;
          if (k >= Context->flags.colorscale) k = - 1;
       }
@@ -2809,9 +2840,9 @@ struct Sundata * Context;
          return;
       }
 
-      /* Shading = 4 is quite straightforward... compute everything! */
+      /* Shading = 4,5 are quite straightforward... compute everything! */
 
-      if (Context->flags.shading == 4) {
+      if (Context->flags.shading >= 4) {
          for (i = 0; i < (int)Context->geom.width; i++)
             for (j = 0; j< (int)Context->geom.height; j++) {
                DarkenPixel(Context, i, j, howDark(Context, i, j));
@@ -4064,9 +4095,9 @@ KeySym  keysym;
                 Context->flags.shading = 1 - Context->flags.shading;
              else {
                 if (keysym==XK_n) 
-                   Context->flags.shading = (Context->flags.shading + 1) % 5;
+                   Context->flags.shading = (Context->flags.shading + 1) % 6;
                 if (keysym==XK_N) 
-                   Context->flags.shading = (Context->flags.shading + 4) % 5;
+                   Context->flags.shading = (Context->flags.shading + 5) % 6;
              }
              drawShadedArea(Context);
              Context->flags.update = -1;
@@ -4611,8 +4642,7 @@ char **         argv;
 
         /* Correct some option parameters */
         if (placement<0) placement = NW;
-        if (gflags.mono && (gflags.shading>=2)) gflags.shading = 1;
-        gflags.darkness = (unsigned int) ((1.0-darkness) * 255.25);
+        correctValues();
         rem_menu = do_menu; do_menu = 0;
         rem_selector = do_selector; do_selector = 0;
         rem_zoom = do_zoom; do_zoom = 0;

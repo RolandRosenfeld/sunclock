@@ -12,7 +12,13 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
-Version 3.36, April 12, 2001
+Version 3.37, April 13, 2001
+
+- Added new option -lightgradient
+- Corrected and improved somewhat the shading algorithm (while slightly
+  improving speed as well).
+
+Version 3.36, April 13, 2001
 
 - Code clean-ups and bug fixes. Language and fonts are now runtime
   configurable as promised (and without segfaulting !).

@@ -21,6 +21,7 @@
 #define MENU_WIDTH 38
 #define SEL_WIDTH 28
 #define SEL_HEIGHT 10
+#define MAXSHORT 32767
 
 #define abs(x) ((x) < 0 ? (-(x)) : x)			  /* Absolute value */
 #define sgn(x) (((x) < 0) ? -1 : ((x) > 0 ? 1 : 0))	  /* Extract sign */
@@ -225,6 +226,7 @@ typedef struct Sundata {
         double          sundec;         /* Sun declination */
         double          sunlon;         /* Sun longitude */
         double          shadefactor;    /* shading factor */
+        double          shadescale;     /* shading rescale factor */
         double          fnoon;          /* position of noon, double float */
 	int		noon;		/* position of noon, integer */
         int             local_day;      /* previous local day */

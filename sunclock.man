@@ -362,7 +362,8 @@ or rc file. The operating mode is set to Coordinates mode.
 .BI "\-position " latitude longitude
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
-.BI "\-shading " mode=0,1,2,3,4
+.TP
+.BI "\-shading " mode=0,1,2,3,4,5
 Start sunclock with the specified shading mode. Mode 0 means that the night
 area is not displayed. In higher modes, the night area is displayed, with
 increasingly sophisticated shading algorithms. Mode 1 stands for no shading
@@ -371,7 +372,10 @@ terminator area -- the area in which the sun is partially hidden by the
 horizon. Mode 3 shades the region in which there is still substantial 
 luminosity left after sunset (depending on the diffusion parameter below). 
 Default is 3° below horizon. Mode 4 additionally represents the luminosity 
-values in all parts of the illuminated area.
+values in all parts of the illuminated area. Mode 5 represents the gradient
+of luminosity from the brightest area (facing the sun) to the darkest area
+(opposite to the sun); this has nothing to do, though, with the actual
+luminosity values.
 .TP 
 .BI "\-terminator " 
 Equivalent to \-shading 2 
@@ -381,6 +385,9 @@ Equivalent to \-shading 3
 .TP 
 .BI "\-luminosity "
 Equivalent to \-shading 4
+.TP 
+.BI "\-lightgradient "
+Equivalent to \-shading 5
 .TP
 .BI "\-diffusion " value (degrees)
 Sets the amplitude of the area in which diffusion of light in the
