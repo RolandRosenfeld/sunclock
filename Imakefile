@@ -1,6 +1,9 @@
 XCOMM Should install to /usr or /usr/local ??
 DESTDIR=/usr
 
+XCOMM Name of man subdirectory of DESTDIR:
+MANDIR=/X11R6/man/man1
+
 XCOMM Name of bin subdirectory of DESTDIR: /X11R6/bin or maybe just  /bin
 BINDIR=/X11R6/bin
 
@@ -18,21 +21,34 @@ XCOMM Pick -O or -g
 XCOMM
 
 #ifdef HPArchitecture
-CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+XPMLIB=-L/opt/xpm/lib/X11
+XPMINC=-I/opt/xpm/include
+JLIB=-L/opt/jpeg-6/lib
+JINC=-I/opt/jpeg-6/include
+
+CCOPTIONS = -Ae $(XPMINC) $(JINC) -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #else
 # SunOS
+
+#XPMLIB=-L/usr/X11R6/lib
+#XPMINC=-I/usr/X11R6/include/X11
+#JLIB=-L/usr/lib
+#JINC=-I/usr/include
 #CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+
 # Solaris, Linux
+#XPMLIB=-L/usr/X11R6/lib
+#XPMINC=-I/usr/X11R6/include/X11
+#JLIB=-L/usr/lib
+#JINC=-I/usr/include
+
 CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
 SRCS=sunclock.c astro.c tildepath.c dirlist.c readvmf.c readxpm.c readjpeg.c
 OBJS=sunclock.o astro.o tildepath.o dirlist.o readvmf.o readxpm.o readjpeg.o
-LOCAL_LIBRARIES=$(XLIB) -lXpm -ljpeg -lm
+LOCAL_LIBRARIES=$(XLIB) $(XPMLIB) -lXpm $(JLIB) -ljpeg -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
-
-realclean:: clean
-	rm -f Makefile *.xpm *.xbm
 
 ComplexProgramTarget(sunclock)
 
@@ -43,7 +59,9 @@ install::
 	mkdirhier $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cat WARNING
-	./check_obsolete $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
+	./check_obsolete $(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
 
+realclean:: clean
+	rm -f Makefile *.xpm *.xbm
 
 

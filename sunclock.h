@@ -18,7 +18,7 @@
 #include "version.h"
 
 #define MENU_WIDTH 38
-#define SEL_WIDTH 32
+#define SEL_WIDTH 28
 #define SEL_HEIGHT 10
 
 #define abs(x) ((x) < 0 ? (-(x)) : x)			  /* Absolute value */

@@ -159,7 +159,7 @@ char    StdFormats[] = STDFORMATS;
 char *  ListFormats = StdFormats;
 char ** DateFormat;
 
-struct Sundata *Seed, *MenuCaller, *SelCaller;
+struct Sundata *Seed, *MenuCaller, *SelCaller, *ZoomCaller;
 
 char	TextBgColor[COLORLENGTH], TextFgColor[COLORLENGTH], 
         DirColor[COLORLENGTH], ImageColor[COLORLENGTH],
@@ -195,11 +195,14 @@ XFontStruct *	BigFont;
 
 Window		Menu = 0;
 Window		Selector = 0;
+Window		Zoom = 0;
 
 struct Geometry MapGeom =   { 0, 30,  30, 768, 384, 320, 160, 20 };
 struct Geometry	ClockGeom = { 0, 30,  30, 128,  64,  48,  24, 20 };
+
 struct Geometry	MenuGeom =  { 0, 30, 430, 700,  40, 700,  40,  0 };
 struct Geometry	SelGeom =   { 0, 30,  40, 600, 180, 450,  80,  0 };
+struct Geometry	ZoomGeom =  { 0, 30,  40, 500, 320, 375, 150,  0 };
 
 int             radius[5] = {0, 2, 2, 3, 5};
 
@@ -226,13 +229,16 @@ int             horiz_shift = 0;
 int             vert_shift = 12;
 int		label_shift = 0;
 int		selector_shift = 0;
+int		zoom_shift = 0;
 
 int             horiz_drift = 0;
 int             vert_drift =  0;
 
-int             do_selector = 0;
-int             do_hint = 0;
 int		do_menu = 0;
+int             do_selector = 0;
+int		do_zoom = 0;
+
+int             do_hint = 0;
 int             do_dock = 0;
 int             do_sync = 0;
 int             do_title = 1;
@@ -1105,6 +1111,8 @@ Window win;
      return MenuCaller;
    if (win==Selector)
      return SelCaller;
+   if (win==Zoom)
+     return ZoomCaller;
 
    Context = Seed;
    while (Context && Context->win != win) Context = Context->next;
@@ -1150,18 +1158,23 @@ GClist gclist;
  	 }
 }
 
+void PopMenu();
+void PopSelector();
+void PopZoom();
+
 void
 shutDown(Context, all)
 struct Sundata * Context;
 int all;
 {
-        struct Sundata * ParentContext = NULL;
+        struct Sundata * ParentContext, *NextContext;
 
 	if (all<0)
 	   Context = Seed;
 
       repeat:
-        ParentContext = Context->next;
+        NextContext = Context->next;
+        ParentContext = parentContext(Context);
 
 	if (Context->xim) {
            XDestroyImage(Context->xim); 
@@ -1200,8 +1213,9 @@ int all;
 	   last_time = 0;
 
            if (Context->win) {
-	      if (MenuCaller == Context) MenuCaller = parentContext(Context);
-	      if (SelCaller == Context) SelCaller = parentContext(Context);
+	      if (do_menu && Context == MenuCaller) PopMenu(Context);
+	      if (do_selector && Context == SelCaller) PopSelector(Context);
+	      if (do_zoom && Context == ZoomCaller) PopZoom(Context);
 	      XDestroyWindow(dpy, Context->win);
   	      Context->win = 0;
 	   }
@@ -1219,20 +1233,23 @@ int all;
               free(Context->map_img_file);
 	   if (all<0) {
 	      free(Context);
-	      Context = ParentContext;
-	      if (Context)
+	      if (NextContext) {
+	         Context = NextContext;
 	         goto repeat;
+	      }
 	      else {
 	        endup:
-         	 if (dirtable) free(dirtable);
                  if (cmap0) destroyGCs(gcl0);
+         	 XDestroyWindow(dpy, Menu);
+         	 XDestroyWindow(dpy, Selector);
+         	 XDestroyWindow(dpy, Zoom);
          	 XFreeFont(dpy, BigFont);
          	 XFreeFont(dpy, SmallFont);
                  XCloseDisplay(dpy);
+         	 if (dirtable) free(dirtable);
          	 exit(0);
  	      }
  	   }
-           ParentContext = parentContext(Context);
 	   if (ParentContext) {
 	     ParentContext->next = Context->next;
 	   } else
@@ -1286,6 +1303,12 @@ int				num;
 	      xsh.min_width = Geom->w_mini;
               xsh.min_height = Geom->h_mini;
 	    }
+	    if (num==4) {
+	      win = Zoom;
+	      Geom = &ZoomGeom;
+	      xsh.min_width = Geom->w_mini;
+              xsh.min_height = Geom->h_mini;
+	    }
 	    xsh.x = Geom->x;
 	    xsh.y = Geom->y;
 	    xsh.width = Geom->width;
@@ -1303,7 +1326,7 @@ int    num;
 {
         XClassHint xch;
         char 			name[80];	/* Used to change icon name */
-	char *instance[4] =     { "clock", "map", "menu", "selector" };
+	char *instance[5] =     { "clock", "map", "menu", "selector", "zoom" };
 
         sprintf(name, "%s %s", ProgName, VERSION);
         XSetIconName(dpy, win, name);
@@ -1340,6 +1363,11 @@ int				num;
 
 	   case 3:
 	        win = Selector;
+		mask |= ResizeRedirectMask;
+		break;
+
+	   case 4:
+	        win = Zoom;
 		mask |= ResizeRedirectMask;
 		break;
 	}
@@ -1398,6 +1426,11 @@ int num;
 	   case 3:
 	        if (!Selector) win = &Selector;
 		Geom = &SelGeom;
+		break;
+
+	   case 4:
+	        if (!Zoom) win = &Zoom;
+		Geom = &ZoomGeom;
 		break;
 	}
 
@@ -2986,6 +3019,7 @@ initMenu()
 	char s[2];
 	char *ptr[2] = { Label[L_ESCAPE], Label[L_CONTROLS] };
 	int i, j, b, d;
+	GC gc;
 
         s[1]='\0';
 	d = (5*chwidth)/12;
@@ -2994,7 +3028,10 @@ initMenu()
 	      for (j=(i+1)*chwidth-b; j<=(i+1)*chwidth+b; j++)
 	          XDrawLine(dpy, Menu, MenuCaller->gclist.bigfont, j, 0, j, MapGeom.strip);
 	      s[0]=Option[2*i];
-	      XDrawImageString(dpy, Menu, MenuCaller->gclist.bigfont, d+i*chwidth, 
+	      gc = MenuCaller->gclist.bigfont;
+	      if (!MenuCaller->wintype && i>=3 && i<=6) 
+                  gc=MenuCaller->gclist.imagefont;
+	      XDrawImageString(dpy, Menu, gc, d+i*chwidth, 
                   BigFont->max_bounds.ascent + 3, s, 1);
 	}
 	for (i=0; i<=1; i++)
@@ -3012,8 +3049,6 @@ struct Sundata * Context;
 {
 	int    w, h, a, b;
 	
-	if (!Context->wintype) return;
-
 	do_menu = 1 - do_menu;
 
         if (!do_menu) 
@@ -3031,7 +3066,7 @@ struct Sundata * Context;
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
 	   MenuGeom.x = Context->geom.x + horiz_shift - horiz_drift;
 	   /* To center: + (Context->geom.width - MenuGeom.width)/2; */
-	   a = Context->geom.y + Context->geom.height + MapGeom.strip + vert_shift;
+	   a = Context->geom.y + Context->geom.height + Context->geom.strip + vert_shift;
            b = Context->geom.y - MenuGeom.height - vert_shift - 2*vert_drift;
            if (b < (int) MenuGeom.height ) b = MenuGeom.height;
            if (a > (int) DisplayHeight(dpy,scr) 
@@ -3069,20 +3104,20 @@ clearSelectorPartially()
 void
 initSelector()
 {
-	int i, b, d, p, q, h, skip;
-	char *s;
-	char *banner[9] = { "home", "share", "  /", "  .", "", "", 
-	                    Label[L_ESCAPE], "", Label[L_VECTMAP] };
+	int i, j, b, d, p, q, h, skip;
+	char *s, *sp;
+	char *banner[10] = { "home", "share", "  /", "  .", "", "", 
+	                     "  K", "  W", "  !", Label[L_ESCAPE]};
 
-	d = chwidth/4;
+	d = chwidth/3;
 
 	if (do_selector==1) {
 
-	  for (i=0; i<9; i++)
+	  for (i=0; i<=9; i++)
              XDrawImageString(dpy, Selector, SelCaller->gclist.bigfont, d+2*i*chwidth,
                 BigFont->max_bounds.ascent + 3, banner[i], strlen(banner[i]));
  
-          for (i=1; i<=8; i++) if (i!=7) {
+          for (i=1; i<=9; i++) {
 	     h = 2*i*chwidth;
              XDrawLine(dpy, Selector, SelCaller->gclist.bigfont, h, 0, h, MapGeom.strip);
 	  }
@@ -3132,13 +3167,21 @@ initSelector()
 	    if (strstr(s,".xpm") || strstr(s,".jpg") || strstr(s,".vmf"))
 	       b=2;
 	  }
+	  j = BigFont->max_bounds.ascent + 2 * MapGeom.strip + i*skip + 3;
+	  sp = (SelCaller->wintype)? 
+	    SelCaller->map_img_file : SelCaller->clock_img_file;
+	  if (strstr(sp,s)) {
+             XClearArea(dpy, Selector, 2, 
+                BigFont->max_bounds.ascent + 2 * MapGeom.strip, 3, 
+                SelGeom.height, False);
+             XFillRectangle(dpy, Selector, SelCaller->gclist.bigfont,
+                                 d/4, j-BigFont->max_bounds.ascent/2, 3, 4);
+	  }
           XDrawImageString(dpy, Selector, 
               (b==1)? SelCaller->gclist.dirfont : 
               ((b==2)? SelCaller->gclist.imagefont : 
                        SelCaller->gclist.bigfont),
-              d, BigFont->max_bounds.ascent + 
-              2*MapGeom.strip + i*skip + 3, 
-              s, strlen(s));
+              d, j, s, strlen(s));
 	}
 
 }
@@ -3172,8 +3215,8 @@ struct Sundata * Context;
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
 	   SelGeom.x = Context->geom.x + horiz_shift - horiz_drift;
 	   /* + (Context->geom.width - SelGeom.width)/2; */
-	   a = Context->geom.y + Context->geom.height + MapGeom.strip + vert_shift;
-           if (Context->wintype && do_menu && Context == MenuCaller) 
+	   a = Context->geom.y + Context->geom.height + Context->geom.strip + vert_shift;
+           if (do_menu && Context == MenuCaller) 
                a += MenuGeom.height + vert_drift + vert_shift;
            b = Context->geom.y - SelGeom.height - vert_shift - 2*vert_drift;
            if (b < (int) MenuGeom.strip ) b = MenuGeom.height;
@@ -3188,6 +3231,79 @@ struct Sundata * Context;
         XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
         XMapRaised(dpy, Selector);
         XMoveWindow(dpy, Selector, SelGeom.x, SelGeom.y);
+	XSync(dpy, True);
+}
+
+void
+clearZoom()
+{
+    if (!mono)
+       XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.textbgcolor);
+    XClearArea(dpy, Zoom,  0,0, ZoomGeom.width, ZoomGeom.height, True);
+    XSetWindowColormap(dpy, Zoom, ZoomCaller->cmap);
+}
+
+void
+initZoom()
+{
+    char s[]="This will be the zoom command window - still unfinished !  Click to close.";
+
+    XDrawImageString(dpy, Zoom, ZoomCaller->gclist.bigfont, chwidth,
+                BigFont->max_bounds.ascent + 3, s, strlen(s));
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.white);
+    XClearArea(dpy, Zoom,  30,30, 200, 100, False);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.black);
+    XClearArea(dpy, Zoom,  50,50, 40, 20, False);
+    if (!mono)
+       XSetWindowBackground(dpy, Zoom, ZoomCaller->pixlist.textbgcolor);
+    XDrawRectangle(dpy, Zoom, ZoomCaller->gclist.bigfont, 30, 30, 200, 100);
+}
+
+void
+PopZoom(Context)
+struct Sundata * Context;
+{
+        int a, b, w, h;
+
+	if (do_zoom)
+            do_zoom = 0;
+	else
+	    do_zoom = 1;
+
+        if (!do_zoom) 
+	  {
+	  XUnmapWindow(dpy, Zoom);
+	  if (dirtable) free_dirlist(dirtable);
+	  dirtable = NULL;
+	  if (Context == ZoomCaller) {
+	     ZoomCaller = NULL;
+	     return;
+	     }
+	  do_zoom = 1;
+	  }
+
+	ZoomCaller = Context;
+	zoom_shift = 0;
+
+	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
+	   ZoomGeom.x = Context->geom.x + horiz_shift - horiz_drift;
+	   /* + (Context->geom.width - ZoomGeom.width)/2; */
+	   a = Context->geom.y + Context->geom.height + Context->geom.strip + vert_shift;
+           if (do_menu && Context == MenuCaller) 
+               a += MenuGeom.height + vert_drift + vert_shift;
+           b = Context->geom.y - ZoomGeom.height - vert_shift - 2*vert_drift;
+           if (b < (int) MenuGeom.strip ) b = MenuGeom.height;
+           if (a > (int) DisplayHeight(dpy,scr) 
+                   - ZoomGeom.height - vert_drift -20)
+              a = b;
+	   ZoomGeom.y = (placement<=NE)? a : b;              
+	}
+
+        setAllHints(NULL, 4);
+        clearZoom();
+        XMoveWindow(dpy, Zoom, ZoomGeom.x, ZoomGeom.y);
+        XMapRaised(dpy, Zoom);
+        XMoveWindow(dpy, Zoom, ZoomGeom.x, ZoomGeom.y);
 	XSync(dpy, True);
 }
 
@@ -3594,28 +3710,52 @@ struct Sundata * Context;
 }
 
 void
-checkAuxilWins(Context)
+resetAuxilWins(Context)
+Sundata * Context;
+{
+      if (do_menu && Context == MenuCaller) {
+	 clearMenu();
+	 initMenu();
+      }
+      if (do_selector && Context == SelCaller) { 
+         do_selector = 1; 
+         clearSelector();
+	 initSelector();
+      }
+      if (do_zoom && Context == ZoomCaller) { 
+         do_zoom = 1; 
+         clearSelector();
+	 initSelector();
+      }
+}
+
+void
+remapAuxilWins(Context)
 struct Sundata * Context;
 {
-      if (do_menu || do_selector)
+      if (do_menu || do_selector || do_zoom) {
+	 XFlush(dpy);
 	 usleep(TIMESTEP);
-
-      if (do_selector) 
-	 do_selector = 2;
+      }
 
       if (do_menu) {
-	     if (Context->wintype) {
-	        do_menu = 0;
-   	        PopMenu(Context);
-        	initMenu();
-	     } else
-                XUnmapWindow(dpy, Menu);
-      } 
+	 do_menu = 0;
+   	 PopMenu(Context);
+         initMenu();
+      }
+
       if (do_selector) {
-	  do_selector = 0;
-	  PopSelector(Context);
-	  do_selector = 1;
-	  initSelector();
+	 do_selector = 0;
+	 PopSelector(Context);
+	 do_selector = 1;
+	 initSelector();
+      }
+
+      if (do_zoom) {
+	 do_zoom = 0;
+	 PopZoom(Context);
+	 do_zoom = 1;
+	 initZoom();
       }
 }
 
@@ -3642,7 +3782,10 @@ int wintype, build;
          Seed = NewContext;
       Context = NewContext;
       Context->wintype = wintype;
-      if (do_selector) SelCaller = Context;
+      if (do_selector<0) {
+	 do_selector = 1;
+	 SelCaller = Context;
+      }
    }
    makeContext(Context, build);
    win = Context->win;
@@ -3673,15 +3816,7 @@ int wintype, build;
       checkLocation(Context, CityInit);
       XSync(dpy, True);
       createWorkImage(Context);
-      if (private && do_menu && Context == MenuCaller) {
-	 clearMenu();
-	 initMenu();
-      }
-      if (private && do_selector && Context == SelCaller) { 
-         do_selector = 1; 
-         clearSelector();
-	 initSelector();
-      }
+      if (private) resetAuxilWins(Context);
       XSync(dpy, True);
       setProtocols(Context, Context->wintype);
    } else {
@@ -3703,16 +3838,14 @@ int wintype, build;
       Context->clockgeom = Context->geom;
    if (private)
       XSetWindowColormap(dpy, Context->win, Context->cmap);
-   if (color_depth<=8) {
-      if (do_menu) {
-         clearMenu();
-         initMenu();
-      }
-      if (do_selector) {
-         do_selector = 1;
-         clearSelector();
-         initSelector();
-      }
+   if (do_menu) {
+      clearMenu();
+      initMenu();
+   }
+   if (do_selector) {
+      do_selector = 1;
+      clearSelector();
+      initSelector();
    }
    clearStrip(Context);
 }
@@ -3790,7 +3923,10 @@ char	key;
 	   clearSelectorPartially();
 	   return;
 	}
-	 
+
+        if (win==Zoom)
+	   return;
+
  general:
         switch(key) {
 	   case '\011':
@@ -3838,15 +3974,13 @@ char	key;
                 adjustGeom(Context, 0);
                 shutDown(Context, 0);
 	        buildMap(Context, Context->wintype, 0);
-	        checkAuxilWins(Context);
+	        remapAuxilWins(Context);
 	        Context->flags.resized = 0;
 	     }
 	     break;
 	   case ' ':
 	   case '!':
 	     if (Context==Seed && do_dock) return;
-             if (do_menu) PopMenu(Context);
-             if (do_selector) PopSelector(Context);
              Context->wintype = 1 - Context->wintype;
              if (Context->wintype)
                 Context->geom = MapGeom;
@@ -3855,7 +3989,7 @@ char	key;
 	     adjustGeom(Context, 1);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
-	     doTimeout(Context);
+	     remapAuxilWins(Context);
 	     return;
 	   case '­':
 	   case '-':
@@ -3874,6 +4008,7 @@ char	key;
 	     Context->flags.last_hint = -1;
 	     break;
 	   case 'c': 
+	     if (!Context->wintype) break;
 	     if (Context->flags.map_mode != COORDINATES) 
 	       Context->flags.dms = gflags.dms;
 	     else
@@ -3888,6 +4023,7 @@ char	key;
              Context->mark2.city = NULL;
 	     break;
 	   case 'd': 
+	     if (!Context->wintype) break;
 	     if (Context->flags.map_mode != DISTANCES) 
 	       Context->flags.dms = gflags.dms;
 	     else
@@ -3895,6 +4031,7 @@ char	key;
 	     Context->flags.map_mode = DISTANCES;
 	     break;
 	   case 'e': 
+	     if (!Context->wintype) break;
 	     Context->flags.map_mode = EXTENSION;
 	     old_mode = EXTENSION;
 	     Context->flags.hours_shown = 0;
@@ -3907,7 +4044,6 @@ char	key;
                 RaiseAndFocus(Selector);
 	     break;
 	   case 'g': 
-	     if (!Context->wintype) break;
 	     if (!do_menu)
 	       PopMenu(Context);
              else {
@@ -3955,6 +4091,14 @@ char	key;
 	        shutDown(Context, 1);
 	     return;
 	   case 'l':
+	     if (!Context->wintype) {
+	        clearStrip(Context);
+	        if (!Context->wintype)
+                   Context->flags.clock_mode = 
+                     (Context->flags.clock_mode+1) % num_formats;
+	        updateMap(Context);
+                break;
+	     }
 	     Context->flags.map_mode = LEGALTIME;
              if (Context->mark1.city) Context->mark1.city->mode = 0;
              if (Context->mark2.city) Context->mark2.city->mode = 0;
@@ -4031,6 +4175,12 @@ char	key;
 	     break;
 	   case 'x':
 	     if (Command) system(Command);
+	     break;
+	   case 'z':
+	     if (!do_zoom)
+	        PopZoom(Context);
+	     else
+                RaiseAndFocus(Zoom);
 	     break;
            default:
 	     if (!Context->wintype) {
@@ -4122,14 +4272,23 @@ int b;
 	     if (num_table_entries-selector_shift<num_lines) return;
 	     selector_shift += num_lines/2;
 	  }
-	  if (a>=6 && a<=7) {
+	  if (a==6) {	
+              processKey(SelCaller->win, 'k');
+	      return;
+	  }
+	  if (a==7) {	
+	      do_selector = -1;
+              processKey(SelCaller->win, 'w');
+	      return;
+	  }
+	  if (a==8) {	
+              processKey(SelCaller->win, '!');
+	      return;
+	  }
+	  if (a>=9) {
 	     XUnmapWindow(dpy, Selector);
 	     do_selector = 0;
 	     return;
-	  }
-	  if (a>=8) {	
-              processKey(SelCaller->win, 'w');
-	      return;
 	  }
 	  clearSelectorPartially();
 	  return;
@@ -4228,40 +4387,51 @@ struct Sundata * Context = (struct Sundata *) NULL;
 	   return;
 	}
 
+        if (win == Zoom) {
+	   PopZoom(ZoomCaller);
+	   return;
+	}
+
 	Context = getContext(win);
 	if (!Context) return;
  
         /* Click on bottom strip of window */
-        if (Context->wintype) {
-          if(y >= Context->geom.height) {
-	     PopMenu(Context);
-             return;
-	  }
+        if (y >= Context->geom.height) {
+	   if (button==1) {
+	      PopMenu(Context);
+              return;
+	   }
+           if (button==2) {
+	        processKey(win, 'l');
+		return;
+	   }
+           if (button==3) {
+	        /* Open new window */
+	        processKey(win, 'w');
+	        return;
+	   }
+	}
 
-	  if (button==2) {
-	     PopSelector(Context);
-	     return;
-	  }
-	  if (button==3) {
-	     processKey(win, 'w');
-	     return;
-	  } 
-	} else {
-	  if (button==1) {
-	     if (y>Context->geom.height) {
-	        Context->flags.clock_mode = 
-                     (Context->flags.clock_mode+1) % num_formats;
-	        updateMap(Context);
-	     } else
-		processKey(win, 'x');
-	  }
-	  if (button==2)
-	     PopSelector(Context);
-	  if (button==3)
-	     processKey(win, 'w');
-	  return;
+        /* Click on the map */
+	if (button==2) {
+	   PopSelector(Context);
+	   return;
         }
+	if (button==3) {
+	   /* Open zoom selector */
+	   PopZoom(Context);
+	   return;
+        } 
+	
+        /* Click with button 1 on the map */
 
+	/* It's a clock, just execute predefined command */
+	if (!Context->wintype) {
+	   processKey(win, 'x');
+	   return;
+	}
+
+        /* Otherwise, user wants to get info on a city or a location */
         Context->count = PRECOUNT;
 
         /* Erase bottom strip to clean-up spots overlapping bottom strip */
@@ -4333,7 +4503,7 @@ Window win;
            shutDown(Context, 0);
 	   buildMap(Context, Context->wintype, 0);
 	   Context->flags.resized = 1;
-	   checkAuxilWins(Context);
+	   remapAuxilWins(Context);
 }
 
 /*
@@ -4370,6 +4540,9 @@ register Window	w;
 
         if (w == Selector)
            initSelector(Context);
+
+        if (w == Zoom)
+           initZoom(Context);
 
         Context = getContext(w);
 	if (!Context) return;
@@ -4432,6 +4605,9 @@ eventLoop()
 					else
 					if (ev.xexpose.window == Selector)
 					   PopSelector(SelCaller);
+					else
+					if (ev.xexpose.window == Zoom)
+					   PopSelector(ZoomCaller);
 					else
 					   shutDown(
                                          getContext(ev.xexpose.window), 1);
@@ -4501,7 +4677,7 @@ int				argc;
 register char **		argv;
 {
 	char * p;
-	int    i;
+	int    i, rem_menu;
 
 	ProgName = *argv;
 
@@ -4556,22 +4732,23 @@ register char **		argv;
 	if (invert && (gflags.shading>=2)) gflags.shading = 1;
 	if (color_depth>8 || mono) private = always_private = 0;
 	adjust_dark = (unsigned int) ((1.0-darkness) * 255.25);
+	rem_menu = do_menu;
+	do_menu = 0;
 	parseFormats(ListFormats);
 
 	getFonts();
 
+
         buildMap(NULL, win_type, 1);
 
-	for (i=2; i<=3; i++) {
+	for (i=2; i<=4; i++) {
 	   createWindow(NULL, i);
 	   setProtocols(NULL, i);
 	   setAllHints(NULL, i);
 	}
 
-	if (do_menu) {
-	   do_menu = 0;
+	if (rem_menu)
 	   PopMenu(Seed);
-	}
 	eventLoop();
 	exit(0);
 }
