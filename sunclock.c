@@ -1,6 +1,6 @@
 /*****************************************************************************
  *
- * Sun clock version 3.xx by Jean-Pierre Demailly
+ * Sunclock version 3.xx by Jean-Pierre Demailly
  *
  * Is derived from the previous versions whose notices appear below.
  * See CHANGES for more explanation on the (quite numerous changes and
@@ -101,6 +101,7 @@
        3.30  02/20/01  Sunclock now loads JPG images, and images are resizable
        3.32  03/19/01  Implementation of the zoom widget
        3.34  03/28/01  Vast improvements in the zoom widget
+       3.38  04/17/01  Substantial improvements in option handling
 */
 
 #include <unistd.h>
@@ -112,6 +113,7 @@
 #define DEFVAR
 #include "sunclock.h"
 #include "langdef.h"
+#include "bitmaps.h"
 
 /* 
  *  external routines
@@ -193,23 +195,25 @@ char * Map_img_file = NULL;
 char * ClockStripFont_name = NULL;
 char * MapStripFont_name = NULL;
 char * MenuFont_name = NULL;
+char * CoordFont_name = NULL;
+char * CityFont_name = NULL;
 
 char * share_maps_dir = NULL;
 char * image_dir = NULL;
 char * rc_file = NULL;
 
 char * ExternAction = NULL;
+char * HelpCommand = NULL;
 char **DateFormat = NULL;
 char * ListFormats = NULL;
 
 char **dirtable = NULL;
 char * freq_filter = "";
 
-char StdFormats[] = STDFORMATS;
+char oldlanguage[4] = "en";
 char language[4] = "";
 
-
-Pixmap zoompix = 0;
+Pixmap textpix = 0, zoompix = 0;
 
 struct Sundata *Seed, *MenuCaller, *SelCaller, *ZoomCaller, *OptionCaller;
 
@@ -222,9 +226,9 @@ char    ClockBgColor[COLORLENGTH], ClockFgColor[COLORLENGTH],
         ChangeColor[COLORLENGTH], ChoiceColor[COLORLENGTH],
         ZoomBgColor[COLORLENGTH], ZoomFgColor[COLORLENGTH], 
         OptionBgColor[COLORLENGTH], OptionFgColor[COLORLENGTH], 
-        CaretColor[COLORLENGTH],
+        CaretColor[COLORLENGTH], 
         CityColor0[COLORLENGTH], CityColor1[COLORLENGTH], 
-        CityColor2[COLORLENGTH],
+        CityColor2[COLORLENGTH], CityNameColor[COLORLENGTH],
         MarkColor1[COLORLENGTH], MarkColor2[COLORLENGTH], 
         LineColor[COLORLENGTH], MeridianColor[COLORLENGTH],
         ParallelColor[COLORLENGTH], TropicColor[COLORLENGTH], 
@@ -247,12 +251,18 @@ int             color_pad;
 int             bytes_per_pixel;
 int             total_colors;
 
+int             textheight = 0;
+int             textwidth = 0;
+int             coordvalheight;
+int             coordvalwidth;
+
 int             runtime = 0;
 int             button_pressed = 0;
 int             control_key = 0;
 int             precedence = 0;
 int             option_changes = 1;
 int             auxil_changed = 0;
+int             erase_obj = 0;
 
 int             zoom_mode = 0;
 int             zoom_active = 1;
@@ -286,7 +296,7 @@ struct Geometry SelGeom    = { 0,  0,  30, 600, 180, 450,  80 };
 struct Geometry ZoomGeom   = { 0,  0,  30, 500, 320, 360, 250 };
 struct Geometry OptionGeom = { 0,  0,  30, 630,  80, 630,  80 };
 
-int             radius[5] = {0, 2, 2, 3, 5};
+int             radius[5] = {2, 2, 3, 4, 5};
 
 int             win_type = 0;
 int             placement = -1;
@@ -324,70 +334,14 @@ long            progress_value[6] = { 60, 3600, 86400, 604800, 2592000, 0 };
 double          darkness = 0.5;
 double          atm_refraction = ATM_REFRACTION;
 double          atm_diffusion = ATM_DIFFUSION;
-double          *daywave, *cosval, *sinval;    /* pointers to trigo values */
 
 /* Records to hold extra marks 1 and 2 */
 
 City position, *cities = NULL;
 
-void
-usage()
-{
-     fprintf(stderr, "%s: version %s, %s\nUsage:\n"
-     "%s [-help] [-listmenu] [-version]\n"
-     SP"[-display name] [-rcfile file] [-sharedir directory]\n"
-     SP"[-clock] [-clockimage file] [-dock]\n"
-     SP"[-map] [-mapimage file] [-mapmode * <L,C,S,D,E>]\n"
-     SP"[-menu] [-nomenu] [-selector] [-noselector]\n"
-     SP"[-zoom] [-nozoom] [-option] [-nooption]\n"
-"**       [-language name] [-dateformat string1|string2|...] [-command string]\n"
-     SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
-     SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
-     SP"[-auxilgeom <geom>] [-menugeom <geom>]\n"
-     SP"[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>]\n"
-     SP"[-title name] [-mapclassname name] [-clockclassname name]\n"
-     SP"[-auxilclassname name] [-classname name]\n"
-     SP"[-menufont fontname] [-mapfont fontname]\n"
-     SP"[-mapstripfont fontname] [-clockstripfont fontname]\n"
-     SP"[-fullcolors] [-colorinvert] [-monochrome] [-aspect mode]\n"
-     SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
-     SP"[-placementshift x, y]\n"
-     SP"[-decimal] [-dms] [-city name] [-position latitude longitude]\n"
-     SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
-     SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
-     SP"[-night] [-terminator] [-twilight] [-luminosity] [-lightgradient]\n"
-     SP"[-nonight] [-darkness value<=1.0] [-colorscale number>=1]\n"
-     SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
-     SP"[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value]\n"
-     SP"[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians]\n"
-     SP"[-parallels] [-noparallels] [-tropics] [-notropics]\n"
-     SP"[-spotsize size(0,1,2,3,4)] [-dottedlines] [-plainlines]\n"
-     SP"[-menubgcolor color] [-menufgcolor color]\n"
-     SP"[-mapstripbgcolor color] [-mapstripfgcolor color]\n"
-     SP"[-clockstripbgcolor color] [-clockstripfgcolor color]\n"
-     SP"[-zoombgcolor color] [-zoomfgcolor color]\n"
-     SP"[-optionbgcolor color] [-optionfgcolor color] [-caretcolor]\n"
-     SP"[-changecolor color] [-choicecolor color]\n"
-     SP"[-dircolor color] [-imagecolor color]\n"
-     SP"[-mapbgcolor color] [-mapfgcolor color]\n"
-     SP"[-clockbgcolor color] [-clockfgcolor color]\n"
-     SP"[-linecolor color] [-suncolor color] [-mooncolor color]\n"
-     SP"[-meridiancolor color] [-parallelcolor] [-tropiccolor color]\n"
-     SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
-     SP"[-markcolor1 color] [-markcolor2 color]\n\n%s\n\n",
-        ProgName, VERSION, COPYRIGHT, ProgName, Configurability);
-}
-
-void
-ListMenu()
-{
-        int i;
-
-        fprintf(stderr, "%s\n", ShortHelp);
-        for (i=0; i<N_HELP; i++)
-        fprintf(stderr, "%s %c : %s\n", Label[L_KEY], CommandKey[i], Help[i]);
-        fprintf(stderr, "\n");
-}
+/* 
+ * String copy and reallocation/deallocation routine 
+ */
 
 void
 StringReAlloc(t, s)
@@ -402,6 +356,119 @@ char **t, *s;
           *t = NULL;
 }
 
+/*
+ * Read language i18n file
+ */
+
+void 
+readLanguage()
+{
+    FILE *rc;           /* File pointer for rc file */
+    char buf[1028];      /* Buffer to hold input lines */
+    int i, j, k, l, m, p, tot;
+
+    i = strlen(share_i18n);
+
+    for (j=0; j<=1; j++) share_i18n[i+j-2] = tolower(language[j]);
+
+    j = k = l = m = 0;
+    tot = 2;
+    if ((rc = fopen(share_i18n, "r")) != NULL) {
+      while (fgets(buf, 1024, rc)) {
+        if (buf[0] != '#') {
+                p = strlen(buf) - 1;
+                if (p>=0 && buf[p]=='\n') buf[p] = '\0';
+                if (j<7) { strcpy(Day_name[j], buf); j++; } else
+                if (k<12) { strcpy(Month_name[k], buf); k++; } else
+                if (l<L_END) { 
+                   StringReAlloc(&Label[l], buf); 
+                   l++; 
+                } else
+                if (m<N_HELP) { 
+		   StringReAlloc(&Help[m], buf);
+                   m++; 
+                } else break;
+        }
+      }
+      strncpy(oldlanguage, language, 2);
+
+      fclose(rc);
+    } else {
+        fprintf(stderr, 
+             "Unable to open language in %s\n", share_i18n);
+	strncpy(language, oldlanguage, 2);
+    }
+}
+
+
+/* 
+ * Usage output 
+ */
+
+void
+Usage()
+{
+#define SP		"\t"
+     fprintf(stderr, 
+     "%s: version %s, %s\n\nUsage:  %s [-options ...]\n\n%s\n\n"
+     SP"[-help] [-listmenu] [-version]\n"
+     SP"[-display name] [-rcfile file] [-sharedir directory]\n"
+     SP"[-clock] [-map] [-dock]\n"
+     SP"[-menu] [-nomenu] [-selector] [-noselector]\n"
+     SP"[-zoom] [-nozoom] [-option] [-nooption]\n"
+"**" SP"[-language name] [-dateformat string1|string2|...]\n"
+     SP"[-command string] [-helpcommand string]\n"
+     SP"[-clockimage file] [-mapimage file] [-mapmode * <L,C,S,D,E>]\n"
+     SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
+     SP"[-auxilgeom <geom>] [-menugeom <geom>]\n"
+     SP"[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>]\n"
+     SP"[-title name] [-mapclassname name] [-clockclassname name]\n"
+     SP"[-auxilclassname name] [-classname name]\n"
+     SP"[-menufont fontname] [-coordfont fontname] [-cityfont fontname]\n"
+     SP"[-mapstripfont fontname] [-clockstripfont fontname]\n"
+     SP"[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync]\n"
+     SP"[-fullcolors] [-invertcolors] [-monochrome] [-aspect mode]\n"
+     SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
+     SP"[-placementshift x, y]\n"
+     SP"[-decimal] [-dms] [-city name] [-position latitude longitude]\n"
+     SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
+     SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
+     SP"[-night] [-terminator] [-twilight] [-luminosity] [-lightgradient]\n"
+     SP"[-nonight] [-darkness value<=1.0] [-colorscale number>=1]\n"
+     SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
+     SP"[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value]\n"
+     SP"[-tropics] [-notropics] [-sun] [-nosun] [-citymode mode=0,1,2]\n"
+     SP"[-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3]\n"
+     SP"[-meridianspacing value] [-parallelspacing value]\n"
+     SP"[-spotsize size(0,1,2,3,4,5)] [-dottedlines] [-plainlines]\n"
+     SP"[-clockbgcolor color] [-clockfgcolor color]\n"
+     SP"[-clockstripbgcolor color] [-clockstripfgcolor color]\n"
+     SP"[-mapbgcolor color] [-mapfgcolor color]\n"
+     SP"[-mapstripbgcolor color] [-mapstripfgcolor color]\n"
+     SP"[-linecolor color] [-suncolor color] [-mooncolor color]\n"
+     SP"[-meridiancolor color] [-parallelcolor] [-tropiccolor color]\n"
+     SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
+     SP"[-citynamecolor color] [-markcolor1 color] [-markcolor2 color]\n"
+     SP"[-menubgcolor color] [-menufgcolor color]\n"
+     SP"[-zoombgcolor color] [-zoomfgcolor color]\n"
+     SP"[-optionbgcolor color] [-optionfgcolor color] [-caretcolor]\n"
+     SP"[-changecolor color] [-choicecolor color]\n"
+     SP"[-dircolor color] [-imagecolor color]\n\n%s\n\n",
+        ProgName, VERSION, COPYRIGHT, ProgName, Label[L_LISTOPTIONS],
+        Label[L_CONFIG]);
+}
+
+void
+ListMenu()
+{
+        int i;
+
+        fprintf(stderr, "%s\n", Label[L_SHORTHELP]);
+        for (i=0; i<N_HELP; i++)
+        fprintf(stderr, "%s %c : %s\n", Label[L_KEY], CommandKey[i], Help[i]);
+        fprintf(stderr, "\n");
+}
+
 void
 initValues()
 {
@@ -414,7 +481,6 @@ initValues()
         gflags.colorscale = 16;
 
         gflags.update = -1;
-        gflags.firsttime = 1;
         gflags.progress = 0;
         gflags.bottom = 0;
         gflags.map_mode = LEGALTIME;
@@ -422,17 +488,18 @@ initValues()
         gflags.hours_shown = 0;
         gflags.dms = 0;
         gflags.shading = 2;
-        gflags.cities = 1;
+        gflags.citymode = 1;
         gflags.sunpos = 1;
         gflags.meridian = 0;
         gflags.parallel = 0;
-        gflags.tropics = 0;
 
         gzoom.mode = 0;
         gzoom.fx = 1.0;
         gzoom.fy = 1.0;
         gzoom.fdx = 0.5;
         gzoom.fdy = 0.5;
+        gzoom.meridspacing = 0.0;
+        gzoom.paralspacing = 0.0;
 
         strcpy(ClockBgColor, "White");
         strcpy(ClockFgColor, "Black");
@@ -456,6 +523,7 @@ initValues()
         strcpy(CityColor0, "Orange");
         strcpy(CityColor1, "Red");
         strcpy(CityColor2, "Red3");
+	strcpy(CityNameColor, "Red");
         strcpy(MarkColor1, "Pink1");
         strcpy(MarkColor2, "Pink2");
         strcpy(LineColor, "White");
@@ -471,8 +539,11 @@ initValues()
         StringReAlloc(&share_maps_dir, SHAREDIR"/earthmaps/");
         StringReAlloc(&MapStripFont_name, MAPSTRIPFONT);
         StringReAlloc(&ClockStripFont_name, CLOCKSTRIPFONT);
+        StringReAlloc(&CoordFont_name, COORDFONT);
+        StringReAlloc(&CityFont_name, CITYFONT);
         StringReAlloc(&MenuFont_name, MENUFONT);
-        StringReAlloc(&ListFormats, StdFormats);
+        StringReAlloc(&ListFormats, STDFORMATS);
+        StringReAlloc(&HelpCommand, HELPCOMMAND);
 
         StringReAlloc(&image_dir, share_maps_dir);
         StringReAlloc(&Clock_img_file, Default_vmf);
@@ -480,8 +551,11 @@ initValues()
 
 	for (i=0; i<L_END; i++) Label[i] = strdup(Label[i]);
 	for (i=0; i<N_HELP; i++) Help[i] = strdup(Help[i]);
-	Configurability = strdup(Configurability);
-	ShortHelp = strdup(ShortHelp);
+
+        if (!*language && getenv("LANG"))
+           strncpy(language, getenv("LANG"), 2);
+        if (!(language[0] && language[1]))
+           strcpy (language,"en");
 }
 
 void
@@ -497,6 +571,8 @@ correctValues()
            gflags.darkness = (unsigned short) ((1.0-darkness) * 255.25);
 	else
            gflags.darkness = (unsigned short) ((1.0-darkness) * 32767.25);
+
+	if (do_dock) win_type = 0;
 }
 
 void
@@ -508,13 +584,14 @@ register char **                argv;
                 fprintf(stderr, "%s: option `%s' requires an argument\n\n",
                         ProgName, *argv);
                 if (parse_cmdline) {
-                        usage();
+                        Usage();
                         exit(1);
 		} else
-                if (runtime)
+		if (runtime) {
                    fprintf(stderr, 
-                        "Invalid option specification\n");		  
-		else
+                        "Invalid option specification\n");
+		   runtime = -1;
+		} else
                    fprintf(stderr, 
                         "Error in config file %s. "RECOVER, *argv);
         }
@@ -629,10 +706,12 @@ register char **                argv;
         for (i=1; i<argc-1; i++) {
            if (strcasecmp(argv[i], "-rcfile") == 0)
               rc_file = argv[i+1];
-           if (strcasecmp(argv[i], "-language") == 0)
+           if (strcasecmp(argv[i], "-language") == 0) {
               strncpy(language, argv[i+1], 2);
-        }
-           
+	   }
+	} 
+
+        if (strcmp(language, oldlanguage)) readLanguage();
 }
 
 int
@@ -661,53 +740,12 @@ register char **                argv;
                         strncpy(image_dir, *argv, 1020);
                         --argc;
                 }
-                else if (strcasecmp(*argv, "-mapimage") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&Map_img_file, *++argv);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-clockimage") == 0) {
-                        needMore(argc, argv);
-                        StringReAlloc(&Clock_img_file, *++argv);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-mag") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fx = atof(*++argv);
-                        if (gzoom.fx < 1) gzoom.fx = 1.0;
-                        if (gzoom.fx > 100.0) gzoom.fx = 100.0;
-                        gzoom.fy = gzoom.fx;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-magx") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fx = atof(*++argv);
-                        if (gzoom.fx < 1) gzoom.fx = 1.0;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-magy") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fy = atof(*++argv);
-                        if (gzoom.fy < 1) gzoom.fy = 1.0;
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-dx") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fdx = atof(*++argv)/360.0-0.5;
-                        checkZoomSettings(&gzoom);
-                        --argc;
-                }
-                else if (strcasecmp(*argv, "-dy") == 0) {
-                        needMore(argc, argv);
-                        gzoom.fdy = 0.5-atof(*++argv)/180.0;
-                        checkZoomSettings(&gzoom);
-                        --argc;
-                }
                 else 
                   configurable:
                      if (strcasecmp(*argv, "-language") == 0) {
                         needMore(argc, argv);
                         strncpy(language, *++argv, 2);
+			if (strcmp(language, oldlanguage)) readLanguage();
                         --argc;
                 } 
 	        else if (strcasecmp(*argv, "-title") == 0) {
@@ -738,11 +776,25 @@ register char **                argv;
                 else if (strcasecmp(*argv, "-clockgeom") == 0) {
                         needMore(argc, argv);
                         getGeom(*++argv, &ClockGeom);
+			option_changes |= 8;
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-mapgeom") == 0) {
                         needMore(argc, argv);
                         getGeom(*++argv, &MapGeom);
+			option_changes |= 16;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-clockimage") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&Clock_img_file, *++argv);
+			option_changes |= 32;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-mapimage") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&Map_img_file, *++argv);
+			option_changes |= 64;
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-auxilgeom") == 0) {
@@ -777,6 +829,43 @@ register char **                argv;
 			option_changes |= 2;
                         --argc;
                 }
+                else if (strcasecmp(*argv, "-mag") == 0) {
+                        needMore(argc, argv);
+                        gzoom.fx = atof(*++argv);
+                        if (gzoom.fx < 1) gzoom.fx = 1.0;
+                        if (gzoom.fx > 100.0) gzoom.fx = 100.0;
+                        gzoom.fy = gzoom.fx;
+			option_changes |= 4;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-magx") == 0) {
+                        needMore(argc, argv);
+                        gzoom.fx = atof(*++argv);
+                        if (gzoom.fx < 1) gzoom.fx = 1.0;
+			option_changes |= 4;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-magy") == 0) {
+                        needMore(argc, argv);
+                        gzoom.fy = atof(*++argv);
+                        if (gzoom.fy < 1) gzoom.fy = 1.0;
+			option_changes |= 4;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-dx") == 0) {
+                        needMore(argc, argv);
+                        gzoom.fdx = atof(*++argv)/360.0+0.5;
+                        checkZoomSettings(&gzoom);
+			option_changes |= 4;
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-dy") == 0) {
+                        needMore(argc, argv);
+                        gzoom.fdy = 0.5-atof(*++argv)/180.0;
+                        checkZoomSettings(&gzoom);
+			option_changes |= 4;
+                        --argc;
+                }
                 else if (strcasecmp(*argv, "-clockstripfont") == 0) {
                         needMore(argc, argv);
                         StringReAlloc(&ClockStripFont_name, *++argv); 
@@ -785,6 +874,16 @@ register char **                argv;
                 else if (strcasecmp(*argv, "-mapstripfont") == 0) {
                         needMore(argc, argv);
                         StringReAlloc(&MapStripFont_name, *++argv); 
+                        --argc;
+                } 
+                else if (strcasecmp(*argv, "-coordfont") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&CoordFont_name, *++argv); 
+                        --argc;
+                } 
+                else if (strcasecmp(*argv, "-cityfont") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&CityFont_name, *++argv); 
                         --argc;
                 } 
                 else if (strcasecmp(*argv, "-menufont") == 0) {
@@ -813,11 +912,49 @@ register char **                argv;
                            gflags.map_mode = SOLARTIME;
                         --argc;
                 }
+                else if (strcasecmp(*argv, "-parallelmode") == 0) {
+                        needMore(argc, argv);
+                        opt = atoi(*++argv);
+                        if (opt<0) opt = 0;
+                        if (opt>3) opt = 3;
+			gflags.parallel = opt + (gflags.parallel & 8);
+                        --argc;
+                } 
+		else if (strcasecmp(*argv, "-parallelspacing") == 0) {
+                        needMore(argc, argv);
+                        gzoom.paralspacing = atof(*++argv);
+                        if (gzoom.paralspacing<0) gzoom.paralspacing = 0;
+                        if (gzoom.paralspacing>30.0) gzoom.paralspacing = 30.0;
+                        if (gzoom.paralspacing<0.1) gzoom.paralspacing = 0.1;
+                        --argc;
+                } 
+		else if (strcasecmp(*argv, "-meridianmode") == 0) {
+                        needMore(argc, argv);
+                        gflags.meridian = atoi(*++argv);
+                        if (gflags.meridian<0) gflags.meridian = 0;
+                        if (gflags.meridian>3) gflags.meridian = 3;
+                        --argc;
+                } 
+		else if (strcasecmp(*argv, "-meridianspacing") == 0) {
+                        needMore(argc, argv);
+                        gzoom.meridspacing = atof(*++argv);
+                        if (gzoom.meridspacing<0) gzoom.meridspacing = 0;
+                        if (gzoom.meridspacing>30.0) gzoom.meridspacing = 30.0;
+                        if (gzoom.meridspacing<0.1) gzoom.meridspacing = 0.1;
+                        --argc;
+                } 
+		else if (strcasecmp(*argv, "-citymode") == 0) {
+                        needMore(argc, argv);
+                        gflags.citymode = atoi(*++argv);
+                        if (gflags.citymode<0) gflags.citymode = 0;
+                        if (gflags.citymode>2) gflags.citymode = 2;
+                        --argc;
+                } 
                 else if (strcasecmp(*argv, "-spotsize") == 0) {
                         needMore(argc, argv);
                         gflags.spotsize = atoi(*++argv);
-                        if (gflags.spotsize<0) gflags.spotsize = 0;
-                        if (gflags.spotsize>4) gflags.spotsize = 4;
+                        if (gflags.spotsize<1) gflags.spotsize = 1;
+                        if (gflags.spotsize>5) gflags.spotsize = 5;
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-fillmode") == 0) {
@@ -874,6 +1011,16 @@ register char **                argv;
                         strncpy(MapFgColor, *++argv, COLORLENGTH);
                         --argc;
                 }
+                else if (strcasecmp(*argv, "-menubgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(MenuBgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
+                else if (strcasecmp(*argv, "-menufgcolor") == 0) {
+                        needMore(argc, argv);
+                        strncpy(MenuFgColor, *++argv, COLORLENGTH);
+                        --argc;
+                }
                 else if (strcasecmp(*argv, "-clockstripbgcolor") == 0) {
                         needMore(argc, argv);
                         strncpy(ClockStripBgColor, *++argv, COLORLENGTH);
@@ -894,9 +1041,9 @@ register char **                argv;
                         strncpy(MapStripFgColor, *++argv, COLORLENGTH);
                         --argc;
                 }
-                else if (strcasecmp(*argv, "-menubgcolor") == 0) {
+                else if (strcasecmp(*argv, "-citynamecolor") == 0) {
                         needMore(argc, argv);
-                        strncpy(MenuBgColor, *++argv, COLORLENGTH);
+                        strncpy(CityNameColor, *++argv, COLORLENGTH);
                         --argc;
                 }
                 else if (strcasecmp(*argv, "-menufgcolor") == 0) {
@@ -1058,6 +1205,11 @@ register char **                argv;
                         StringReAlloc(&ExternAction, *++argv);
                         --argc;
                 }
+                else if (strcasecmp(*argv, "-helpcommand") == 0) {
+                        needMore(argc, argv);
+                        StringReAlloc(&HelpCommand, *++argv);
+                        --argc;
+                }
                 else if (strcasecmp(*argv, "-dateformat") == 0) {
                         needMore(argc, argv);
                         StringReAlloc(&ListFormats, *++argv);
@@ -1092,7 +1244,7 @@ register char **                argv;
                           case 'Y': value *= 31536000 ; break;
                           default : c = ' '; break;
                         }
-                        if (c == ' ') usage();
+                        if (c == ' ') Usage();
                         if (opt) {
                            progress_value[5] = abs(value); 
                            if (value) 
@@ -1121,7 +1273,7 @@ register char **                argv;
                         gflags.fillmode = 1;
                 }
                 else if (strcasecmp(*argv, "-monochrome") == 0) {
-                        gflags.spotsize = 4;
+                        gflags.spotsize = 5;
                         gflags.mono = 2;
                         gflags.fillmode = 1;
                 }
@@ -1163,29 +1315,17 @@ register char **                argv;
                         gflags.shading = 4;
                 else if (strcasecmp(*argv, "-lightgradient") == 0)
                         gflags.shading = 5;
-                else if (strcasecmp(*argv, "-parallels") == 0)
-                        gflags.parallel = 1;
-                else if (strcasecmp(*argv, "-meridians") == 0)
-                        gflags.meridian = 1;
                 else if (strcasecmp(*argv, "-tropics") == 0)
-                        gflags.tropics = 1;
-                else if (strcasecmp(*argv, "-cities") == 0)
-                        gflags.cities = 1;
+                        gflags.parallel |= 8;
+                else if (strcasecmp(*argv, "-notropics") == 0)
+                        gflags.parallel &= 3;
                 else if (strcasecmp(*argv, "-sun") == 0)
                         gflags.sunpos = 1;
-                else if (strcasecmp(*argv, "-nomeridians") == 0)
-                        gflags.meridian = 0;
-                else if (strcasecmp(*argv, "-notropics") == 0)
-                        gflags.tropics = 0;
-                else if (strcasecmp(*argv, "-noparallels") == 0)
-                        gflags.parallel = 0;
-                else if (strcasecmp(*argv, "-nocities") == 0)
-                        gflags.cities = 0;
                 else if (strcasecmp(*argv, "-nosun") == 0)
                         gflags.sunpos = 0;
                 else if (runtime) {
                    fprintf(stderr, 
-                      "Option %s : unknown or not available at runtime !!\n",
+                      "Option %s : incorrect or not available at runtime !!\n",
                       *argv);
                    runtime = -1;
                    return(0);
@@ -1212,12 +1352,17 @@ register char **                argv;
                         do_option = 1;
                 else if (strcasecmp(*argv, "-nooption") == 0)
                         do_option = 0;
+                else if (strcasecmp(*argv, "-help") == 0) {
+		        if (parse_cmdline) {
+			   Usage();
+			   exit(0);
+			}
+		}
                 else if (strcasecmp(*argv, "-listmenu") == 0) {
-                        ListMenu();
-                        if (parse_cmdline) 
-                          exit(0);
-                        else
-                          return(0);
+                        if (parse_cmdline) { 
+                           ListMenu();
+			   exit(0);
+			}
                 }
                 else if (strcasecmp(*argv, "-version") == 0) {
                         fprintf(stderr, "%s: version %s, %s\n",
@@ -1229,75 +1374,16 @@ register char **                argv;
                 } else {
                   fprintf(stderr, "%s: unknown option !!\n\n", *argv);
                   if (parse_cmdline) {
-                    usage();
+                    Usage();
                     exit(1);
                   }
                   else {
                     fprintf(stderr, RECOVER);
-                    return(0);
+                    return(1);
                   }
                 }
         }
         return(0);
-}
-
-/*
- * Read language i18n file
- */
-
-void 
-readLanguage()
-{
-    char *fname;        /* Path to .sunclockrc file */
-    FILE *rc;           /* File pointer for rc file */
-    char buf[128];      /* Buffer to hold input lines */
-    int i, j, k, l, m, n, p, tot;
-
-    fname = share_i18n;
-
-    i = strlen(share_i18n);
-       
-    if (!*language && getenv("LANG"))
-       strncpy(language, getenv("LANG"), 2);
-    if (!(language[0] && language[1]))
-       strcpy (language,"en");
-
-    for (j=0; j<=1; j++) share_i18n[i+j-2] = tolower(language[j]);
-
-    j = k = l = m = n = 0;
-    tot = 2;
-    if ((rc = fopen(fname, "r")) != NULL) {
-      while (fgets(buf, 128, rc)) {
-        if (buf[0] != '#') {
-                p = strlen(buf) - 1;
-                if (p>=0 && buf[p]=='\n') buf[p] = '\0';
-                if (j<7) { strcpy(Day_name[j], buf); j++; } else
-                if (k<12) { strcpy(Month_name[k], buf); k++; } else
-                if (l<L_END) { 
-                   StringReAlloc(&Label[l], buf); 
-                   l++; 
-                } else 
-                if (m<N_HELP) { 
-		   StringReAlloc(&Help[m], buf);
-                   m++; 
-                } else {
-		   if (n==0) {
-                      StringReAlloc(&Configurability, buf);
-		   } else {
-		      tot += strlen(buf);
-                      ShortHelp = (char *)realloc(ShortHelp,tot*sizeof(char));
-		      if (n==1) *ShortHelp = '\0';
-                      strcat(ShortHelp, buf); 
-                      strcat(ShortHelp, "\n");
-		   }
-                   n++;
-                }
-        }
-      }
-      fclose(rc);
-    } else
-        fprintf(stderr, 
-             "Unable to open language in %s\n", share_i18n);
 }
 
 int
@@ -1510,6 +1596,8 @@ void
 getFonts(Context)
 Sundata * Context;
 {
+        int h, hp;
+
         Context->gdata->clockstripfont = 
            XLoadQueryFont(dpy, ClockStripFont_name);
         if (Context->gdata->clockstripfont == (XFontStruct *)NULL) {
@@ -1547,6 +1635,30 @@ Sundata * Context;
                 }
         }
 
+        Context->gdata->coordfont = XLoadQueryFont(dpy, CoordFont_name);
+        if (Context->gdata->coordfont == (XFontStruct *)NULL) {
+                fprintf(stderr, "%s: can't open font `%s', using `%s'\n",
+                        ProgName, CoordFont_name, FAILFONT);
+                Context->gdata->coordfont = XLoadQueryFont(dpy, FAILFONT);
+                if (Context->gdata->coordfont == (XFontStruct *)NULL) {
+                   fprintf(stderr, "%s: can't open font `%s', giving up\n",
+                                ProgName, FAILFONT);
+                   exit(1);
+                }
+        }
+
+        Context->gdata->cityfont = XLoadQueryFont(dpy, CityFont_name);
+        if (Context->gdata->cityfont == (XFontStruct *)NULL) {
+                fprintf(stderr, "%s: can't open font `%s', using `%s'\n",
+                        ProgName, CityFont_name, FAILFONT);
+                Context->gdata->cityfont = XLoadQueryFont(dpy, FAILFONT);
+                if (Context->gdata->cityfont == (XFontStruct *)NULL) {
+                   fprintf(stderr, "%s: can't open font `%s', giving up\n",
+                                ProgName, FAILFONT);
+                   exit(1);
+                }
+        }
+
         Context->gdata->clockstrip = 
                            Context->gdata->clockstripfont->max_bounds.ascent +
                            Context->gdata->clockstripfont->max_bounds.descent + 4;
@@ -1565,6 +1677,16 @@ Sundata * Context;
 	       SelGeom.width = SEL_WIDTH * Context->gdata->menustrip;
                SelGeom.height = (11+4*SEL_HEIGHT)*Context->gdata->menustrip/5;
 	}
+
+        h = Context->gdata->cityfont->max_bounds.ascent + 
+            Context->gdata->cityfont->max_bounds.descent;
+        hp = Context->gdata->coordfont->max_bounds.ascent + 
+             Context->gdata->coordfont->max_bounds.descent;
+        if (hp>h) h = hp;
+	if (h>textheight) textheight = h;
+	if (textpix) XFreePixmap(dpy, textpix);
+	textpix = XCreatePixmap(dpy, RootWindow(dpy, scr),
+                                Context->geom.width, textheight, 1);
 }
 
 unsigned long 
@@ -1654,6 +1776,7 @@ int private;
            Context->gdata->pixlist.mapstripfgcolor = black;
            Context->gdata->pixlist.clockstripbgcolor = white;
            Context->gdata->pixlist.clockstripfgcolor = black;
+           Context->gdata->pixlist.citynamecolor = black;
            Context->gdata->pixlist.menubgcolor = white;
            Context->gdata->pixlist.menufgcolor = black;
            Context->gdata->pixlist.dircolor = black;
@@ -1729,6 +1852,9 @@ int private;
               Context->gdata->pixlist.black, Context->gdata->cmap);
            Context->gdata->pixlist.citycolor2 = getColor(CityColor2,
               Context->gdata->pixlist.black, Context->gdata->cmap);
+           Context->gdata->pixlist.citynamecolor = getColor(CityNameColor, 
+              Context->gdata->pixlist.black, Context->gdata->cmap);
+
            Context->gdata->pixlist.markcolor1 = getColor(MarkColor1,
               Context->gdata->pixlist.black, Context->gdata->cmap);
            Context->gdata->pixlist.markcolor2 = getColor(MarkColor2,
@@ -1775,19 +1901,20 @@ int private;
                   Context->gdata->usedcolors,
                   (Context->gdata->cmap==cmap0)? "default":"private");
         }
-
-        Context->gdata->gclist.invert = 0;
 }
+
 void
 createGCs(Context)
 struct Sundata * Context;
 {
         XGCValues               gcv;
         Window                  root;
+	int                     mask;
 
         if (Context->gdata->links==0) {
            if (verbose)
-              fprintf(stderr, "Creating new GCs, mode = %d\n", Context->flags.mono);
+              fprintf(stderr, "Creating new GCs, mode = %d\n", 
+                     Context->flags.mono);
         } else {
            if (verbose)
               fprintf(stderr, "Using previous GC settings (%d links)\n", 
@@ -1799,32 +1926,66 @@ struct Sundata * Context;
 
         getFonts(Context);
 
-        if (Context->flags.mono) {
-           gcv.background = Context->gdata->pixlist.mapbgcolor;
-           gcv.foreground = Context->gdata->pixlist.mapfgcolor;
-           Context->gdata->gclist.mapstore = XCreateGC(dpy, root, 
-                             GCForeground | GCBackground, &gcv);
-           gcv.background = Context->gdata->pixlist.clockbgcolor;
-           gcv.foreground = Context->gdata->pixlist.clockfgcolor;
-           Context->gdata->gclist.clockstore = XCreateGC(dpy, root, 
-                             GCForeground | GCBackground, &gcv);
-        }
-
         gcv.background = Context->gdata->pixlist.menubgcolor;
         gcv.foreground = Context->gdata->pixlist.menufgcolor;
         gcv.font = Context->gdata->menufont->fid;
-        Context->gdata->gclist.menufont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+	mask = GCForeground | GCBackground | GCFont;
+        Context->gdata->gclist.menufont = XCreateGC(dpy, root, mask, &gcv);
 
+	if (Context->flags.mono == 2) {
+           Context->gdata->gclist.dirfont = Context->gdata->gclist.menufont;
+           Context->gdata->gclist.imagefont = Context->gdata->gclist.menufont;
+           Context->gdata->gclist.choice = Context->gdata->gclist.menufont;
+           Context->gdata->gclist.change = Context->gdata->gclist.menufont;
+	   Context->gdata->gclist.zoombg = Context->gdata->gclist.menufont;
+           Context->gdata->gclist.optionfont = Context->gdata->gclist.menufont;
+
+           gcv.function = GXinvert;
+	   gcv.font = Context->gdata->cityfont->fid;
+           Context->gdata->gclist.cityfont = 
+                    XCreateGC(dpy, Context->mappix, GCFunction | GCFont, &gcv);
+	   gcv.font = Context->gdata->coordfont->fid;
+           Context->gdata->gclist.meridianfont = 
+                    XCreateGC(dpy, Context->mappix, GCFunction | GCFont, &gcv);
+           Context->gdata->gclist.parallelfont =
+              Context->gdata->gclist.meridianfont;
+        } else {  /* Context->flags.mono < 2 */
+	   mask = GCForeground | GCFont;
+           gcv.font = Context->gdata->cityfont->fid;
+           gcv.foreground = Context->gdata->pixlist.citynamecolor;
+           Context->gdata->gclist.cityfont = XCreateGC(dpy, root, mask, &gcv);
+           gcv.font = Context->gdata->coordfont->fid;
+           gcv.foreground = Context->gdata->pixlist.parallelcolor;
+           Context->gdata->gclist.parallelfont = XCreateGC(dpy,root,mask,&gcv);
+           gcv.foreground = Context->gdata->pixlist.meridiancolor;
+           Context->gdata->gclist.meridianfont = XCreateGC(dpy,root,mask,&gcv);
+        }
+
+        if (Context->flags.mono) {
+           gcv.function = GXinvert;
+           Context->gdata->gclist.invert = 
+                    XCreateGC(dpy, Context->mappix, GCFunction, &gcv);
+	   mask = GCForeground | GCBackground;
+           gcv.background = Context->gdata->pixlist.clockbgcolor;
+           gcv.foreground = Context->gdata->pixlist.clockfgcolor;
+           Context->gdata->gclist.clockstore = XCreateGC(dpy, root,mask, &gcv);
+           gcv.background = Context->gdata->pixlist.mapbgcolor;
+           gcv.foreground = Context->gdata->pixlist.mapfgcolor;
+           Context->gdata->gclist.mapstore = XCreateGC(dpy, root, mask, &gcv);
+        }
+
+	mask = GCBackground | GCForeground | GCFont;
         gcv.background = Context->gdata->pixlist.clockstripbgcolor;
         gcv.foreground = Context->gdata->pixlist.clockstripfgcolor;
         gcv.font = Context->gdata->clockstripfont->fid;
-        Context->gdata->gclist.clockstripfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        Context->gdata->gclist.clockstripfont = XCreateGC(dpy, root,mask,&gcv);
 
         gcv.background = Context->gdata->pixlist.mapstripbgcolor;
         gcv.foreground = Context->gdata->pixlist.mapstripfgcolor;
         gcv.font = Context->gdata->mapstripfont->fid;
-        Context->gdata->gclist.mapstripfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        Context->gdata->gclist.mapstripfont = XCreateGC(dpy, root, mask, &gcv);
 
+	mask = GCForeground | GCBackground;
 	if (Context->flags.mono == 2) {
            gcv.background = black;
            gcv.foreground = white;
@@ -1832,41 +1993,46 @@ struct Sundata * Context;
            gcv.background = Context->gdata->pixlist.choicecolor;
            gcv.foreground = Context->gdata->pixlist.zoomfgcolor;
 	}
-        Context->gdata->gclist.zoomfg = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
+        Context->gdata->gclist.zoomfg = XCreateGC(dpy, root, mask, &gcv);
 
-        if (Context->flags.mono==2) {
-           Context->gdata->gclist.dirfont = Context->gdata->gclist.menufont;
-           Context->gdata->gclist.imagefont = Context->gdata->gclist.menufont;
-           Context->gdata->gclist.choice = Context->gdata->gclist.menufont;
-           Context->gdata->gclist.change = Context->gdata->gclist.menufont;
-	   Context->gdata->gclist.zoombg = Context->gdata->gclist.menufont;
-           Context->gdata->gclist.optionfont = Context->gdata->gclist.menufont;
-           return;
-        }
+        if (Context->flags.mono == 2) return;
+
+        if (Context->flags.mono == 0) {
+           gcv.background = 0;
+           gcv.foreground = Context->gdata->pixlist.white;
+	   mask = GCForeground | GCBackground | GCFont;
+
+           gcv.font = Context->gdata->coordfont->fid;
+           Context->gdata->gclist.coordpix = XCreateGC(dpy, textpix, mask, &gcv);
+
+           gcv.font = Context->gdata->cityfont->fid;
+           Context->gdata->gclist.citypix = XCreateGC(dpy, textpix, mask, &gcv);
+	}
 
         gcv.background = Context->gdata->pixlist.optionbgcolor;
         gcv.foreground = Context->gdata->pixlist.optionfgcolor;
         gcv.font = Context->gdata->menufont->fid;
-        Context->gdata->gclist.optionfont = 
-             XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+	mask = GCForeground | GCBackground | GCFont;
+        Context->gdata->gclist.optionfont = XCreateGC(dpy, root, mask, &gcv);
         
         gcv.background = Context->gdata->pixlist.menubgcolor;           
         gcv.foreground = Context->gdata->pixlist.dircolor;
-        Context->gdata->gclist.dirfont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        Context->gdata->gclist.dirfont = XCreateGC(dpy, root, mask, &gcv);
 
         gcv.foreground = Context->gdata->pixlist.imagecolor;
         gcv.font = Context->gdata->menufont->fid;
-        Context->gdata->gclist.imagefont = XCreateGC(dpy, root, GCForeground | GCBackground | GCFont, &gcv);
+        Context->gdata->gclist.imagefont = XCreateGC(dpy, root, mask, &gcv);
 
         gcv.foreground = Context->gdata->pixlist.choicecolor;
-        Context->gdata->gclist.choice = XCreateGC(dpy, root, GCForeground, &gcv);
-
-        gcv.foreground = Context->gdata->pixlist.changecolor;
-        Context->gdata->gclist.change = XCreateGC(dpy, root, GCForeground, &gcv);
+	mask = GCForeground | GCBackground;
+        Context->gdata->gclist.choice = XCreateGC(dpy, root, mask, &gcv);
 
         gcv.background = Context->gdata->pixlist.zoombgcolor;
         gcv.foreground = Context->gdata->pixlist.zoomfgcolor;
-        Context->gdata->gclist.zoombg = XCreateGC(dpy, root, GCForeground | GCBackground, &gcv);
+        Context->gdata->gclist.zoombg = XCreateGC(dpy, root, mask, &gcv);
+
+        gcv.foreground = Context->gdata->pixlist.changecolor;
+        Context->gdata->gclist.change = XCreateGC(dpy, root, GCForeground, &gcv);
 
         gcv.foreground = Context->gdata->pixlist.citycolor0;
         Context->gdata->gclist.citycolor0 = XCreateGC(dpy, root, GCForeground, &gcv);
@@ -2135,8 +2301,10 @@ struct Sundata * Context;
                 + (int)(Context->sunlon*Context->zoom.width/360.0))%
                   Context->zoom.width + 1 - Context->zoom.dx;
             if (x>=0 && x<Context->geom.width)
-            XDrawImageString(dpy, Context->win, Context->gdata->gclist.menufont, 
-               x, Context->gdata->menufont->max_bounds.ascent + Context->geom.height + 4, 
+            XDrawImageString(dpy, Context->win, 
+               Context->gdata->gclist.menufont, 
+               x, Context->gdata->menufont->max_bounds.ascent + 
+                  Context->geom.height + 4, 
                s, strlen(s));
         }
         Context->flags.hours_shown = 1;
@@ -2456,13 +2624,13 @@ int build;
            Context->zoom = gzoom;
            Context->flags = gflags;
            Context->jump = time_jump;
-           Context->clock_img_file = Clock_img_file;
-           Context->map_img_file = Map_img_file;
+           Context->clock_img_file = strdup(Clock_img_file);
+           Context->map_img_file = strdup(Map_img_file);
            Context->mark1.city = NULL;
-           Context->mark1.status = 0;
+           Context->mark1.flags = 0;
            Context->pos1.tz = NULL;
            Context->mark2.city = NULL;
-           Context->mark2.status = 0;
+           Context->mark2.flags = 0;
            Context->pos2.tz = NULL;
            Context->tr1 = Context->tr2 = NULL;
            if (position.lat<=90.0) {
@@ -2477,6 +2645,9 @@ int build;
 
         Context->local_day = -1;
         Context->solar_day = -1;
+	Context->sundec = 100.0;
+	Context->sunlon = 0.0;
+
         if (runtime<2) {
 	   Context->xim = NULL;
            Context->ximdata = NULL;
@@ -2487,376 +2658,19 @@ int build;
               Context->daypixel = NULL;
               Context->nightpixel = NULL;
            }
-           Context->pix = 0;
+           Context->mappix = 0;
 	}
 
         Context->bits = 0;
         Context->flags.update = -1;
         Context->time = 0L;
         Context->projtime = -1L;
-        Context->wave = (double *) salloc( 
+        Context->daywave = (double *) salloc( 
               (2*Context->geom.height+Context->geom.width)*sizeof(double));
+        Context->cosval = Context->daywave + Context->geom.width;
+        Context->sinval = Context->cosval + Context->geom.height;
 
         initShading(Context);
-}
-
-/*
- * placeSpot() - Put a spot (city or mark) on the map.
- */
-
-void
-placeSpot(Context, mode, lon, lat)
-struct Sundata * Context;
-int    mode;
-double lon, lat;                /* Latitude and longtitude of the city */
-{
-    /*
-     * Local Variables
-     */
-
-    int ilon, ilat;             /* Screen coordinates of the city */
-    int rad;
-    GC gc;
-    Window w;
-
-    if (mode < 0) return;
-    if (Context->flags.mono<2 && !Context->flags.cities && mode <= 2) return;
-
-    if (Context->flags.mono==2) {
-       w = Context->pix;
-       gc = Context->gdata->gclist.invert;
-    } else {
-       w = Context->win;
-       gc = Context->gdata->gclist.citycolor0;
-       if (mode == 0) { gc = Context->gdata->gclist.citycolor0; --mode; }
-       if (mode == 1)   gc = Context->gdata->gclist.citycolor1;
-       if (mode == 2)   gc = Context->gdata->gclist.citycolor2;
-       if (mode == 3)   gc = Context->gdata->gclist.markcolor1;
-       if (mode == 4)   gc = Context->gdata->gclist.markcolor2;
-       if (mode == 5)   gc = Context->gdata->gclist.suncolor;
-    }
-
-    ilon = (int) ((180.0 + lon) * ((double)Context->zoom.width / 360.0))
-                  - Context->zoom.dx ;
-    ilat = (int) ((double)Context->zoom.height 
-                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
-                  - Context->zoom.dy ;
-
-    if (ilon<0 || ilon>Context->geom.width) return;
-    if (ilat<0 || ilat>Context->geom.height) return;
-
-    if (mode == 5)
-       {
-       int rad=6, diag=4;
-       XFillArc(dpy, w, gc, ilon-rad/2, ilat-rad/2, rad, rad, 0, 360 * 64);
-       XDrawLine(dpy, w, gc, ilon, ilat-rad, ilon, ilat+rad);
-       XDrawLine(dpy, w, gc, ilon-rad, ilat, ilon+rad, ilat);
-       XDrawLine(dpy, w, gc, ilon-diag, ilat-diag, ilon+diag, ilat+diag);
-       XDrawLine(dpy, w, gc, ilon-diag, ilat+diag, ilon+diag, ilat-diag);
-       return;
-       }
-
-    rad = radius[Context->flags.spotsize];
-
-    if (Context->flags.spotsize != 3)
-       XDrawArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);
-
-    if (Context->flags.spotsize == 2)
-       XDrawLine(dpy, w, gc, ilon, ilat, ilon, ilat);
-
-    if (Context->flags.spotsize == 3)
-       XFillArc(dpy, w, gc, ilon-rad, ilat-rad, 2*rad, 2*rad, 0, 360 * 64);  
-
-    if (Context->flags.spotsize == 4)
-       XFillArc(dpy, w, gc, ilon-3, ilat-3, 6, 6, 0, 360 * 64);
-}
-
-void
-drawCities(Context)
-struct Sundata * Context;
-{
-City *c;
-        if (!Context->wintype) return; 
-        for (c = cities; c; c = c->next)
-            placeSpot(Context, c->mode, c->lon, c->lat);
-}
-
-void
-drawMarks(Context)
-struct Sundata * Context;
-{
-        if (Context->flags.mono==2 || !Context->wintype) return; 
-
-        /* code for color mode */
-        if (Context->mark1.city == &Context->pos1)
-          placeSpot(Context, 3, Context->mark1.city->lon, Context->mark1.city->lat);
-        if (Context->mark2.city == &Context->pos2)
-          placeSpot(Context, 4, Context->mark2.city->lon, Context->mark2.city->lat);
-}
-
-/*
- * draw_parallel() - Draw a parallel line
- */
-
-void
-draw_parallel(Context, gc, lat, step, thickness)
-struct Sundata * Context;
-GC gc;
-double lat;
-int step;
-int thickness;
-{
-        Window w;
-        int ilat, i0, i1, i;
-
-        if (!Context->wintype) return; 
-
-        ilat = (int) ((double) Context->zoom.height
-                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
-                  - Context->zoom.dy ;
-
-        if (ilat<0 || ilat>=Context->geom.height) return;
-
-        if (Context->flags.mono==2) {
-           w = Context->pix;
-           gc = Context->gdata->gclist.invert;
-        } else
-           w = Context->win;   
-
-        i0 = Context->geom.width/2;
-        i1 = 1+i0/step;
-        for (i=-i1; i<i1; i+=1)
-          XDrawLine(dpy, w, gc, i0+step*i-thickness, ilat, 
-                                i0+step*i+thickness, ilat);
-}
-
-void
-draw_parallels(Context)
-struct Sundata * Context;
-{
-        int     i;
-
-        for (i=-8; i<=8; i++) if (i!=0 || !Context->flags.tropics)
-          draw_parallel(Context, Context->gdata->gclist.parallelcolor, 
-              i*10.0, 3, Context->flags.dotted);
-}
-
-void
-draw_tropics(Context)
-struct Sundata * Context;
-{
-        static  double val[5] = { -66.55, -23.45, 0.0, 23.45, 66.55 };
-        int     i;
-
-        if (Context->flags.mono==2 && Context->flags.parallel)
-          draw_parallel(Context, Context->gdata->gclist.parallelcolor, 
-              0.0, 3, Context->flags.dotted);
-
-        for (i=0; i<5; i++)
-          draw_parallel(Context, Context->gdata->gclist.tropiccolor, 
-              val[i], 3, 1);
-}       
-
-
-/*
- * draw_meridian() - Draw a meridian line
- */
-
-void
-draw_meridian(Context, lon, step,thickness)
-struct Sundata * Context;
-double lon;
-int step;
-int thickness;
-{
-        Window w;
-        GC gc;
-        int ilon, i0, i1, i, j, jp;
-
-        if (!Context->wintype) return; 
-        
-        ilon = (int) ((180.0 + lon) * ((double) Context->zoom.width / 360.0))
-                   - Context->zoom.dx;
-        if (ilon<0 || ilon>=Context->geom.width) return;
-
-        if (Context->flags.mono==2) {
-           w = Context->pix;
-           gc = Context->gdata->gclist.invert;
-        } else {
-           w = Context->win;   
-           gc = Context->gdata->gclist.meridiancolor;
-        }
-
-        i0 = Context->geom.height/2;
-        i1 = 1+i0/step;
-        for (i=-i1; i<i1; i+=1) {
-           j = i0+step*i-thickness;
-           jp = i0+step*i+thickness;
-           if (j<0) j = 0;
-           if (jp>(int)Context->geom.height) jp = (int)Context->geom.height;
-           XDrawLine(dpy, w, gc, ilon, j, ilon, jp);
-        }
-}
-
-void
-draw_meridians(Context)
-struct Sundata * Context;
-{
-        int     i;
-
-        for (i=-11; i<=11; i++)
-          draw_meridian(Context, i*15.0, 3, Context->flags.dotted);
-}
-
-/*
- * draw_sun() - Draw Sun at position where it stands at zenith
- */
-
-void
-draw_sun(Context)
-struct Sundata * Context;
-{
-        placeSpot(Context, 5, Context->sunlon, Context->sundec);
-}
-
-void
-drawSun(Context)
-struct Sundata * Context;
-{
-        if (Context->flags.sunpos)
-          draw_sun(Context);
-}
-
-void
-drawBottomline(Context)
-struct Sundata * Context;
-{
-        XDrawLine(dpy, Context->win, Context->gdata->gclist.menufont, 
-                   0, Context->geom.height, 
-                   Context->geom.width-1, Context->geom.height);
-}
-
-void
-drawLines(Context)
-struct Sundata * Context;
-{
-        if (Context->flags.meridian)
-          draw_meridians(Context);
-        if (Context->flags.parallel)
-          draw_parallels(Context);
-        if (Context->flags.tropics)
-          draw_tropics(Context);
-        drawBottomline(Context);
-}
-
-void
-drawAll(Context)
-struct Sundata * Context;
-{
-        if (Context->flags.mono) {
-           if (!Context->pix) return;
-        } else {
-           if (!Context->xim) return;
-        }
-        drawLines(Context);
-        drawCities(Context);
-        drawMarks(Context);
-}
-
-void
-showImage(Context)
-struct Sundata * Context;
-{
-
-        if (button_pressed) return;
-
-        if (Context->flags.update>=2) {
-           if (Context->flags.mono)
-               XCopyPlane(dpy, Context->pix, Context->win, 
-                    (Context->wintype)?
-		       Context->gdata->gclist.mapstore :
-                       Context->gdata->gclist.clockstore, 
-                    0, 0, Context->geom.width, Context->geom.height, 0, 0, 1);
-           else
-               XPutImage(dpy, Context->win, Context->gdata->gclist.menufont, 
-                    Context->xim, 0, 0, 0, 0,
-                    Context->geom.width, Context->geom.height);
-        }
-        if (Context->flags.update) {
-           Context->flags.update = 0;
-           if (Context->flags.mono<2) {
-               drawAll(Context);
-               drawSun(Context);
-           }
-        }
-}
-
-void
-pulseMarks(Context)
-struct Sundata * Context;
-{
-int     done = 0;
-        
-        if (!Context->wintype) return; 
-        if (Context->flags.mono) {
-           if (!Context->pix) return;
-        } else {
-           if (!Context->xim) return;
-        }
-        if (Context->mark1.city && Context->mark1.status<0) {
-           if (Context->mark1.pulse) {
-             placeSpot(Context, 0, Context->mark1.save_lon, 
-                   Context->mark1.save_lat);
-             done = 1;
-           }
-           Context->mark1.save_lat = Context->mark1.city->lat;
-           Context->mark1.save_lon = Context->mark1.city->lon;
-           if (Context->mark1.city == &Context->pos1) {
-              done = 1;
-              placeSpot(Context, 0, Context->mark1.save_lon, Context->mark1.save_lat);
-              Context->mark1.pulse = 1;
-           } else
-              Context->mark1.pulse = 0;
-           Context->mark1.status = 1;
-        }
-        else
-        if (Context->mark1.status>0) {
-           if (Context->mark1.city|| Context->mark1.pulse) {
-              placeSpot(Context, 0, Context->mark1.save_lon, Context->mark1.save_lat);
-              Context->mark1.pulse = 1-Context->mark1.pulse;
-              done = 1;
-           }
-           if (Context->mark1.city == NULL) Context->mark1.status = 0;
-        }
-
-        if (Context->mark2.city && Context->mark2.status<0) {
-           if (Context->mark2.pulse) {
-             placeSpot(Context, 0, Context->mark2.save_lon, Context->mark2.save_lat);
-             done = 1;
-           }
-           Context->mark2.save_lat = Context->mark2.city->lat;
-           Context->mark2.save_lon = Context->mark2.city->lon;
-           if (Context->mark2.city == &Context->pos2) {
-              placeSpot(Context, 0, Context->mark2.save_lon, Context->mark2.save_lat);
-              done = 1;
-              Context->mark2.pulse = 1;
-           } else
-              Context->mark2.pulse = 0;
-           Context->mark2.status = 1;
-        }
-        else
-        if (Context->mark2.status>0) {
-           if (Context->mark2.city || Context->mark2.pulse) {
-              placeSpot(Context, 0, Context->mark2.save_lon, Context->mark2.save_lat);
-              Context->mark2.pulse = 1 - Context->mark2.pulse;
-              done = 1;
-           }
-           if (Context->mark2.city == NULL) Context->mark2.status = 0;
-        }
-        if (done) {
-           Context->flags.update = 2;
-           showImage(Context);
-        }
 }
 
 void
@@ -2871,7 +2685,7 @@ int t;
         unsigned char u, v, w, r, g, b;
 
         if (Context->flags.mono) {
-           XDrawPoint(dpy, Context->pix, Context->gdata->gclist.invert, x, y);
+           XDrawPoint(dpy, Context->mappix,Context->gdata->gclist.invert, x,y);
            return;
         }
         i = bytes_per_pixel * x + Context->xim->bytes_per_line * y;
@@ -2969,7 +2783,11 @@ int i, j;
       double light;
       int k;
 
-      light = daywave[i] * cosval[j] + sinval[j];
+      if (Context->flags.shading == 0) {
+	 return -1;
+      }
+
+      light = Context->daywave[i] * Context->cosval[j] + Context->sinval[j];
 
       if (Context->flags.shading == 1) {
          if (light >= 0) k = -1; else k = 0;
@@ -2982,6 +2800,585 @@ int i, j;
          if (k >= Context->flags.colorscale) k = - 1;
       }
       return k;
+}
+
+void
+SetPixelLight(Context, i, j, pixel)
+struct Sundata * Context;
+int i, j;
+Pixel pixel;
+{
+      if (i<0 || i>= Context->geom.width) return;
+      if (j<0 || j>= Context->geom.height) return;
+      if (erase_obj)
+         DarkenPixel(Context, i, j, howDark(Context, i, j));
+      else
+	 XPutPixel(Context->xim, i, j, pixel);
+}
+
+void 
+XPutStringImage(Context, x, y, s, l, mode)
+Sundata *Context;
+int x, y;
+char *s;
+int l, mode;
+{
+    int i, j, w, h, dy;
+    char u = 0, test;
+    GC gc;
+    XFontStruct * font;
+    Pixel pixel;
+    XImage *xim;
+    
+    if (mode == 2) {
+       gc = Context->gdata->gclist.citypix;
+       font = Context->gdata->cityfont;
+       pixel = Context->gdata->pixlist.citynamecolor;
+    } else {
+       gc = Context->gdata->gclist.coordpix;
+       font = Context->gdata->coordfont;
+       pixel = (mode)? Context->gdata->pixlist.meridiancolor :
+                       Context->gdata->pixlist.parallelcolor;
+    }
+
+    h = font->max_bounds.ascent + font->max_bounds.descent;
+    dy = font->max_bounds.ascent;
+    
+    w = XTextWidth(font, s, l);
+    XDrawImageString(dpy, textpix, gc, 0, dy, s, l);
+    xim = XGetImage(dpy, textpix, 0, 0, w, h, 1, XYPixmap);
+    test = (bigendian)? 128 : 1;
+    for (j=0; j<h; ++j)
+       for (i=0; i<w; ++i) {
+	  if ((i&7) == 0) u = xim->data[j*xim->bytes_per_line+i/8];
+          if (u&test) SetPixelLight(Context, x+i+1, y-dy+j, pixel);
+	  u = (bigendian)? u<<1 : u>>1;
+       }
+    XDestroyImage(xim);
+}
+
+/*
+ * drawObject() - Draw an object (city, mark, sun, moon) on the map.
+ */
+
+void
+drawObject(Context, lon, lat, mode, color, name)
+struct Sundata * Context;
+double lon, lat;                /* Latitude and longtitude of the city */
+int    mode;
+int    color;
+char *name;
+{
+    /*
+     * Local Variables
+     */
+
+    int ilon, ilat;             /* Screen coordinates of the city */
+    int i, j, dx, dy, u;
+    unsigned short * bits;
+    Window w = 0;
+    GC *pgc = NULL;
+    Pixel pixel = 0;
+
+    if (mode < 0) return;
+    if (Context->flags.mono<2 && !Context->flags.citymode && mode <= 2) return;
+
+    ilon = (int) ((180.0 + lon) * ((double)Context->zoom.width / 360.0))
+                  - Context->zoom.dx ;
+    if (ilon<0 || ilon>Context->geom.width) return;
+
+    ilat = (int) ((double)Context->zoom.height 
+                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
+                  - Context->zoom.dy ;
+    if (ilat<0 || ilat>Context->geom.height) return;
+
+    bits = symbol_bits[mode-1];
+
+    dx = bits[0]/2;
+    dy = bits[1]/2;
+
+    if (Context->flags.mono) {
+       if (Context->flags.mono==1) {
+          w = Context->win;
+          pgc = &Context->gdata->gclist.citycolor0 + color;
+          if (mode==0) --mode;
+       } else {
+          w = Context->mappix;
+          pgc = &Context->gdata->gclist.invert;
+       }
+       for (j=0; j<bits[1]; j++) {
+          u = bits[j+2];
+          for (i=0; i<bits[0]; i++) {
+	     if (u&1) XDrawPoint(dpy, w, *pgc, ilon-dx+i, ilat-dy+j);
+	     u = u>>1;
+	  }
+       }
+    } else {
+       pixel = *(&Context->gdata->pixlist.citycolor0 + color);
+       for (j=0; j<bits[1]; j++) {
+          u = bits[j+2];
+          for (i=0; i<bits[0]; i++) {
+             if (u&1) SetPixelLight(Context, ilon-dx+i, ilat-dy+j, pixel);
+             u = u>>1;
+          }
+       }
+    }
+
+    if (Context->flags.citymode==2 && name) {
+       if (Context->flags.mono)
+          XDrawString(dpy, w, Context->gdata->gclist.cityfont,
+                    ilon+1, ilat-4, name, strlen(name));
+       else
+          XPutStringImage(Context, ilon+2, ilat-1, name, strlen(name), 2);
+    }
+
+}
+
+void
+drawCities(Context)
+struct Sundata * Context;
+{
+City *c;
+        if (!Context->wintype || !Context->flags.citymode) return; 
+
+        for (c = cities; c; c = c->next)
+            drawObject(Context, c->lon, c->lat, 
+               Context->flags.spotsize, c->mode, c->name);
+}
+
+void
+drawMarks(Context)
+struct Sundata * Context;
+{
+        if (Context->flags.mono==2 || !Context->wintype) return;
+
+        /* code for color mode */
+	if (erase_obj==0 || (erase_obj&1))
+        if (Context->mark1.city == &Context->pos1)
+          drawObject(Context, Context->mark1.city->lon, 
+                              Context->mark1.city->lat,
+                              6, 3, NULL);
+
+	if (erase_obj==0 || (erase_obj&2))
+        if (Context->mark2.city == &Context->pos2)
+          drawObject(Context, Context->mark2.city->lon, 
+                              Context->mark2.city->lat,
+                              6, 4, NULL);
+}
+
+double
+getSpacing(Context, mode)
+Sundata * Context;
+int mode;   /* 0=parallel 1=meridian spacing */
+{
+  double val[12] = 
+    { 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0, 45.0, 90.0 };
+  double quot = 0.0;
+  int i = 0;
+
+  i = 11;
+
+  if (mode == 0)
+     quot = 4200.0/(double)Context->zoom.height;
+
+  if (mode == 1)
+     quot = 10800.0/(double)Context->zoom.width;
+  
+  if (quot<0.5 && mode) quot = quot*1.2;
+
+  while (i>0 && val[i-1] > quot) --i;
+     
+  if (mode==1 && i==8) ++i;
+  return val[i];  
+}
+
+
+/*
+ * drawParallel() - Draw a parallel line
+ */
+
+void
+drawParallel(Context, gc, lat, step, thickness, text, numdigits)
+struct Sundata * Context;
+GC gc;
+double lat;
+int step;
+int thickness;
+int text;
+int numdigits;
+{
+        Window w;
+        int ilat, i0, i1, i, j, jp, k, min, max, doit;
+	char s[10], format[10];
+
+        if (!Context->wintype) return; 
+
+        ilat = (int) ((double) Context->zoom.height
+                  - (lat + 90) * ((double)Context->zoom.height / 180.0))
+                  - Context->zoom.dy ;
+
+        i = Context->flags.meridian & 3 ;
+	min = 0;
+	max = Context->geom.height;
+	if (i==2) max = max-coordvalheight;
+	if (i==3) min = coordvalheight;
+
+        if (ilat<min || ilat>=max) return;
+
+        if (Context->flags.mono==2) {
+           w = Context->mappix;
+           gc = Context->gdata->gclist.invert;
+        } else
+           w = Context->win;   
+
+        doit = 1;
+	if (text<0) {
+	   text = -text;
+           if (lat != 0.0)
+	      doit = 0;
+	}
+	
+	if (text>=2) {
+           sprintf(format, "%%.%df°", numdigits);
+	   sprintf(s, format, lat);
+           min = XTextWidth(Context->gdata->coordfont, s, strlen(s))+4;
+           max = (int) Context->geom.width;
+	   if (text==2)
+ 	     i0 = 2;
+	   else {
+             max = max-min-2;
+	     i0 = max+4;
+	     min = 0;
+	   }
+           i1 = (coordvalheight-6)/3;
+	   if (doit) {
+	      if (Context->flags.mono)
+                 XDrawString(dpy, w, Context->gdata->gclist.parallelfont,
+                   i0, ilat+i1, s, strlen(s));
+              else
+     	         XPutStringImage(Context, i0, ilat+i1, s, strlen(s), 0);
+	   }
+	} else {
+	   min = 0;
+	   max = (int) Context->geom.width - 1;
+	}
+
+        i0 = Context->geom.width/2;
+        i1 = 1+i0/step;
+        for (i=-i1; i<i1; i+=1) {
+          j = i0+step*i-thickness;
+          jp = i0+step*i+thickness;
+          if (j<0) j = 0;
+          if (jp>max) jp = max;
+	  if (jp<min) continue;
+          if (j>max) continue;
+	  if (Context->flags.mono)
+             XDrawLine(dpy, w, gc, j, ilat, jp, ilat);
+	  else {
+	     for (k=j; k<=jp; k++)
+                SetPixelLight(Context, k, ilat, 
+                              Context->gdata->pixlist.meridiancolor);
+	  }
+	}
+}
+
+void
+drawParallels(Context)
+struct Sundata * Context;
+{
+        static  double val[5] = { -66.55, -23.45, 0.0, 23.45, 66.55 };
+	double  f1, f2, spacing;
+        int     i, b1, b2, parmode, numdigits;
+
+        if (!Context->wintype || !Context->flags.parallel) return; 
+
+	parmode = Context->flags.parallel & 3;
+
+	if (Context->zoom.paralspacing)
+	   spacing = Context->zoom.paralspacing;
+	else
+	   spacing = getSpacing(Context, 0);
+        
+        /* b = (int) (89.9/spacing); */
+	f1 = (double)(Context->zoom.dy+Context->geom.height)/
+                ((double)Context->zoom.height);
+	f2 = (double)Context->zoom.dy/((double)Context->zoom.height);
+
+	b1 = rint(0.7 + (90.0 - f1*180.0)/spacing);
+	b2 = rint(-0.7 + (90.0 - f2*180.0)/spacing);
+
+	numdigits = (spacing<1.0);
+	if (parmode)
+        for (i=b1; i<=b2; i++) if (i!=0 || Context->flags.parallel <=3)
+          drawParallel(Context, Context->gdata->gclist.parallelcolor, 
+              i*spacing, 3, 
+              Context->flags.dotted, parmode, numdigits);
+
+	if (Context->flags.parallel & 8) {
+          for (i=0; i<5; i++)
+            drawParallel(Context, Context->gdata->gclist.tropiccolor, 
+               val[i], 3, 1, -parmode, numdigits);
+	}
+}
+
+/*
+ * drawMeridian() - Draw a meridian line
+ */
+
+void
+drawMeridian(Context, lon, step, thickness, numdigits)
+struct Sundata * Context;
+double lon;
+int step;
+int thickness;
+int numdigits;
+{
+        Window w;
+        GC gc;
+        int ilon, i0, i1, i, j, jp, k, min, max;
+	char s[10], format[10];
+
+        ilon = (int) ((180.0 + lon) * ((double) Context->zoom.width / 360.0))
+                   - Context->zoom.dx;
+
+        i = Context->flags.parallel & 3 ;
+	min = 0;
+	max = Context->geom.width;
+	if (i==2) min = coordvalwidth;
+	if (i==3) max = max-coordvalwidth;
+
+        if (ilon<min || ilon>=max) return;
+
+        if (Context->flags.mono==2) {
+           w = Context->mappix;
+           gc = Context->gdata->gclist.invert;
+        } else {
+           w = Context->win;   
+           gc = Context->gdata->gclist.meridiancolor;
+        }
+
+        i0 = Context->geom.height/2;
+        i1 = 1+i0/step;
+	if (Context->flags.meridian>=2) {
+           sprintf(format, "%%.%df°", numdigits);
+	   sprintf(s, format, lon);
+	   i = 2*XTextWidth(Context->gdata->coordfont, s, strlen(s))/5;
+	   min = Context->gdata->coordfont->max_bounds.ascent +
+                          Context->gdata->coordfont->max_bounds.descent + 3;
+	   max = (int) Context->geom.height;
+	   if (Context->flags.meridian==2) {
+	      j = Context->geom.height-3;
+	      max = max-min-1;
+	      min = 0;
+	   } else
+	      j = min-4;
+	   if (Context->flags.mono)
+              XDrawString(dpy, w, Context->gdata->gclist.meridianfont,
+                 ilon-i, j, s, strlen(s));
+	   else
+	      XPutStringImage(Context, ilon-i, j, s, strlen(s), 1);
+	} else {
+	   min = 0;
+	   max = (int) Context->geom.height - 1 ;
+	}
+
+        for (i=-i1; i<i1; i+=1) {
+           j = i0+step*i-thickness;
+           jp = i0+step*i+thickness;
+           if (j<0) j = 0;
+           if (jp>max) jp = max;
+	   if (jp<min) continue;
+	   if (j>max) continue;
+	   if (Context->flags.mono)
+	      XDrawLine(dpy, w, gc, ilon, j, ilon, jp);
+	   else {
+	      for (k=j; k<=jp; k++)
+	         SetPixelLight(Context, ilon, k,
+                               Context->gdata->pixlist.meridiancolor);
+	   }
+        }
+}
+
+void
+drawMeridians(Context)
+struct Sundata * Context;
+{
+        int     i, b1, b2, numdigits;
+	double  spacing, f1, f2;
+
+        if (!Context->wintype || !Context->flags.meridian) return; 
+
+	if (Context->zoom.meridspacing)
+	   spacing = Context->zoom.meridspacing;
+	else
+	   spacing = getSpacing(Context, 1);
+        
+        /* b = (int) (179.9/spacing); */
+	f1 = (double)Context->zoom.dx/((double)Context->zoom.width);
+	f2 = (double)(Context->zoom.dx+Context->geom.width)/
+                ((double)Context->zoom.width);
+
+	b1 = rint(0.7 + (f1*360.0 - 180.0)/spacing);
+	b2 = rint(-0.7 + (f2*360.0 - 180.0)/spacing);
+
+	numdigits = (spacing<1.0);
+        for (i=b1; i<=b2; i++)
+         drawMeridian(Context, i*spacing, 3, Context->flags.dotted, numdigits);
+}
+
+void
+drawLines(Context)
+Sundata * Context;
+{
+        coordvalwidth = 
+            XTextWidth(Context->gdata->coordfont, "-45°", 4) + 6;
+        coordvalheight = Context->gdata->coordfont->max_bounds.ascent + 
+                         Context->gdata->coordfont->max_bounds.descent + 6;
+        drawMeridians(Context);
+        drawParallels(Context);
+}
+
+/*
+ * drawSun() - Draw Sun at position where it stands at zenith
+ */
+
+void
+drawSun(Context)
+struct Sundata * Context;
+{
+    if (Context->flags.sunpos)
+        drawObject(Context, Context->sunlon, Context->sundec, 7, 5, NULL);
+}
+
+void
+drawBottomline(Context)
+struct Sundata * Context;
+{
+        XDrawLine(dpy, Context->win, Context->gdata->gclist.menufont, 
+                   0, Context->geom.height, 
+                   Context->geom.width-1, Context->geom.height);
+}
+
+void
+drawAll(Context)
+struct Sundata * Context;
+{
+        if (Context->flags.mono) {
+           if (!Context->mappix) return;
+        } else {
+           if (!Context->xim) return;
+        }
+        drawLines(Context);
+        drawBottomline(Context);
+        drawCities(Context);
+        drawMarks(Context);
+}
+
+void
+showImage(Context)
+struct Sundata * Context;
+{
+           if (Context->flags.mono)
+               XCopyPlane(dpy, Context->mappix, Context->win, 
+                    (Context->wintype)?
+		       Context->gdata->gclist.mapstore :
+                       Context->gdata->gclist.clockstore, 
+                    0, 0, Context->geom.width, Context->geom.height, 0, 0, 1);
+           else
+               XPutImage(dpy, Context->win, Context->gdata->gclist.menufont, 
+                    Context->xim, 0, 0, 0, 0,
+                    Context->geom.width, Context->geom.height);
+}
+
+void
+showEarth(Context)
+struct Sundata * Context;
+{
+
+        if (button_pressed) return;
+
+        if (Context->flags.update>=2) {
+           if (Context->flags.mono==0) drawAll(Context);
+	   showImage(Context);
+        }
+
+        if (Context->flags.update) {
+           Context->flags.update = 0;
+           if (Context->flags.mono==1) drawAll(Context);
+        }
+}
+
+void
+pulseMarks(Context)
+struct Sundata * Context;
+{
+int     done = 0;
+        
+        if (!Context->wintype) return; 
+        if (Context->flags.mono) {
+           if (!Context->mappix) return;
+        } else {
+           if (!Context->xim) return;
+        }
+        if (Context->mark1.city && Context->mark1.flags<0) {
+           if (Context->mark1.pulse) {
+             drawObject(Context, Context->mark1.save_lon, 
+                   Context->mark1.save_lat, 6, 0, NULL);
+             done = 1;
+           }
+           Context->mark1.save_lat = Context->mark1.city->lat;
+           Context->mark1.save_lon = Context->mark1.city->lon;
+           if (Context->mark1.city == &Context->pos1) {
+              done = 1;
+              drawObject(Context, Context->mark1.save_lon, 
+                                Context->mark1.save_lat, 6, 0, NULL);
+              Context->mark1.pulse = 1;
+           } else
+              Context->mark1.pulse = 0;
+           Context->mark1.flags = 1;
+        }
+        else
+        if (Context->mark1.flags>0) {
+           if (Context->mark1.city|| Context->mark1.pulse) {
+              drawObject(Context, Context->mark1.save_lon, 
+                                Context->mark1.save_lat, 6, 0, NULL);
+              Context->mark1.pulse = 1-Context->mark1.pulse;
+              done = 1;
+           }
+           if (Context->mark1.city == NULL) Context->mark1.flags = 0;
+        }
+
+        if (Context->mark2.city && Context->mark2.flags<0) {
+           if (Context->mark2.pulse) {
+             drawObject(Context, Context->mark2.save_lon, 
+                               Context->mark2.save_lat, 6, 0, NULL);
+             done = 1;
+           }
+           Context->mark2.save_lat = Context->mark2.city->lat;
+           Context->mark2.save_lon = Context->mark2.city->lon;
+           if (Context->mark2.city == &Context->pos2) {
+              drawObject(Context, Context->mark2.save_lon, 
+                       Context->mark2.save_lat, 6, 0, NULL);
+              done = 1;
+              Context->mark2.pulse = 1;
+           } else
+              Context->mark2.pulse = 0;
+           Context->mark2.flags = 1;
+        }
+        else
+        if (Context->mark2.flags>0) {
+           if (Context->mark2.city || Context->mark2.pulse) {
+              drawObject(Context, Context->mark2.save_lon, 
+                                Context->mark2.save_lat, 6, 0, NULL);
+              Context->mark2.pulse = 1 - Context->mark2.pulse;
+              done = 1;
+           }
+           if (Context->mark2.city == NULL) Context->mark2.flags = 0;
+        }
+        if (done) {
+           Context->flags.update = 2;
+           showEarth(Context);
+        }
 }
 
 /* To be used in case of mono mode only, to clear night area */
@@ -3031,18 +3428,14 @@ struct Sundata * Context;
       if (quot>0) south = 0; else south = -1;
       north = -1-south;
 
-      daywave = Context->wave;
-      cosval = daywave + Context->geom.width;
-      sinval = cosval + Context->geom.height;
-
       quot = 2.0*M_PI/(double)Context->zoom.width;
       for (i = 0; i < (int)Context->geom.width; i++)
-         daywave[i] = cos(quot *(((double)i)-Context->fnoon));
+         Context->daywave[i] = cos(quot *(((double)i)-Context->fnoon));
 
       for (j = 0; j < (int)Context->geom.height; j++) {
          quot = shift + f1 * (double)j;
-         cosval[j] = sin(quot)*cd;
-         sinval[j] = cos(quot)*sd;
+         Context->cosval[j] = sin(quot)*cd;
+         Context->sinval[j] = cos(quot)*sd;
       }
 
       /* Shading = 1 uses tr1 as j-integer value of transition day/night */
@@ -3052,7 +3445,7 @@ struct Sundata * Context;
       if (Context->flags.shading == 1) {
          for (i = 0; i < (int)Context->geom.width; i++) {
             if (fabs(sd)>f3)
-               tr1 = (int) (shiftp+f2*atan(daywave[i]*cd/sd));
+               tr1 = (int) (shiftp+f2*atan(Context->daywave[i]*cd/sd));
             else
                tr1 = 0;
             if (tr1<0) tr1 = 0;     
@@ -3105,7 +3498,7 @@ struct Sundata * Context;
 
       for (i = 0; i < (int)Context->geom.width; i++) {
          if (fabs(sd)>f3)
-            j0 = (int) (shiftp+f2*atan(daywave[i]*cd/sd));
+            j0 = (int) (shiftp+f2*atan(Context->daywave[i]*cd/sd));
          else
             j0 = 0;
          if (j0<0) j0 = 0;
@@ -3242,7 +3635,7 @@ City *c = NULL;
         for (c = cities; c; c = c->next) {
             if (!strcasecmp(c->name, CityInit)) {
                 Context->mark1.city = c;
-                if (Context->flags.mono==2) Context->mark1.status = -1;
+                if (Context->flags.mono==2) Context->mark1.flags = -1;
                 c->mode = 1;
             } else
                 c->mode = 0;
@@ -3274,8 +3667,10 @@ struct Sundata * Context;
         if (button_pressed) return;
 
         time(&Context->time);
-        
-        if (Context->flags.mono==2 && !Context->flags.firsttime) drawSun(Context);
+
+	erase_obj = 1;
+        drawSun(Context);
+        erase_obj = 0;
 
         (void) sunParams(Context->time + Context->jump, 
               &Context->sunlon, &Context->sundec, NULL);
@@ -3283,14 +3678,6 @@ struct Sundata * Context;
                          - (double) Context->zoom.dx;
         noon = (int) fnoon;
         Context->sunlon -= 180.0;
-
-        if (Context->flags.mono==2) {
-          drawSun(Context);
-          if (Context->flags.firsttime) {
-            drawAll(Context);
-            Context->flags.firsttime = 0;
-          }
-        }
 
         /* Projecting the illumination curve  for the current seasonal
            instant is costly.  If we're running in real time, only  do
@@ -3306,7 +3693,12 @@ struct Sundata * Context;
                 Context->noon = noon;
                 Context->fnoon = fnoon;
                 moveNightArea(Context);
+		if (!Context->flags.mono) {
+		   drawAll(Context);
+		   drawCities(Context);
+		}
         }
+        drawSun(Context);
 }
 
 void setPosition1(Context, x, y)
@@ -3378,7 +3770,14 @@ int x, y;      /* Screen co-ordinates of mouse */
         break;
 
       case DISTANCES:
-        if (Context->mark2.city) Context->mark2.city->mode = 0;
+        if (Context->mark2.city) {
+	    Context->mark2.city->mode = 0;
+	    if (Context->flags.mono==0) {
+	       erase_obj = 2;
+	       drawMarks(Context);
+               erase_obj = 0;
+	    }
+	}
         if (Context->mark1.city == &Context->pos1) {
             Context->pos2 = Context->pos1;
             Context->mark2.city = &Context->pos2;
@@ -3394,8 +3793,14 @@ int x, y;      /* Screen co-ordinates of mouse */
         break;
 
       case SOLARTIME:
-        if (Context->mark1.city) 
+        if (Context->mark1.city) {
            Context->mark1.city->mode = 0;
+	   if (Context->flags.mono==0) {
+	      erase_obj = 1;
+	      drawMarks(Context);
+              erase_obj = 0;
+	   }
+	}
         if (cptr) {
           Context->mark1.city= cptr;
           Context->mark1.city->mode = 1;
@@ -3411,8 +3816,12 @@ int x, y;      /* Screen co-ordinates of mouse */
     setDayParams(Context);
 
     if (Context->flags.mono==2) {
-      if (Context->mark1.city) Context->mark1.status = -1;
-      if (Context->mark2.city) Context->mark2.status = -1;
+      if (Context->mark1.city) Context->mark1.flags = -1;
+      if (Context->mark2.city) Context->mark2.flags = -1;
+    } else {
+      drawAll(Context);
+      showEarth(Context);
+      Context->flags.update = 2;
     }
 }
 
@@ -3632,7 +4041,7 @@ struct Sundata * Context;
       if (verbose)
          fprintf(stderr, 
            "Recycling image (XID %ld) and changing requested parameters...\n",
-	   (gflags.mono)? (long) Context->pix : (long) Context->xim);
+	   (gflags.mono)? (long) Context->mappix : (long) Context->xim);
       code = 0;
       if (gflags.mono)
 	 goto run_direct1;
@@ -3692,17 +4101,11 @@ struct Sundata * Context;
    retry:
      readVMF(path, Context);
      if (Context->bits) {
-       Context->pix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
+       Context->mappix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
           Context->bits, Context->geom.width,
           Context->geom.height, 0, 1, 1);
      run_direct1:
        createGData(Context, 0);
-       if (!Context->gdata->gclist.invert) {
-          XGCValues gcv;
-          gcv.function = GXinvert;
-          Context->gdata->gclist.invert = 
-             XCreateGC(dpy, Context->pix, GCFunction, &gcv);
-       }
        if (color_alloc_failed) report_failure(path, 6);
        if (Context->bits) free(Context->bits);
        createGCs(Context);
@@ -3851,8 +4254,8 @@ int wintype, build;
          XResizeWindow(dpy, Context->win, 
             Context->geom.width, Context->geom.height + Context->hstrip);
 	 XMapRaised(dpy, Context->win);
-         XFlush(dpy);
-         usleep(2*TIMESTEP);
+	 XSync(dpy, True);
+         usleep(TIMESTEP);
          remapAuxilWins(Context);
       } else
          resetAuxilWins(Context);
@@ -3864,20 +4267,21 @@ int wintype, build;
       createWorkImage(Context);
       setSizeHints(Context, wintype);
       XMapWindow(dpy, Context->win);
-      XSync(dpy, True);
-      usleep(3*TIMESTEP);
+      XFlush(dpy);
+      usleep(TIMESTEP);
       remapAuxilWins(Context);
       setProtocols(Context, wintype);
       Context->prevgeom.width = 0;
    }
    checkLocation(Context, CityInit);
-   Context->flags.update = -1;
+   if (Context->flags.mono == 2) drawAll(Context);
    clearStrip(Context);
-   doTimeout(Context);
    if (Context->gdata->cmap!=cmap0)
       XSetWindowColormap(dpy, Context->win, Context->gdata->cmap);
    runtime = 0;
    option_changes = 0;
+   Context->flags.update = -1;
+   doTimeout(Context);
 }
 
 /*
@@ -3897,7 +4301,7 @@ KeySym  keysym;
         Context = getContext(win);
         if (!Context) return;
         if (Context->flags.mono) {
-           if (!Context->pix) return;
+           if (!Context->mappix) return;
         } else {
            if (!Context->xim) return;
         }
@@ -4170,11 +4574,18 @@ KeySym  keysym;
                 Context->geom = ClockGeom;
              adjustGeom(Context, 1);
 	     XSelectInput(dpy, Context->win, 0);
-	     XSync(dpy, True);
+	     /*
 	     XResizeWindow(dpy, Context->win, 1, 1);
              XMoveWindow(dpy, Context->win, Context->geom.x, Context->geom.y);
-	     XUnmapWindow(dpy, Context->win);
+             XUnmapWindow(dpy, Context->win);
              XFlush(dpy);
+	     */
+             XMoveResizeWindow(dpy, Context->win, 
+                 Context->geom.x, Context->geom.y, 
+                 Context->geom.width, 
+                 Context->geom.height+((Context->wintype)?
+                     Context->gdata->mapstrip:Context->gdata->clockstrip));
+	     XSync(dpy, True);
              shutDown(Context, 0);
              buildMap(Context, Context->wintype, 0);
              return;
@@ -4234,11 +4645,24 @@ KeySym  keysym;
              else
                Context->flags.dms = 1 - Context->flags.dms;
              Context->flags.map_mode = COORDINATES;
-             if (Context->mark1.city == &Context->pos1) 
-                 Context->mark1.city = NULL;
+             if (Context->mark1.city == &Context->pos1) {
+		if (Context->flags.mono==0) {
+		   erase_obj = 1;
+		   drawMarks(Context);
+                   erase_obj = 0;
+		}
+                Context->mark1.city = NULL;
+	     }
              if (Context->mark1.city)
                setDayParams(Context);
-             if (Context->mark2.city) Context->mark2.city->mode = 0;
+             if (Context->mark2.city) {
+	        Context->mark2.city->mode = 0;
+		if (Context->flags.mono==0) {
+		   erase_obj = 2;
+		   drawMarks(Context);
+                   erase_obj = 0;
+		}
+	     }
              Context->mark2.city = NULL;
              Context->flags.update = 2;
              break;
@@ -4296,7 +4720,7 @@ KeySym  keysym;
                    PopMenu(Context);
                 } else {
                    XMapRaised(dpy, Menu);
-                   system("sunclock_help &");
+                   system(HelpCommand);
 		}
              }
              break;
@@ -4327,6 +4751,11 @@ KeySym  keysym;
                 break;
              }
              Context->flags.map_mode = LEGALTIME;
+	     if (Context->flags.mono==0) {
+	        erase_obj = 3;
+	        drawMarks(Context);
+                erase_obj = 0;
+	     }
              if (Context->mark1.city) Context->mark1.city->mode = 0;
              if (Context->mark2.city) Context->mark2.city->mode = 0;
              Context->mark1.city = NULL;
@@ -4335,8 +4764,16 @@ KeySym  keysym;
              break;
            case XK_m:
              if (!Context->wintype) break;
-             Context->flags.meridian = 1 - Context->flags.meridian;
-             if (Context->flags.mono==2) draw_meridians(Context);
+             if (Context->flags.mono!=1) {
+	        erase_obj = 1;
+	        drawLines(Context);
+                erase_obj = 0;
+	     }
+	     if (keysym == XK_M)
+                Context->flags.meridian = (Context->flags.meridian + 3) % 4;
+	     else
+                Context->flags.meridian = (Context->flags.meridian + 1) % 4;
+             if (Context->flags.mono==2) drawLines(Context);
              Context->flags.update = 2;
              break;
            case XK_n:
@@ -4364,8 +4801,17 @@ KeySym  keysym;
              break;
            case XK_p:
              if (!Context->wintype) break;
-             Context->flags.parallel = 1 - Context->flags.parallel;
-             if (Context->flags.mono==2) draw_parallels(Context);
+             if (Context->flags.mono!=1) {
+	        erase_obj = 1;
+	        drawLines(Context);
+                erase_obj = 0;
+	     }
+	     i = Context->flags.parallel;
+             if (keysym == XK_P) 
+                Context->flags.parallel = ((i+3)&3) + (i&8);
+	     else
+                Context->flags.parallel = ((i+1)&3) + (i&8);
+             if (Context->flags.mono==2) drawLines(Context);
              Context->flags.update = 2;
              break;
            case XK_q: 
@@ -4377,7 +4823,14 @@ KeySym  keysym;
              else
                Context->flags.dms = 1 - Context->flags.dms;
              Context->flags.map_mode = SOLARTIME;
-             if (Context->mark2.city) Context->mark2.city->mode = 0;
+             if (Context->mark2.city) {
+	        Context->mark2.city->mode = 0;
+		if (Context->flags.mono==0) {
+		   erase_obj = 2;
+		   drawMarks(Context);
+                   erase_obj = 0;
+		}
+	     }
              Context->mark2.city = NULL;
              if (Context->mark1.city)
                setDayParams(Context);
@@ -4385,17 +4838,27 @@ KeySym  keysym;
              break;
            case XK_t:
              if (!Context->wintype) break;
-             Context->flags.tropics = 1 - Context->flags.tropics;
-             if (Context->flags.mono==2) draw_tropics(Context);
+             if (Context->flags.mono!=1) {
+	        erase_obj = 1;
+	        drawLines(Context);
+                erase_obj = 0;
+	     }
+             Context->flags.parallel = (Context->flags.parallel + 8) & 15;
+             if (Context->flags.mono==2) drawLines(Context);
              Context->flags.update = 2;
              break;
            case XK_u:
              if (!Context->wintype) break;
-             if (Context->flags.mono==2 && Context->flags.cities) 
-                drawCities(Context);
-             Context->flags.cities = 1 - Context->flags.cities;
-             if (Context->flags.mono==2 && Context->flags.cities) 
-                drawCities(Context);
+             if (Context->flags.mono!=1) {
+	        erase_obj = 1;
+	        drawCities(Context);
+                erase_obj = 0;
+	     }
+             if (keysym == XK_U)
+                Context->flags.citymode = (Context->flags.citymode + 2) % 3;
+	     else
+                Context->flags.citymode = (Context->flags.citymode + 1) % 3;
+             if (Context->flags.mono==2) drawCities(Context);
              Context->flags.update = 2;
              break;
            case XK_w: 
@@ -4415,8 +4878,11 @@ KeySym  keysym;
              if (ExternAction) system(ExternAction);
              break;
            case XK_y:
+	     erase_obj = 1;
+             drawSun(Context);
+             erase_obj = 0;
              Context->flags.sunpos = 1 - Context->flags.sunpos;
-             if (Context->flags.mono==2) draw_sun(Context);
+             drawSun(Context);
              Context->flags.update = 2;
              break;
            case XK_z:
@@ -4466,7 +4932,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
         Context = getContext(win);
         if (!Context) return;
         if (Context->flags.mono) {
-           if (!Context->pix) return;
+           if (!Context->mappix) return;
         } else {
            if (!Context->xim) return;
         }
@@ -4486,7 +4952,8 @@ struct Sundata * Context = (struct Sundata *) NULL;
               PopMenu(MenuCaller);
               return;
            }
-           key = tolower(MenuKey[2*click_pos]);
+           key = MenuKey[2*click_pos];
+	   if (button<=2) key = tolower(key);
            processKey(win, (KeySym)key);
            return;
         }
@@ -4576,7 +5043,7 @@ void
 processResize(win)
 Window win;
 {
-           int x, y, w, h, num=0;
+           int x, y, w, h, num = 0;
            struct Sundata * Context = NULL;
            struct Geometry * Geom = NULL;
 
@@ -4594,6 +5061,7 @@ Window win;
               Geom = &OptionGeom;
               num = 5;
            }
+
            if (num) {
               if (getPlacement(win, &x, &y, &w, &h)) return;
               if (w==Geom->width && h==Geom->height) return;
@@ -4649,6 +5117,8 @@ Window win;
               ClockGeom.height = h;
            }
            adjustGeom(Context, 0);
+	   Context->flags.update = 2;
+	   if (!Context->flags.mono) showImage(Context);
            shutDown(Context, 0);
            (void)setZoomAspect(Context, 3);
            buildMap(Context, Context->wintype, 2);
@@ -4665,7 +5135,7 @@ struct Sundata * Context;
 {
         if (!Context) return;
 
-        if (QLength(dpy))
+        if (QLength(dpy) && Context->flags.update>=0)
                 return;         /* ensure events processed first */
 
         if (Context->flags.update)
@@ -4675,17 +5145,18 @@ struct Sundata * Context;
 
         if (Context->count==0) {
            updateImage(Context);
-           showImage(Context);
+           showEarth(Context);
            writeStrip(Context);
            if (Context->flags.mono==2) pulseMarks(Context);
+	   XFlush(dpy);
         }
 }
 
 void
 doExpose(w)
-register Window w;
+Window w;
 {
-        struct Sundata * Context = (struct Sundata *)NULL;
+        struct Sundata * Context;
 
         if (w == Menu) {
            do_menu = 1;
@@ -4715,7 +5186,8 @@ register Window w;
         if (!Context) return;
 
         Context->flags.update = 2;
-        showImage(Context);
+
+        showEarth(Context);
         writeStrip(Context);
 }
 
@@ -4735,9 +5207,9 @@ register Window w;
 
 Bool
 evpred(d, e, a)
-register Display *              d;
-register XEvent *               e;
-register char *                 a;
+Display *              d;
+XEvent *               e;
+XPointer               a;
 {
         return (True);
 }
@@ -4747,84 +5219,84 @@ eventLoop()
 {
         XEvent                  ev;
         Sundata *               Context;
+	Sundata *               Which;
         char                    buffer[1];
         KeySym                  keysym;
 
         for (;;) {
-                if (XCheckIfEvent(dpy, &ev, evpred, (char *)0))
+	   if (XCheckIfEvent(dpy, &ev, evpred, (XPointer)0)) {
 
-                        switch(ev.type) {
+	      /* printf("%d %d\n", ev.type, ev.xexpose.window); */
+              switch(ev.type) {
 
-                        case FocusChangeMask:
-                        case VisibilityNotify:
-                                doExpose(ev.xexpose.window);
-                                break;
+                 case FocusChangeMask:
+                 case VisibilityNotify:
+                      doExpose(ev.xexpose.window);
+                      break;
 
-                        case Expose:
-                                if (ev.xexpose.count == 0)
-                                        doExpose(ev.xexpose.window);
-                                break;
+                 case Expose:
+                      if (ev.xexpose.count == 0)
+                      doExpose(ev.xexpose.window);
+                      break;
 
-                        case ClientMessage:
-                                if (ev.xclient.message_type == wm_protocols &&
-                                    ev.xclient.format == 32 &&
-                                    ev.xclient.data.l[0] == wm_delete_window) {
-                                        if (ev.xexpose.window == Menu)
-                                           PopMenu(MenuCaller);
-                                        else
-                                        if (ev.xexpose.window == Selector)
-                                           PopSelector(SelCaller);
-                                        else
-                                        if (ev.xexpose.window == Zoom)
-                                           PopZoom(ZoomCaller);
-                                        else
-                                        if (ev.xexpose.window == Option)
-                                           PopOption(OptionCaller);
-                                        else
-                                           shutDown(
-                                         getContext(ev.xexpose.window), 1);
-                                }
-                                break;
+                 case ClientMessage:
+                      if (ev.xclient.message_type == wm_protocols &&
+                          ev.xclient.format == 32 &&
+                          ev.xclient.data.l[0] == wm_delete_window) {
+                             if (ev.xexpose.window == Menu) PopMenu(MenuCaller);
+                                else
+                             if (ev.xexpose.window == Selector) 
+                                   PopSelector(SelCaller);
+                               else
+                             if (ev.xexpose.window == Zoom) PopZoom(ZoomCaller);
+                               else
+                             if (ev.xexpose.window == Option)
+                                   PopOption(OptionCaller);
+                               else
+                             shutDown(getContext(ev.xexpose.window), 1);
+		      }
+                      break;
 
-                        case KeyPress:
-                        case KeyRelease:
-                                XLookupString((XKeyEvent *) &ev, buffer, 
-                                              1, &keysym, NULL);
-                                if (keysym==XK_Control_L || 
-                                    keysym==XK_Control_R) {
-                                   if (ev.type == KeyPress) control_key = 1;
-                                   if (ev.type == KeyRelease) control_key = 0;
-                                } else
-                                if (ev.type == KeyPress)
-                                   processKey(ev.xexpose.window, keysym);
-                                break;
+                 case KeyPress:
+                 case KeyRelease:
+                      XLookupString((XKeyEvent *) &ev, buffer, 1, &keysym, NULL);
+                      if (keysym==XK_Control_L || keysym==XK_Control_R) {
+                         if (ev.type == KeyPress) control_key = 1;
+                         if (ev.type == KeyRelease) control_key = 0;
+                      } else
+                         if (ev.type == KeyPress)
+                            processKey(ev.xexpose.window, keysym);
+                      break;
 
-                        case ButtonPress:
-                        case ButtonRelease:
-                        case MotionNotify:
-                                if (ev.type==ButtonPress)
-                                   button_pressed = ev.xbutton.button;
-                                if (ev.type==ButtonRelease)
-                                   button_pressed = 0;
-                                processMouseEvent(ev.xexpose.window,
-                                             ev.xbutton.x, ev.xbutton.y,
-                                             ev.xbutton.button, ev.type);
-                                break;
+                 case ButtonPress:
+                 case ButtonRelease:
+                 case MotionNotify:
+                      if (ev.type==ButtonPress) button_pressed = ev.xbutton.button;
+                      if (ev.type==ButtonRelease) button_pressed = 0;
+                      processMouseEvent(ev.xexpose.window,
+                                           ev.xbutton.x, ev.xbutton.y,
+                                           ev.xbutton.button, ev.type);
+                      break;
 
-                        case ResizeRequest: 
-                                processResize(ev.xexpose.window);
-                                break;
+		 /* case ResizeRequest: */
+		 case PropertyNotify:
+		 case ConfigureNotify:
+                      processResize(ev.xexpose.window);
+                      break;
+			
+                 default:
+		      break;
+	      }
+	   } else {
+              Which = getContext(ev.xexpose.window);
+              usleep(TIMESTEP);
 
-                        } else {
-                                Sundata *Which = getContext(ev.xexpose.window);
-                                usleep(TIMESTEP);
-                                if (Which == NULL) Which=Seed;
-                                for (Context = Seed; Context; 
-                                                     Context = Context->next)
-                                if (do_sync || Context == Which ||
-                                    (do_dock && Context == Seed))
-                                   doTimeout(Context);
-                        }
+              if (Which == NULL) Which = Seed;
+  
+              for (Context = Seed; Context; Context = Context->next)
+                 if (do_sync || Context == Which || (do_dock && Context == Seed))
+                    doTimeout(Context);
+	   }
         }
 }
 
@@ -4850,7 +5322,6 @@ char **         argv;
 
         parse_cmdline = 1;
         (void) parseArgs(argc, argv);
-        readLanguage();
         parse_cmdline = 0;
 
         /* Open Display */

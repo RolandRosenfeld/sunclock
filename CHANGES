@@ -12,6 +12,21 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
+Version 3.40, May 14, 2001
+
+- City names and coordinate values can now be shown on the map
+- Bitmaps of city/mark spots are now obtained from explicit data
+  in bitmaps.h rater than calls to X routines (slower and more rigid)
+- Menu options which can take more than 2 values (e.g. 'N') can get
+  their values rotated in both directions by using lower/upper cases
+  or clicking with the left/right mouse button.
+- Removed the sunclock_help script, replaced by an internal call
+- Much improved refresh mechanism for -fullcolors mode. Flickering
+  should not occur any longer in that mode (still somewhat unavoidable
+  with obsolete mode -invertcolors)
+- Corrected a X BadAccess bug showing up under some window managers
+  (e.g. enlightenment)
+
 Version 3.38, April 17, 2001
 
 - Added new color and font options 

@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "April 17, 2001"
+.TH SUNCLOCK 1 "April 27, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -14,23 +14,24 @@ where the list of licit options is the following long list
 .PP
 [-help] [-listmenu] [-version] \
 [-display name] [-rcfile file] [-sharedir directory] \
-[-title name] [-classname name] [-auxilclassname name] \
-[-clockclassname name] [-mapclassname name] \
-[-clock] [-clockimage file] [-dock] \
-[-map] [-mapimage file] [-mapmode * <L,C,S,D,E>] \
+[-clock] [-map] [-dock] \
 [-menu] [-nomenu] [-selector] [-noselector] \
 [-zoom] [-nozoom] [-option] [-nooption]
 .PP
-(**)  [-language name] [-dateformat string1|string2|...] [-command string] \
-[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
-[-mapgeom <geom>] [-clockgeom <geom>] [-menugeom <geom>] \
-[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>] [-auxilgeom <geom>] \
-[-title name] [-mapclassname name] [-clockclassname name] \
+(**)  [-language name] [-dateformat string1|string2|...] \
+[-command string] [-helpcommand string] \
+[-clockimage file] [-mapimage file] [-mapmode * <L,C,S,D,E>] \
+[-clockgeom <geom>] [-mapgeom <geom>] \
+[-auxilgeom <geom>] [-menugeom <geom>] \
+[-selgeom <geom>] [-zoomgeom <geom>] [-optiongeom <geom>] \
+[-title name] [-clockclassname name] [-mapclassname name] \
 [-auxilclassname name] [-classname name] \
-[-menufont fontname] [-mapfont fontname] \
+[-menufont fontname] [-coordfont fontname] [-cityfont fontname] \
 [-mapstripfont fontname] [-clockstripfont fontname] \
-[-fullcolors] [-colorinvert] [-monochrome] [-aspect mode] \
-[-placement (random, fixed, center, NW, NE, SW, SE)] [-placementshift x y] \
+[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
+[-fullcolors] [-invertcolors] [-monochrome] [-aspect mode] \
+[-placement (random, fixed, center, NW, NE, SW, SE)] \
+[-placementshift x y] \
 [-decimal] [-dms] [-city name] [-position latitude longitude] \
 [-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]] \
 [-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
@@ -38,23 +39,23 @@ where the list of licit options is the following long list
 [-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
 [-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2] \
 [-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
-[-sun] [-nosun] [-cities] [-nocities] [-meridians] [-nomeridians] \
-[-parallels] [-noparallels] [-tropics] [-notropics] \
-[-spotsize size(0,1,2,3,4)] [-dottedlines] [-plainlines] \
-[-menubgcolor color] [-menufgcolor color] \
-[-mapstripbgcolor color] [-mapstripfgcolor color] \
-[-clockstripbgcolor color] [-clockstripfgcolor color] \
-[-zoombgcolor color] [-zoomfgcolor color] \
-[-optionbgcolor color] [-optionfgcolor color] [-caretcolor] \
-[-changecolor color] [-choicecolor color] \
-[-dircolor color] [-imagecolor color] \
-[-dircolor color] [-imagecolor color] \
-[-mapbgcolor color] [-mapfgcolor color] \
+[-tropics] [-notropics] [-sun] [-nosun] [-citymode mode=0,1,2] \
+[-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3] \
+[-meridianspacing value] [-parallelspacing value] \
+[-spotsize size(0,1,2,3,4,5)] [-dottedlines] [-plainlines] \
 [-clockbgcolor color] [-clockfgcolor color] \
+[-clockstripbgcolor color] [-clockstripfgcolor color] \
+[-mapbgcolor color] [-mapfgcolor color] \
+[-mapstripbgcolor color] [-mapstripfgcolor color] \
 [-linecolor color] [-suncolor color] [-mooncolor color] \
 [-meridiancolor color] [-parallelcolor] [-tropiccolor color] \
 [-citycolor0 color] [-citycolor1 color] [-citycolor2 color] \
-[-markcolor1 color] [-markcolor2 color]
+[-citynamecolor color] [-markcolor1 color] [-markcolor2 color] \
+[-menubgcolor color] [-menufgcolor color] \
+[-zoombgcolor color] [-zoomfgcolor color] \
+[-optionbgcolor color] [-optionfgcolor color] [-caretcolor] \
+[-changecolor color] [-choicecolor color] \
+[-dircolor color] [-imagecolor color]
 
 .SH DESCRIPTION
 .I sunclock
@@ -103,6 +104,35 @@ observe the evolution of day/night periods and seasons.
 Depending on the mode chosen, the bottom line shows a short text
 displaying the required information. The bottom line can be scrolled to
 the right or to the left by pressing the horizontal key arrows.
+
+All functionalities can be accessed though GUI actions on the main window
+or the auxiliary windows. The main window is resizable by pulling the window
+edges as the window manager under use permits it. There are 4 auxiliary windows:
+.PP
+- Menu Window. This is the main menu, which offers a wide list of actions. 
+The menu window is launched by typing 'H' or clicking on the bottom 
+strip with the left mouse button once. Each action can be obtained by using 
+the indicated keyboard shortcut or by clicking with the mouse on the 
+corresponding entry. Upper/lower case is irrelevant, except for options or 
+actions which have more than 2 switches. Lower case then rotates the switches 
+in one direction, upper case in the other direction. For those switches, 
+the left mouse button will have the same effect as lower case, and the 
+right mouse button the same effect as upper case.
+.PP
+- File Selector window. It can be accessed by clicking on the upper part 
+of the main window with the middle mouse button. It allows to select
+the Earth image file (in formats *.vmf *.xpm, *.xpm.gz, *.jpg) to be 
+loaded.
+.PP
+- Zoom window. It can be accessed by clicking on the upper part
+of the main window with the right mouse button. The zoom window
+allows to select a specific area on the Earth, to translate or zoom 
+it up to 100 times. High resolutions (larger than 10) are only recommended 
+with the "huge" Earthmap of 11 Mbytes, which offers clean images up to
+20 times magnification at least.
+.PP
+- Option window. Allows to reconfigure pretty much everything on the fly
+(colors, fonts, etc), exactly as with the command line options.
 .SH OPTIONS
 The program does not use the Xt nor any other more advanced toolkit,
 and hence only those options explicitly enumerated below may be used.
@@ -158,9 +188,13 @@ to get specify such a behaviour.
 Select the menu font, used in the bottom line of the map window, in the 
 menu, file selection, zoom and option windows. Default is 6x13
 .TP
-.B "\-mapfont " name 
-Select the map font, used when writing text (city names, coordinates...)
-on map window. Default is 6x13. [not yet implemented in 3.38]
+.B "\-coordfont " name 
+Select the coordinates font, used when writing coordinates on the map 
+window. Default is 6x13.
+.TP
+.B "\-cityfont " name 
+Select the city font, used when writing city names on the map window. 
+Default is 6x10.
 .TP
 .B "\-mapstripfont " name 
 Select the map strip font, used in the bottom line of the map window. 
@@ -212,15 +246,6 @@ small number of available colors. The -monochrome and -invertcolors options
 considerably reduce memory and CPU usage, and can be useful on
 slower machines. The option can also be useful if you want to produce 
 Earth maps in which only the coast lines of continents and lands.
-.TP
-.B "\-private "
-Force the allocation of a private colormap. This option has no effect on 
-truecolor displays, and is also disabled in case -mono is set.
-On pseudocolor displays (depth <= 8), the -private option allows sunclock 
-to run even when the environment makes intensive use of colors. An automatic 
-quantization of colors is performed so that true-color Earth maps using 
-hundreds of colors can still be displayed (of course, one may observe in 
-some cases a loss of quality). 
 .TP
 .B "\-dock "
 With this option, sunclock locks the size of the first launched window,
@@ -428,8 +453,13 @@ Use dotted lines to represent meridians and parallels.
 Use plain lines to represent meridians and parallels.
 .TP
 .BI "\-command " string
-Specify an external action or program that will be called by keyboard 
+Specify an external action or program that will be called through keyboard 
 shortcut 'x'. Default is empty command.
+.TP
+.BI "\-helpcommand " string
+Specify an external action or program that will be called through keyboard 
+shortcut double 'h' (call help). Default is 
+"xterm -fn 9x15 -cr green -ms red -e man sunclock &".
 .TP
 .BI "\-jump " number[unit] (where unit=s,m,h,d,M,Y)
 Number of seconds (respectively minutes, hour, days, Months, Years) 
@@ -468,6 +498,14 @@ values in all parts of the illuminated area. Mode 5 represents the gradient
 of luminosity from the brightest area (facing the sun) to the darkest area
 (opposite to the sun); this has nothing to do, though, with the actual
 luminosity values.
+.TP
+.BI "\-nonight "
+Start sunclock with the night region not drawn. This is
+equivalent to \-shading 0.
+.TP
+.BI "\-night "
+Start sunclock with the night region in plain shading mode. This is
+equivalent to \-shading 1.
 .TP 
 .BI "\-terminator " 
 Equivalent to \-shading 2 
@@ -502,26 +540,31 @@ Sets the number of color subdvisions which will be in use for producing
 shading, that is, the number of colors ranging from bright colors (day)
 to dark colors (night). Default is 16.
 .TP
-.BI "\-night "
-Start sunclock with the night region displayed (by default, it is).
+.BI "\-meridianmode mode=0,1,2,3"
+Start sunclock with meridians displayed or not, according to the mode,
+mode=0 : no meridians, mode=1 : meridians drawn, mode=2 : meridians drawn
+with labels at the bottom, mode=3 : meridians drawn with labels at the top.
+The default mode is 0 (no meridians).
 .TP
-.BI "\-cities "
-Start sunclock with the cities displayed (by default, they are).
+.BI "\-parallelmode mode=0,1,2,3"
+Start sunclock with parallels displayed or not, according to the mode,
+mode=0 : no parallels, mode=1 : parallels drawn, mode=2 : parallels drawn
+with labels at the left hand side, mode=3 : parallels drawn with labels 
+at the right hand side. The default mode is 0 (no parallels).
 .TP
-.BI "\-sun "
-Start sunclock with the Sun position displayed (by default, it is).
-.TP
-.BI "\-meridians "
-Start sunclock with meridians displayed (by default, they aren't).
-.TP
-.BI "\-parallels "
-Start sunclock with parallels displayed (by default, they aren't).
+.BI "\-citymode mode=0,1,2"
+Start sunclock with cities displayed or not, according to the mode,
+mode=0 : no cities, mode=1 : cities drawn, mode=2 : cities drawn
+with their names. The default mode is 1 (cities shown without names).
 .TP
 .BI "\-tropics "
 Start sunclock with tropics and arctic circles displayed (by default, 
 they aren't).
 .TP
-.BI "\-nonight \-nocities \-nosun \-nomeridians \-noparallels \-notropics"
+.BI "\-sun "
+Start sunclock with the Sun position displayed (by default, it is).
+.TP
+.BI "\-notropics \-nosun "
 These options just negate the above ones.
 .TP
 .BI "\-menubgcolor " color
@@ -596,6 +639,9 @@ widget. Default is Blue.
 Specifies the color used in the file selection widget for representing the 
 image files whose formats are recognized and can be read. Default is Magenta.
 .TP
+.BI "\-citynamecolor " color
+Specifies the color of text to be used to indicate city names. Default is Red.
+.TP
 .BI "\-citycolor0 " color
 Specifies the color of cities (as described in ~/.sunclockrc or in
 the systemwide app-default file), when they have not yet been clicked 
@@ -655,13 +701,15 @@ also be specified under a heading [Cities], in the following format:
 .PP
 name: latitude longitude timezone
 .PP
-where name is the ascii name of the place to be shown on the map. 
+.PP
+where name is the ascii name of the place to be shown on the map.
 Latitude and longitude are floating point numbers representing the
 geographical location of the place. Western longitudes and southern latitudes
 should be entered as negative numbers. timezone is the name of the timezone
-that the place is in. This should be the name of a file under /lib/zoneinfo,
-incorrect timezones cause the clock to display GMT. It is also possible to 
-reference a file in a directory relative to /lib/zoneinfo for example
+that the place is in. This should be the name of a file under
+/usr/share/zoneinfo (or whatever directory is used on your system),
+incorrect timezones cause the clock to display GMT. It is also possible to
+reference a file in a directory relative to /usr/share/zoneinfo for example
 Canada/Eastern instead of EST5EDT.
 .PP
 The user may click on the dot on the map associated with a place

@@ -26,12 +26,12 @@
 [Options]
 #mapmode: L
 #language: en
-city: Washington
-map
-mapimage: /usr/share/sunclock/earthmaps/jpeg/caida.jpg
+#city: Washington
+#map
+#mapimage: /usr/share/sunclock/earthmaps/jpeg/caida.jpg
 #tropics
 #twilight
--tropics -tropiccolor lavender
+#-tropics -tropiccolor lavender
 
 [Cities]
 Paris: 48.850 2.333 Europe/Paris

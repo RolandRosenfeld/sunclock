@@ -36,6 +36,9 @@ Option
 Activating selected option...
 Option incorrect or not available at runtime !!
 Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable
+Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick oder Tastatur zugegriffen werden kann:
 Taste
 Tastatur/Maus Steuerung
 Abbruch
@@ -75,14 +78,13 @@ Iconifiziere das Fenster
 Kartenfenster auffrischen
 Adjust window width to screen size
 Vorhergehende Fenster Grösse zurück
-Synchronisieren die Fenster oder nicht
 Wechsle zwischen Uhr und Kartenfenster 
 Aktiviere Kommando (-command Option)
 Beende Programm
 # Zoom window help
 Activate new zoom settings
 Return to previous zoom settings
-Return to previous zoom settings
+Set aspect by resizing main window
 Cycle through zoom modes 0,1,2
 Zoom in by factor 1.2
 Zoom out by factor 1/1.2 = 0.833
@@ -92,10 +94,5 @@ Synchronize zoom operation
 # Option window help
 Activate the option
 Erase the option command line
-Synchronize windows or not
-# Configurability
-Starting from **, options are runtime configurable.
-# Short help
-Sunclock hat eine Reihe interner Prozeduren, auf die per Mausklick
-oder Tastatur zugegriffen werden kann:
+Synchronisieren die Fenster oder nicht
 # End

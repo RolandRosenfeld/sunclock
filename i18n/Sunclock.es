@@ -36,6 +36,9 @@ Option
 Activating selected option...
 Option incorrect or not available at runtime !!
 Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable.
+Sunclock tiene varios procedimientos internos a los que se puede acceder usando el ratón o el teclado:
 Tecla
 Control Teclado/Ratón
 Escape
@@ -81,7 +84,7 @@ Salir del programa
 # Zoom window help
 Activate new zoom settings
 Return to previous zoom settings
-Return to previous zoom settings
+Set aspect by resizing main window
 Cycle through zoom modes 0,1,2
 Zoom in by factor 1.2
 Zoom out by factor 1/1.2 = 0.833
@@ -92,9 +95,4 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Sincronizar las ventanas o no
-# Configurability
-Starting from **, options are runtime configurable.
-# Short help
-Sunclock tiene varios procedimientos internos a los que se puede
-acceder usando el ratón o el teclado.
 # End

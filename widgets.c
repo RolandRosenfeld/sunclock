@@ -19,7 +19,6 @@ extern int              readVMF();
 extern void             buildMap();
 extern int              parseCmdLine();
 extern void             correctValues();
-extern void             readLanguage();
 extern void             getFonts();
 
 extern void             createGData();
@@ -41,6 +40,8 @@ extern Pixmap           zoompix;
 extern Pixel		black, white;
 
 extern Flags            gflags;
+extern ZoomSettings     gzoom;
+
 extern struct Sundata   *Seed;
 extern struct Sundata   *MenuCaller, *SelCaller, *ZoomCaller, *OptionCaller;
 extern struct Geometry	ClockGeom, MapGeom;
@@ -67,6 +68,9 @@ extern char *           Label[L_END];
 
 extern char             language[4];
 extern char             Default_vmf[];
+
+extern char *           Clock_img_file;
+extern char *           Map_img_file;
 
 extern int		do_menu, do_selector, do_zoom, do_option;
 extern int              do_dock, do_sync, do_zoomsync;
@@ -120,9 +124,13 @@ unsigned int *w, *h;
    unsigned int b, d, n;
    Window junk, root, parent, *children;
 
+   XFlush(dpy);
    XQueryTree(dpy, win, &root, &parent, &children, &n);
 
-   if (!parent) return 1;
+   if (!parent) {
+      fprintf(stderr, "Cannot query window tree!\n");
+      return 1;
+   }
 	
    XGetGeometry(dpy, parent, &root, x, y, w, h, &b, &d);
 
@@ -219,6 +227,7 @@ int				num;
 	Window			win = 0;
 
         if (num<=1) {
+	    if (!Context) return;
 	    win = Context->win;
 	    Geom = &Context->geom;
 	    xsh.flags = PSize | PMinSize;
@@ -335,17 +344,24 @@ struct Sundata * Context;
 int				num;
 {
 	Window			win = 0;
-	int                     mask;
+	long                    mask;
 
 	mask = FocusChangeMask | VisibilityChangeMask | ExposureMask | 
                ButtonPressMask | ButtonReleaseMask | KeyPressMask;
+
+        /* use StructureNotifyMask rather than  ResizeRedirectMask 
+           to avoid bug in some window mangers... as enlightenment !
+           All events would be:
+	   for (i=0; i<=24; i++) mask |= 1L<<i;
+         */
 
         switch(num) {
 
 	   case 0:
 	   case 1:
+                if (!Context) return;
 		win = Context->win;
-		mask |= ResizeRedirectMask;
+		mask |= StructureNotifyMask;
 		break;
 
 	   case 2:
@@ -355,7 +371,7 @@ int				num;
 
 	   case 3:
 	        win = Selector;
-		mask |= ResizeRedirectMask;
+		mask |= StructureNotifyMask;
 		break;
 
 	   case 4:
@@ -365,8 +381,11 @@ int				num;
 
 	   case 5:
 	        win = Option;
-		mask |= PointerMotionMask | ResizeRedirectMask | KeyReleaseMask;
+		mask |= PointerMotionMask | KeyReleaseMask | StructureNotifyMask;
 		break;
+
+ 	   default:
+	        break;
 	}
 
 	if (!win) return;
@@ -1467,6 +1486,8 @@ int mode;
     int b, i, j, j0, opth, vskip;
     char s[80];
 
+    if (!do_option) return;
+
     XSetWindowColormap(dpy, Option, OptionCaller->gdata->cmap);
     XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixlist.menubgcolor);
 
@@ -1535,6 +1556,9 @@ void
 resetOptionLength()
 {
         int a, b;
+
+	if (!do_option) return;
+
 	a = ((OptionGeom.width-86) / 
               XTextWidth(OptionCaller->gdata->menufont, "_", 1)) - 2;
 	b = (option_string == NULL);
@@ -1608,19 +1632,20 @@ activateOption()
 {
         Sundata *Context;
 	Flags oldflags;
-	char oldlang[4];
+        ZoomSettings oldzoom;
 	char *oldbf, *oldsf;
         int i, size;
 	short *ptr, *oldptr, *newptr;
+	double *zptr, *zoldptr, *znewptr;
 
 	Context = OptionCaller;
 
 	if (!do_option || !Context) return;
 
 	oldflags = gflags;
+	oldzoom = gzoom;
 	oldbf = BigFont_name;
 	oldsf = SmallFont_name;
-	strncpy(oldlang, language, 2);
 	runtime = 1;
 	i = parseCmdLine(option_string);
 	correctValues();
@@ -1632,10 +1657,9 @@ activateOption()
 	   option_newhint = '\n';
 	   showOptionHint();
 	}	     
-	if (strncmp(language, oldlang, 2)) readLanguage();
         showOptionHint();
         /* Set runtime=2 if previous image/pixmap can be recycled */
-	if (gflags.mono==oldflags.mono && 
+	if (option_changes<4 && gflags.mono==oldflags.mono && 
             gflags.fillmode==oldflags.fillmode) {
            runtime = 2;
 	   tmp_cmap = Context->gdata->cmap;
@@ -1654,8 +1678,21 @@ activateOption()
 	ptr = (short *) &gflags;
 	oldptr = (short *) &oldflags;
 	newptr = (short *) &Context->flags;
+	zptr = (double *) &gzoom;
+	zoldptr = (double *) &oldzoom;
+	znewptr = (double *) &Context->zoom;
         for (i=0; i<sizeof(Flags)/sizeof(short); i++) 
             if (ptr[i]!=oldptr[i]) newptr[i] = ptr[i];
+        for (i=0; i<6; i++) 
+            if (zptr[i]!=zoldptr[i]) znewptr[i] = zptr[i];
+	if (option_changes & 8)
+	    Context->geom = ClockGeom;
+	if (option_changes & 16)
+	    Context->geom = MapGeom;
+	if (option_changes & 32)
+            StringReAlloc(&Context->clock_img_file, Clock_img_file);
+	if (option_changes & 64)
+            StringReAlloc(&Context->map_img_file, Map_img_file);
 	buildMap(Context, Context->wintype, 0);
 }
 
@@ -1705,7 +1742,7 @@ int x, y, button, evtype;
 	         } else
 	           processKey(Context->win, key);
 	      } else
-	         PopOption(Context);
+	           PopOption(Context);
 	   }
 	}
 }
@@ -1812,29 +1849,31 @@ Sundata * Context;
          if (runtime<2 && Context->gdata->cmap!=cmap0)
 	    XFreeColormap(dpy, Context->gdata->cmap);
 
+         XFreeFont(dpy, Context->gdata->menufont);
+         XFreeFont(dpy, Context->gdata->coordfont);
+         XFreeFont(dpy, Context->gdata->cityfont);
+         XFreeFont(dpy, Context->gdata->clockstripfont);
+         XFreeFont(dpy, Context->gdata->mapstripfont);
+	
 	 gclist = &Context->gdata->gclist;
 
  	 XFreeGC(dpy, gclist->menufont);
+ 	 XFreeGC(dpy, gclist->cityfont);
+ 	 XFreeGC(dpy, gclist->meridianfont);
  	 XFreeGC(dpy, gclist->mapstripfont);
  	 XFreeGC(dpy, gclist->clockstripfont);
 
          if (Context->flags.mono) {
+	    XFreeGC(dpy, gclist->invert);
  	    XFreeGC(dpy, gclist->clockstore);
  	    XFreeGC(dpy, gclist->mapstore);
 	 }
 
-         if (Context->gdata->gclist.invert) {
-	    XFreeGC(dpy, Context->gdata->gclist.invert);
-	    Context->gdata->gclist.invert = 0;
-	 }
-
-         XFreeFont(dpy, Context->gdata->menufont);
-         XFreeFont(dpy, Context->gdata->clockstripfont);
-         XFreeFont(dpy, Context->gdata->mapstripfont);
-	
          XFreeGC(dpy, gclist->zoomfg);
 
  	 if (Context->flags.mono<2) {
+ 	    XFreeGC(dpy, gclist->parallelfont);
+
             XFreeGC(dpy, gclist->dirfont);
             XFreeGC(dpy, gclist->imagefont);
 	    XFreeGC(dpy, gclist->choice);
@@ -1843,6 +1882,11 @@ Sundata * Context;
 	    XFreeGC(dpy, gclist->zoombg);
 
 	    XFreeGC(dpy, gclist->optionfont);
+
+            if (Context->flags.mono == 0) {
+	       XFreeGC(dpy, gclist->coordpix);	    
+               XFreeGC(dpy, gclist->citypix);
+	    }
 
  	    XFreeGC(dpy, gclist->citycolor0);
  	    XFreeGC(dpy, gclist->citycolor1);
@@ -1887,9 +1931,9 @@ int all;
 	      free(Context->ximdata);
 	      Context->ximdata = NULL;
 	   }
-	   if (Context->pix) {
-              XFreePixmap(dpy, Context->pix);
-	      Context->pix = 0;
+	   if (Context->mappix) {
+              XFreePixmap(dpy, Context->mappix);
+	      Context->mappix = 0;
  	   }
            if (Context->daypixel) {
 	      free(Context->daypixel);
@@ -1907,14 +1951,13 @@ int all;
               free(Context->tr2);
               Context->tr2 = NULL;
            }
-           if (Context->wave) {
-              free(Context->wave);
-              Context->wave = NULL;
+           if (Context->daywave) {
+              free(Context->daywave);
+              Context->daywave = NULL;
 	   }
 	}
         destroyGCs(Context);
 	Context->flags.hours_shown = 0;
-	Context->flags.firsttime = 1;
 
         if (all) {
 	   last_time = 0;
@@ -1935,6 +1978,7 @@ int all;
               free(Context->map_img_file);
 	      Context->map_img_file = NULL;
 	   }
+	  
 	   if (all<0) {
 	      free(Context);
 	      if (NextContext) {
@@ -1945,6 +1989,7 @@ int all;
 	        endup:
          	 XDestroyWindow(dpy, Menu);
          	 XDestroyWindow(dpy, Selector);
+         	 XDestroyWindow(dpy, Option);
          	 XDestroyWindow(dpy, Zoom);
                  if (zoompix) XFreePixmap(dpy, zoompix);
                  XCloseDisplay(dpy);

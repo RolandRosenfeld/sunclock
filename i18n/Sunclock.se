@@ -36,6 +36,9 @@ Option
 Activating selected option...
 Option incorrect or not available at runtime !!
 Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable.
+Sunclock har ett antal funktioner som kan åtkommas genom mus-klick eller tastaturet:
 Tastatur
 Tastatur/Mus kontroll
 Escape
@@ -92,11 +95,6 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchronize windows or not
-# Configurability
-Starting from **, options are runtime configurable.
-# Short help
-Sunclock har ett antal funktioner som kan åtkommas
-genom mus-klick eller tastaturet:
 # End
 
 

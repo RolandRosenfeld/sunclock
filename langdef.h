@@ -9,6 +9,7 @@ enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_DAYLENGTH, L_SUNRISE, L_SUNSET, 
       L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, L_DEGREE,
       L_OPTION, L_ACTIVATE, L_INCORRECT, L_OPTIONINTRO,
+      L_LISTOPTIONS, L_CONFIG, L_SHORTHELP,
       L_KEY, L_CONTROLS, 
       L_ESCAPE, L_ESCMENU, L_UNKNOWN, L_SYNCHRO,
       L_PROGRESS, L_TIMEJUMP, L_SEC, L_MIN, L_HOUR, L_DAY, L_DAYS, L_END};
@@ -25,6 +26,10 @@ char	* Label[L_END] = {
         "Activating selected option...",
         "Option incorrect or not available at runtime !!",
 	"Options: strike <Ctrl><Space> for blank space within an item",
+	"with the following rather long list of options:",
+        "Starting from **, options are runtime configurable.",
+        "Sunclock has a number of internal procedures which can be accessed\n"
+            "through mouse clicks or key controls:",
 	"Key",
         "Key/Mouse controls",
 	"Escape",
@@ -104,9 +109,6 @@ char  * Help[N_HELP] = {
 char	*ShortHelp = 
 "Sunclock has a number of internal procedures which can be accessed\n"
 "through mouse clicks or key controls:";
-
-char	*Configurability = 
-"Starting from **, options are runtime configurable.";
 
 char  	Day_name[7][10] = {
         "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"

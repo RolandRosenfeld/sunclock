@@ -36,6 +36,9 @@ Option
 Activating selected option...
 Option incorrect or not available at runtime !!
 Options: strike <Ctrl><Space> for blank space within an item
+with the following rather long list of options:
+Starting from **, options are runtime configurable
+Sunclock has a number of internal procedures which can be accessed through mouse clicks or key controls:
 Key
 Key/Mouse controls
 Escape
@@ -92,9 +95,4 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchronize windows or not
-# Configurability
-Starting from **, options are runtime configurable.
-# Command line help
-Sunclock has a number of internal procedures which can be accessed
-through mouse clicks or key controls:
 # End

@@ -36,6 +36,9 @@ Option
 Activation de l'option sélectionnée...
 Option incorrecte ou non disponible en exécution !!
 Options: taper <Ctrl><Espace> pour un blanc situé dans une chaîne
+avec la liste d'options assez longue suivante :
+A partir de **, les options sont configurables pendant l'exécution.
+Sunclock dispose d'un certain nombre de fonctions accessibles au moyen de la souris ou des touches du clavier :
 Touche
 Contrôles Clavier/Souris
 Echap
@@ -92,9 +95,4 @@ Synchroniser l'action du zoom
 Activer l'option
 Effacer la ligne de commande
 Synchroniser les fenêtres entre elles ou non
-# Configurability
-A partir de **, les options sont configurables pendant l'exécution.
-# Command line help
-Sunclock dispose d'un certain nombre de fonctions accessibles au
-moyen de la souris ou des touches du clavier:
 # End
