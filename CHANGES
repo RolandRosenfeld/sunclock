@@ -5,15 +5,26 @@ Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 
 Planned versions 3.4x, 3.5x... (features to appear in some order)
 
-- Larger data base of cities/coordinates, with level of size
-  Most of this is now implemented, but the representing spots still don't 
-  take into account the size of cities. This should come with 3.43.
-
+- Find a second vector map showing time zones
 - Spherical representation of Earth
 - Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 
   database would be great...)
 
+Version 3.43, June 14, 2001
+
+- Larger data base of cities/coordinates, with level of size
+  New related options -spotsizes -sizelimits -citycategories -citycheck
+  (The upshot is that the size of the spot representing a city can change
+  according to the importance of the city, and that not all cities are 
+  shown if the zoom factor is too small.)
+- Bug fixes: segfault occurring when playing around with the urban selector
+  (only when the clock geometry was set too small...); marked cities still
+  appeared when opening other windows: this was actually fixed by
+  suppressing an unneeded flag, thus reducing the memory usage...
+- The city search now really works !
+- A warning is issued when the user tries to create an already existing city.
+- The "Urban widget" is now stretchable.
 
 Version 3.42, June 11, 2001
 

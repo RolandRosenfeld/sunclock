@@ -26,6 +26,10 @@
 #define MAPSTRIPFONT    "6x13"
 #define CLOCKSTRIPFONT  "6x10"
 
+/* num of bitmaps to accomodate 1 mark and 2 spatial objets (Sun, Moon) */
+#define SPECIALBITMAPS 3
+#define CITYBITMAPS 4
+
 #define MENU_WIDTH 38
 #define SEL_WIDTH 28
 #define SEL_HEIGHT 10
@@ -92,7 +96,6 @@ typedef struct Flags {
         short mono;                     /* 0=color 1=invert 2=B&W */
         short fillmode;                 /* 0=coastlines 1=contour 2=landfill */
         short dotted;                   /* use dotted lines ? */
-        short spotsize;                 /* size of spots repr. cities */
         short colorscale;               /* number of colors in shading */
         short darkness;                 /* level of darkness in shading */
         short map_mode;                 /* are we in C, D, E, L, S mode? */
@@ -239,7 +242,6 @@ typedef struct City {
     double lat, lon;	/* Latitude and longitude of city */
     char *tz;		/* Timezone of city */
     short size;
-    short mode;
     struct City *next;	/* Pointer to next record */
 } City;
 
@@ -267,6 +269,8 @@ typedef struct TextEntry {
 typedef struct Sundata {
         int             wintype;        /* is window map or clock ? */
         Window          win;            /* window id */
+        int             *spotsizes;     /* city spot sizes, by category */
+        int             *sizelimits;    /* city size limits */
         GraphicData *   gdata;          /* associated graphical data */
         Geometry        geom;           /* geometry */
 	Geometry        prevgeom;       /* previous geometry */

@@ -10,21 +10,32 @@ Sunclock displays a map of the Earth and shows which portion is illuminated
 by the sun. It can commute between two states, the "clock window" and
 the "map window". The clock window displays a small map of the Earth
 and therefore occupies little space on the screen, while the "map window" 
-displays a large map and offers more advanced functions. 
+displays a large map and offers more advanced functions: local time
+of cities, Sun and Moon position, etc.
 
-The map window can work in five different modes:
+A customizable list of cities is loaded by sunclock at start-up (and can 
+be modified interactively, as well). Using the information provided for 
+these cities, the map window can operate in five different modes:
+
 - "Legal time" mode: legal time of default time zone and GMT time are 
   displayed.
 - "Coordinate" mode: by clicking on a city, users get coordinates 
-(latitude, longitude) of that city, legal time and sunrise/sunset.
+  (latitude, longitude) of that city, legal time and sunrise/sunset.
 - "Solar" mode: by clicking on a point of the map (either a city or 
-another point), solar time and day length are shown.
+  another point), solar time and day length are shown.
 - "Hour Extension" mode: displays solar times from 00:00 to 23:00 in bottom
-strip, according to the Sun position.
+  strip, according to the Sun position.
 - "Distance" mode: shows distances in km and miles between two arbitrary
-locations.
-- "Progress" mode: allows to accelerate the evolution of time, so as to
-observe the evolution of day/night periods and seasons.
+  locations.
+
+A further functionality is the "Progress" feature, which allows to accelerate 
+the evolution of time, so as to observe the evolution of day/night periods 
+and seasons.
+
+The sunclock package includes a vector map of the Earth (loosely
+derived from the xearth package by Kirk Lauritz Johnson), which is
+capable of building Earth maps of arbitrary sizes without losing the
+accuracy of details (within certain limits...)
 
 Meridians, Parallels, Equator, Tropics and Arctic circles can also be
 drawn. All these actions are performed through mouse clicks 
@@ -34,10 +45,10 @@ bottom strip -- so that no further explanation should be needed.
 Commuting between the clock and map states is obtained by typing '!' 
 or simply <Space>.
 
-Starting from version 3.20, the sunclock package includes a vector map
-of the Earth (loosely derived from the xearth package by Kirk Lauritz
-Johnson), which is capable of building Earth maps of arbitrary sizes
-without losing the accuracy of details (within certain limits...)
+By default, the Sun and Moon are also shown on the map (rather, the
+positions of Earth where Sun and Moon are at zenith are shown).
+Coordinates of meridians, parallels, cities, the names of cities can
+be displayed on the map.
 
 If you are using a monochrome display, there are options -mono and
 -invert that will enable sunclock to run in spite of the low resources. 

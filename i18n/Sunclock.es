@@ -54,6 +54,7 @@ Timezone
 Latitude
 Longitude
 Size
+Warning: %s, lat = %s lon = %s already in list of cities !!
 #
 Option
 Activating selected option...

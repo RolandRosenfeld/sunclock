@@ -1,9 +1,7 @@
 TODO
 ====
 
-- Larger data base of cities/coordinates, with level of size
-  (almost done, just wait for 3.43 !!)
-
+- Find a second vector map showing time zones
 - Spherical representation of Earth
 - Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 

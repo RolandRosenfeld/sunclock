@@ -27,6 +27,9 @@ BOTH the system wide Sunclockrc and the user's private ~/.sunclockrc are
 now read by sunclock at start-up, so cities defined in Sunclockrc
 SHOULD NOT BE REDEFINED in ~/.sunclockrc
 
+In 3.43, the -spotsize option has been changed to -spotsizes, and its 
+behaviour HAS BEEN CHANGED
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 

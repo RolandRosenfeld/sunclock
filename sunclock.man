@@ -12,8 +12,8 @@ data through a point and click interface.
 where the list of licit options is the following long list 
 (starting from (**) the options are configurable at runtime):
 .PP
-[-help] [-listmenu] [-version] \
-[-display name] [-sharedir directory] \
+[-help] [-listmenu] [-version] [-citycheck] \
+[-display name] [-sharedir directory] [-citycategories value] \
 [-clock] [-map] [-dock] [-undock] \
 [-menu] [-nomenu] [-selector] [-noselector] \
 [-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]
@@ -40,7 +40,9 @@ where the list of licit options is the following long list
 [-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
 [-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2] \
 [-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
-[-citymode mode=0,1,2,3] [-spotsize size(0,1,2,3,4,5)] \
+[-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)] \
+[-sizelimits w1|w2|w3|... (wi = zoom width values)] \
+[-citymode mode=0,1,2,3] \
 [-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3] \
 [-meridianspacing value] [-parallelspacing value] \
 [-tropics] [-notropics] \
@@ -163,6 +165,13 @@ on the internal operations performed. This is disabled by default.
 .TP
 .BI "\-silent "
 Make Sunclock silent about internal operations performed. This is the default.
+.TP
+.BI "\-citycheck "
+At start-up, check that there are no repetitions in the list of cities
+(a city is considered to be repeated if it appears twice under the same
+name, with coordinates differing by at most 0.5 degree).
+By default no check is performed on Sunclockrc - which is supposedly
+correctly set up...
 .TP
 .B "\-display " dispname
 Give the name of the X server to contact.
@@ -455,13 +464,6 @@ Specify the relative position (x = horizontal shift, y = vertical shift)
 of the auxiliary windows (menu, zoom, selector, option). All relative 
 displacements are set to (x,y).
 .TP
-.BI "\-spotsize " size
-Define size=0 [=no spots] or 1,2,3 to use either thin circles, medium
-size spots or big spots and circles to represent cities. Size=3
-can be useful for monochrome displays on which cities are hardly
-visible, otherwise small color spots of size 1 or 2 are better).
-Default is 2 for color mode and 3 for monochrome mode.
-.TP
 .BI "\-mag " value
 Rescale the image by a magnification factor equal to <value>, which must 
 be at least equal to 1.0. This means that the window only shows a fraction 
@@ -579,6 +581,26 @@ be replaced by the octal character 037 (i.e. Ctrl-Q Ctrl-_ within emacs).
 .BI "\-removecity " name (\"name|lat|lon\")
 Removes name (respectively name|lat|lon) from the list of cities to be
 displayed. Same remarks as above for blank characters.
+.TP
+.BI "\-citycategories " value
+Specifies the maximal number of city categories: categories range from 1 
+(highest rank, i.e. major city) to some maximum number. The option
+-citycategories specifies that maximum number. It can only be used
+at start-up, not at runtime. The default value is 4.
+.TP
+.BI "\-spotsizes " s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)
+With this setting, major cities (rank 1) will have size s1, rank 2 cities
+will have size s2, etc. The default setting is -spotsize 4|3|2|1. Assigning
+size si=0 means that the corresponding category of cities (rank i) will not 
+be displayed.
+.TP
+.BI "\-sizelimits " w1|w2|w3|... (wi = zoom width values, 1<=i<=citycategories)
+With this setting, cities of rank i=1,2,3,... will appear if (and only if) 
+the width of the zoomed map is at least equal to wi (as it would appear 
+if the Earth would be entirely displayed...) . The default is
+0|580|2500|8000 (no constraint for major cities, rank 4 cities appear
+only if the width is at least 8000 pixels, e.g. if an original window
+of width 800, say, has been applied a zoom at least equal to 10).
 .TP
 .BI "\-shading " mode=0,1,2,3,4,5
 Start sunclock with the specified shading mode. Mode 0 means that the night

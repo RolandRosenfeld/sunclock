@@ -101,8 +101,11 @@
        3.30  02/20/01  Sunclock now loads JPG images, and images are resizable
        3.32  03/19/01  Implementation of the zoom widget
        3.34  03/28/01  Vast improvements in the zoom widget
+       3.35  04/11/01  Correctly handles bigendian machines
        3.38  04/17/01  Substantial improvements in option handling
+                       still buggy though (depending on WM)
        3.41  05/19/01  The Moon is now also shown on the map!
+       3.43  06/13/01  Cities can be managed at runtime and change with zoom.
 */
 
 #include <unistd.h>
@@ -173,6 +176,7 @@ extern void PopOption();
 extern void activateOption();
 extern void processOptionAction();
 
+extern void showUrbanHint();
 extern void updateUrbanEntries();
 extern void setupUrban();
 extern void PopUrban();
@@ -191,6 +195,10 @@ char Default_vmf[] = SHAREDIR"/earthmaps/vmf/standard.vmf";
 
 char * ProgName;
 char * Title = NULL;
+
+char * widget_type[7] =     
+           { "clock", "map", "menu", "file selector", 
+             "zoom", "option", "urban selector" };
 
 char * ClassName = NULL;
 char * ClockClassName = NULL;
@@ -249,6 +257,8 @@ char    ClockBgColor[COLORLENGTH], ClockFgColor[COLORLENGTH],
 
 char *          Display_name = NULL;
 char *          CityInit = NULL;
+char *          SpotSizes = NULL;
+char *          SizeLimits = NULL;
 
 Display *       dpy;
 Visual          visual;
@@ -266,7 +276,7 @@ int             total_colors;
 int             text_input;
 
 int             textheight = 0;
-int             textwidth = 0;
+int             textwidth = 40;
 int             coordvalheight;
 int             coordvalwidth;
 int             extra_width = 10;
@@ -302,11 +312,17 @@ Window          Menu = 0, Filesel = 0, Zoom = 0, Option = 0, Urban = 0;
 
 struct Geometry MapGeom    = { 0, 30,  30, 792, 396, 320, 160 };
 struct Geometry ClockGeom  = { 0, 30,  30, 128,  64,  48,  24 };
-struct Geometry MenuGeom   = { 0,  0,  30, 792,  40, 700,  40 };
+struct Geometry MenuGeom   = { 0,  0,  30, 792,  40, 792,  40 };
 struct Geometry FileselGeom= { 0,  0,  30, 600, 180, 450,  80 };
 struct Geometry ZoomGeom   = { 0,  0,  30, 500, 320, 360, 250 };
 struct Geometry OptionGeom = { 0,  0,  30, 630,  80, 630,  80 };
-struct Geometry UrbanGeom  = { 0,  0,  30, 640, 120, 640, 120 };
+struct Geometry UrbanGeom  = { 0,  0,  30, 640, 120, 360, 120 };
+
+int             num_cat = 4;
+int             *city_spotsizes;
+int             *city_sizelimits;
+
+int             urban_t[5], urban_x[5], urban_y[5], urban_w[5];
 
 int             win_type = 0;
 int             placement = -1;
@@ -316,6 +332,7 @@ int             color_alloc_failed = 0;
 int             num_formats;
 int             runlevel;
 int             verbose = 0;
+int             citycheck = 0;
 int             num_lines;
 int             num_table_entries;
 
@@ -346,9 +363,9 @@ double          darkness = 0.5;
 double          atm_refraction = ATM_REFRACTION;
 double          atm_diffusion = ATM_DIFFUSION;
 
-/* Records to hold extra marks 1 and 2 */
+/* Root and last records for cities */
 
-City position, *cities = NULL;
+City position, *cityroot = NULL, *citylast = NULL;
 
 /* 
  * String copy and reallocation/deallocation routine 
@@ -422,8 +439,8 @@ Usage()
 #define SP		"\t"
      fprintf(stderr, 
      "%s: version %s, %s\n\nUsage:  %s [-options ...]\n\n%s\n\n"
-     SP"[-help] [-listmenu] [-version]\n"
-     SP"[-display name] [-sharedir directory]\n"
+     SP"[-help] [-listmenu] [-version] [-citycheck]\n"
+     SP"[-display name] [-sharedir directory] [-citycategories value]\n"
      SP"[-clock] [-map] [-dock] [-undock]\n"
      SP"[-menu] [-nomenu] [-filesel] [-nofilesel]\n"
      SP"[-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]\n"
@@ -441,7 +458,7 @@ Usage()
      SP"[-fullcolors] [-invertcolors] [-monochrome] [-aspect mode]\n"
      SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
      SP"[-placementshift x, y] [-extrawidth value]\n"
-     SP"[-decimal] [-dms] [-city name] [-position \"latitude|longitude\"]\n"
+     SP"[-decimal] [-dms] [-city name] [-position latitude|longitude]\n"
      SP"[-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)]\n"
      SP"[-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]]\n"
      SP"[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value]\n"
@@ -449,7 +466,9 @@ Usage()
      SP"[-nonight] [-darkness value<=1.0] [-colorscale number>=1]\n"
      SP"[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2]\n"
      SP"[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value]\n"
-     SP"[-citymode mode=0,1,2,3] [-spotsize size(0,1,2,3,4,5)]\n"
+     SP"[-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)]\n"
+     SP"[-sizelimits w1|w2|w3|... (wi = zoom width values)]\n"
+     SP"[-citymode mode=0,1,2,3]\n"
      SP"[-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3]\n"
      SP"[-meridianspacing value] [-parallelspacing value]\n"
      SP"[-tropics] [-notropics]\n"
@@ -491,7 +510,6 @@ initValues()
         gflags.mono = 0;
         gflags.fillmode = 2;
         gflags.dotted = 0;
-        gflags.spotsize = 3;
         gflags.colorscale = 16;
 
         gflags.update = 4;
@@ -566,6 +584,8 @@ initValues()
         StringReAlloc(&image_dir, share_maps_dir);
         StringReAlloc(&Clock_img_file, Default_vmf);
         StringReAlloc(&Map_img_file, Default_vmf);
+        StringReAlloc(&SpotSizes, "4|3|2|1");
+        StringReAlloc(&SizeLimits, "0|580|2500|8000");
 
 	for (i=0; i<L_END; i++) Label[i] = strdup(Label[i]);
 	for (i=0; i<N_HELP; i++) Help[i] = strdup(Help[i]);
@@ -574,6 +594,34 @@ initValues()
            strncpy(language, getenv("LANG"), 2);
         if (!(language[0] && language[1]))
            strcpy (language,"en");
+}
+
+void
+str2numval(s, val, max)
+char *s;
+int *val;
+int max;
+{
+int i, j, l;
+char *ptr;
+ 
+    l = strlen(s);
+
+    j = 0;
+    ptr = s;
+    for (i=0; i<=l; i++) {
+        if (s[i] == '|' || i == l) {
+	   s[i] = '\0';
+	   if (j>=num_cat) break;
+           val[j] = atoi(ptr);
+	   if (max>0 && val[j]>max) val[j] = max;
+	   ++j;
+	   ptr = s+i+1;
+           if (i<l) s[i] = '|';
+	}
+    }
+
+    for (i=j; i<num_cat; i++) val[i] = val[j-1];
 }
 
 void
@@ -591,6 +639,9 @@ correctValues()
            gflags.darkness = (unsigned short) ((1.0-darkness) * 32767.25);
 
 	if (do_dock) win_type = 0;
+
+        str2numval(SpotSizes, city_spotsizes, CITYBITMAPS);
+        str2numval(SizeLimits, city_sizelimits, -1);
 }
 
 int
@@ -797,10 +848,10 @@ char *params;
      } else
         strncpy(name, params, 80);
 
-     c = cities;
+     c = cityroot;
      while (c) {
         if (!strcasecmp(c->name, name) &&
-           (!complete || (fabs(c->lon-dlon)<0.01 && fabs(c->lat-dlat)<0.01)))
+           (!complete || (fabs(c->lon-dlon)<0.5 && fabs(c->lat-dlat)<0.5)))
 	   return c;
         c = c->next;
      }
@@ -857,9 +908,17 @@ char *longparams;
 	  return NULL;
      }
      
-     if (runlevel>READSYSRC) {
+     if (citycheck || runlevel>READSYSRC) {
         sprintf(params, "%s|%s|%s", name, lat, lon);
-	if (searchCityLocation(params)) return NULL;
+	if (searchCityLocation(params)) {
+	   sprintf(params, Label[L_CITYWARNING], name, lat, lon);
+	   fprintf(stderr, "%s\n", params);
+	   if (do_urban) {
+	      urban_newhint = '?';
+	      showUrbanHint(params);
+	   }
+	   return NULL;
+	}
      }
 
      /* Create the record for the city */
@@ -871,13 +930,17 @@ char *longparams;
      city->lat = dms2decim(lat);
      city->lon = dms2decim(lon);
      city->size = size;
-     city->mode = 0;
      city->tz = strdup(tz);
 
      /* Link it into the list */
 
-     city->next = cities;
-     cities = city;
+     if (!cityroot) 
+        cityroot = citylast = city;
+     else {
+        citylast->next = city;
+	citylast = city;
+     }
+     city ->next = NULL;
      return city;
 }
 
@@ -894,15 +957,16 @@ char *params;
      free(c->name);
      free(c);
 
-     if (c == cities) {
-        cities = cn;
+     if (c == cityroot) {
+        cityroot = cn;
 	return;
      }
 
-     cp = cities;
+     cp = cityroot;
      while (cp) {
         if (cp->next == c) {
 	    cp->next = cn;
+            if (c == citylast) citylast = cp;
 	    return;
 	}  
 	cp = cp->next;
@@ -915,15 +979,16 @@ deleteMarkedCity()
      City *c, *cp = NULL;
 
      if (!do_urban || !UrbanCaller) return;
-     c = cities;
 
+     c = cityroot;
      while (c) {
         if (c == UrbanCaller->mark1.city) {
 	   UrbanCaller->mark1.city = NULL;
 	   if (cp) {
 	      cp->next = c->next;
 	   } else
-	      cities = c->next;
+	      cityroot = c->next;
+	   if (c == citylast) citylast = cp;
            free(c->name);
            free(c);
 	   return;
@@ -946,17 +1011,14 @@ char **                argv;
         while (--argc > 0) {
                 ++argv;
                 if (strcasecmp(*argv, "-fullcolors") == 0) {
-                        gflags.spotsize = 3;
                         gflags.mono = 0;
                         gflags.fillmode = 2;
                 }
                 else if (strcasecmp(*argv, "-invertcolors") == 0) {
-                        gflags.spotsize = 3;
                         gflags.mono = 1;
                         gflags.fillmode = 1;
                 }
                 else if (strcasecmp(*argv, "-monochrome") == 0) {
-                        gflags.spotsize = 5;
                         gflags.mono = 2;
                         gflags.fillmode = 1;
                 }
@@ -1022,6 +1084,8 @@ char **                argv;
                         if (needMore(&argc, argv)) return(1);
                         goto options_with_parameter;
 		}
+                else if (strcasecmp(*argv, "-citycheck") == 0)
+                        citycheck = 1;
                 else if (strcasecmp(*argv, "-clock") == 0)
                         win_type = 0;
                 else if (strcasecmp(*argv, "-map") == 0)
@@ -1073,6 +1137,11 @@ char **                argv;
                 else if (strcasecmp(*argv, "-sharedir") == 0) {
                         StringReAlloc(&share_maps_dir, *++argv);
                         strncpy(image_dir, *argv, 1020);
+		}
+                else if (strcasecmp(*argv, "-citycategories") == 0) {
+                        num_cat = atoi(*++argv);
+			if (num_cat <= 0) num_cat = 1;
+			if (num_cat > 100) num_cat = 100;
 		}
                 else 
 	        options_with_parameter :
@@ -1236,11 +1305,10 @@ char **                argv;
                         if (gflags.objectmode<0) gflags.objectmode = 0;
                         if (gflags.objectmode>=2) gflags.objectmode = 2;
 		}
-                else if (strcasecmp(*argv, "-spotsize") == 0) {
-                        gflags.spotsize = atoi(*++argv);
-                        if (gflags.spotsize<1) gflags.spotsize = 1;
-                        if (gflags.spotsize>5) gflags.spotsize = 5;
-                }
+                else if (strcasecmp(*argv, "-spotsizes") == 0)
+                        StringReAlloc(&SpotSizes, *++argv);
+                else if (strcasecmp(*argv, "-sizelimits") == 0)
+                        StringReAlloc(&SizeLimits, *++argv);
                 else if (strcasecmp(*argv, "-fillmode") == 0) {
                         gflags.fillmode = atoi(*++argv);
                         if (gflags.fillmode<0) gflags.fillmode = 0;
@@ -1663,10 +1731,16 @@ Sundata * Context;
         hp = Context->gdata->coordfont->max_bounds.ascent + 
              Context->gdata->coordfont->max_bounds.descent;
         if (hp>h) h = hp;
-	if (h>textheight) textheight = h;
-	if (textpix) XFreePixmap(dpy, textpix);
-	textpix = XCreatePixmap(dpy, RootWindow(dpy, scr),
-                                Context->geom.width, textheight, 1);
+	if (h>textheight) {
+           textheight = h;
+	   if (textpix) {
+	      XFreePixmap(dpy, textpix);
+	      textpix = 0;
+	   }
+	}
+        if (!textpix)
+           textpix = 
+            XCreatePixmap(dpy, RootWindow(dpy, scr), textwidth, textheight, 1);
 }
 
 unsigned long 
@@ -2611,6 +2685,10 @@ int build;
               Context->geom = MapGeom;
            else
               Context->geom = ClockGeom;
+           Context->spotsizes = (int *) salloc(num_cat * sizeof(int));
+           Context->sizelimits = (int *) salloc(num_cat * sizeof(int));
+	   memcpy(Context->spotsizes, city_spotsizes, num_cat*sizeof(int));
+ 	   memcpy(Context->sizelimits, city_sizelimits, num_cat*sizeof(int));
            Context->zoom = gzoom;
            Context->flags = gflags;
            Context->jump = time_jump;
@@ -2820,6 +2898,7 @@ int l, mode;
     Pixel pixel;
     XImage *xim;
     
+    if (!s || !strlen(s)) return;
     if (mode == 2) {
        gc = Context->gdata->gclist.citypix;
        font = Context->gdata->cityfont;
@@ -2835,8 +2914,19 @@ int l, mode;
     dy = font->max_bounds.ascent;
     
     w = XTextWidth(font, s, l);
+    if (w>textwidth) {
+       textwidth = w;
+       if (textpix) {
+	  XFreePixmap(dpy, textpix);
+          textpix = 0;
+       }
+    }
+    if (!textpix)
+       textpix = XCreatePixmap(dpy,RootWindow(dpy,scr),textwidth,textheight,1);
+
     XDrawImageString(dpy, textpix, gc, 0, dy, s, l);
     xim = XGetImage(dpy, textpix, 0, 0, w, h, 1, XYPixmap);
+    if (!xim) return;
     test = (bigendian)? 128 : 1;
     for (j=0; j<h; ++j) {
        if (y-dy+j >= (int)Context->geom.height) break;
@@ -2886,15 +2976,24 @@ char *name;
      */
 
     int ilon, ilat;             /* Screen coordinates of the city */
-    int i, j, dx, dy, u;
+    int i, j, dx, dy, u, which;
     unsigned short * bits;
     char slat[20], slon[20];
     Window w = 0;
     GC *pgc = NULL;
     Pixel pixel = 0;
 
-    if (mode < 0) return;
-    if (Context->flags.mono<2 && !Context->flags.citymode && mode <= 2) return;
+    if (mode == 0 || mode < -SPECIALBITMAPS) return;
+    if (mode > num_cat) mode = num_cat;
+    if (mode > 0) {
+       which = SPECIALBITMAPS + Context->spotsizes[mode-1] - 1;
+       if (which < SPECIALBITMAPS) return;
+    } else
+       which = -mode - 1;
+    if (mode > 0) {
+       if (Context->flags.mono < 2 && !Context->flags.citymode) return;
+       if (Context->zoom.width < Context->sizelimits[mode-1]) return;
+    }
 
     ilon = int_longitude(Context, lon);
     if (ilon<0 || ilon>Context->geom.width) return;
@@ -2902,7 +3001,7 @@ char *name;
     ilat = int_latitude(Context, lat);
     if (ilat<0 || ilat>Context->geom.height) return;
 
-    bits = symbol_bits[mode-1];
+    bits = symbol_bits[which];
 
     dx = bits[0]/2;
     dy = bits[1]/2;
@@ -2911,7 +3010,6 @@ char *name;
        if (Context->flags.mono==1) {
           w = Context->win;
           pgc = &Context->gdata->gclist.citycolor0 + color;
-          if (mode==0) --mode;
        } else {
           w = Context->mappix;
           pgc = &Context->gdata->gclist.invert;
@@ -2945,8 +3043,8 @@ char *name;
     }
 
     if (!Context->wintype) return;
-    if ((Context->flags.citymode==3 && mode<=5) ||
-        (mode>=7 && mode<=8 && Context->flags.objectmode==2)) {
+    if ((Context->flags.citymode==3 && mode>0) ||
+        (mode<-1 && Context->flags.objectmode==2)) {
        dy = Context->gdata->mapstrip/2;
        (void) num2str(lat, slat, Context->flags.dms);
        (void) num2str(lon, slon, Context->flags.dms);
@@ -2956,7 +3054,7 @@ char *name;
           XDrawString(dpy, w, Context->gdata->gclist.cityfont,
                     ilon + 5, ilat-1+dy, slon, strlen(slon));
        } else {
-	  if (mode>=7) dx = 5; else dx = 3;
+	  if (mode<-1) dx = 5; else dx = 3;
           XPutStringImage(Context, ilon+dx, ilat-1, slat, strlen(slat), 2);
           XPutStringImage(Context, ilon+dx, ilat-1+dy, slon, strlen(slon), 2);
        }
@@ -2970,9 +3068,16 @@ struct Sundata * Context;
 City *c;
         if (!Context->wintype || !Context->flags.citymode) return; 
 
-        for (c = cities; c; c = c->next)
-            drawObject(Context, c->lon, c->lat, 
-               Context->flags.spotsize, c->mode, c->name);
+        for (c = cityroot; c; c = c->next) {
+	   if (c!=Context->mark1.city && c!=Context->mark2.city)
+              drawObject(Context, c->lon, c->lat, c->size, 0, c->name);
+	}
+       	c = Context->mark2.city;
+	if (c)
+           drawObject(Context, c->lon, c->lat, c->size, 2, c->name);
+       	c = Context->mark1.city;
+	if (c)
+           drawObject(Context, c->lon, c->lat, c->size, 1, c->name);
 }
 
 void
@@ -2986,13 +3091,13 @@ struct Sundata * Context;
         if (Context->mark1.city == &Context->pos1)
           drawObject(Context, Context->mark1.city->lon, 
                               Context->mark1.city->lat,
-                              6, 3, NULL);
+                              -1, 3, NULL);
 
 	if (erase_obj==0 || (erase_obj&2))
         if (Context->mark2.city == &Context->pos2)
           drawObject(Context, Context->mark2.city->lon, 
                               Context->mark2.city->lat,
-                              6, 4, NULL);
+                              -1, 4, NULL);
 }
 
 double
@@ -3273,9 +3378,9 @@ struct Sundata * Context;
 {
     if (Context->flags.objectmode) {
        if (Context->flags.objects & 1)
-          drawObject(Context, Context->sunlon, Context->sundec, 7, 5, NULL);
+          drawObject(Context, Context->sunlon, Context->sundec, -2, 5, NULL);
        if (Context->flags.objects & 2)
-          drawObject(Context, Context->moonlon, Context->moondec, 8, 6, NULL);
+          drawObject(Context, Context->moonlon, Context->moondec, -3, 6, NULL);
     }
 }
 
@@ -3356,7 +3461,7 @@ int     done = 0;
         if (Context->mark1.city && Context->mark1.flags<0) {
            if (Context->mark1.pulse) {
              drawObject(Context, Context->mark1.save_lon, 
-                   Context->mark1.save_lat, 6, 0, NULL);
+                   Context->mark1.save_lat, -1, 0, NULL);
              done = 1;
            }
            Context->mark1.save_lat = Context->mark1.city->lat;
@@ -3364,7 +3469,7 @@ int     done = 0;
            if (Context->mark1.city == &Context->pos1) {
               done = 1;
               drawObject(Context, Context->mark1.save_lon, 
-                                Context->mark1.save_lat, 6, 0, NULL);
+                                Context->mark1.save_lat, -1, 0, NULL);
               Context->mark1.pulse = 1;
            } else
               Context->mark1.pulse = 0;
@@ -3374,7 +3479,7 @@ int     done = 0;
         if (Context->mark1.flags>0) {
            if (Context->mark1.city|| Context->mark1.pulse) {
               drawObject(Context, Context->mark1.save_lon, 
-                                Context->mark1.save_lat, 6, 0, NULL);
+                                Context->mark1.save_lat, -1, 0, NULL);
               Context->mark1.pulse = 1-Context->mark1.pulse;
               done = 1;
            }
@@ -3384,14 +3489,14 @@ int     done = 0;
         if (Context->mark2.city && Context->mark2.flags<0) {
            if (Context->mark2.pulse) {
              drawObject(Context, Context->mark2.save_lon, 
-                               Context->mark2.save_lat, 6, 0, NULL);
+                               Context->mark2.save_lat, -1, 0, NULL);
              done = 1;
            }
            Context->mark2.save_lat = Context->mark2.city->lat;
            Context->mark2.save_lon = Context->mark2.city->lon;
            if (Context->mark2.city == &Context->pos2) {
               drawObject(Context, Context->mark2.save_lon, 
-                       Context->mark2.save_lat, 6, 0, NULL);
+                       Context->mark2.save_lat, -1, 0, NULL);
               done = 1;
               Context->mark2.pulse = 1;
            } else
@@ -3402,7 +3507,7 @@ int     done = 0;
         if (Context->mark2.flags>0) {
            if (Context->mark2.city || Context->mark2.pulse) {
               drawObject(Context, Context->mark2.save_lon, 
-                                Context->mark2.save_lat, 6, 0, NULL);
+                                Context->mark2.save_lat, -1, 0, NULL);
               Context->mark2.pulse = 1 - Context->mark2.pulse;
               done = 1;
            }
@@ -3658,7 +3763,8 @@ Sundata * Context;
      }
 }
 
-void markLocation(Context, name)
+City *
+markLocation(Context, name)
 struct Sundata * Context;
 char *  name;
 {
@@ -3666,19 +3772,18 @@ City *c;
 
         c = searchCityLocation(name);
         if (c) {
-           if (Context->mark1.city && Context->mark1.city!=&Context->pos1)
-              Context->mark1.city->mode = 0;
 	   Context->mark1.city = c;
            if (Context->flags.mono==2) Context->mark1.flags = -1;
-           c->mode = 1;
         }
+	return c;
 }
 
-void checkLocation(Context, name)
+void
+checkLocation(Context, name)
 struct Sundata * Context;
 char *  name;
 {
-        markLocation(Context, name);
+        (void) markLocation(Context, name);
 
         if (Context->mark1.city == &Context->pos1) {
                 Context->flags.map_mode = SOLARTIME;
@@ -3796,10 +3901,13 @@ int x, y;      /* Screen co-ordinates of mouse */
 
     /* Loop through the cities until on close to the pointer is found */
 
-    for (city = cities; city; city = city->next) {
+    for (city = cityroot; city; city = city->next) {
 
         /* Convert the latitude and longitude of the cities to integer */
 
+        if (city->size == 0) continue;
+        if (Context->zoom.width <
+               Context->sizelimits[city->size-1]) continue;
         cx = int_longitude(Context, city->lon)-x;
 	cy = int_latitude(Context, city->lat)-y;
 
@@ -3821,17 +3929,13 @@ int x, y;      /* Screen co-ordinates of mouse */
 
       case COORDINATES:
       case EXTENSION:
-        if (city) {
-           if (Context->mark1.city) Context->mark1.city->mode = 0;
+        if (city)
            Context->mark1.city = city;
-           city->mode = 1;
-        }
         Context->flags.update = 1;
         break;
 
       case DISTANCES:
         if (Context->mark2.city) {
-	    Context->mark2.city->mode = 0;
 	    if (Context->flags.mono==0) {
 	       erase_obj = 2;
 	       drawMarks(Context);
@@ -3843,29 +3947,25 @@ int x, y;      /* Screen co-ordinates of mouse */
             Context->mark2.city = &Context->pos2;
         } else
             Context->mark2.city = Context->mark1.city;
-        if (Context->mark2.city) Context->mark2.city->mode = 2;
-        if (city) {
-          Context->mark1.city = city;
-          Context->mark1.city->mode = 1;
-        } else
-          setPosition1(Context, x, y);
+        if (city)
+           Context->mark1.city = city;
+        else
+           setPosition1(Context, x, y);
         Context->flags.update = 2;
         break;
 
       case SOLARTIME:
         if (Context->mark1.city) {
-           Context->mark1.city->mode = 0;
 	   if (Context->flags.mono==0) {
 	      erase_obj = 1;
 	      drawMarks(Context);
               erase_obj = 0;
 	   }
 	}
-        if (city) {
-          Context->mark1.city = city;
-          Context->mark1.city->mode = 1;
-        } else
-          setPosition1(Context, x, y);
+        if (city)
+           Context->mark1.city = city;
+        else
+           setPosition1(Context, x, y);
         Context->flags.update = 2;
         break;
 
@@ -4594,7 +4694,8 @@ KeySym  keysym;
                     urban_entry[0].string,
                     urban_entry[2].string,
                     urban_entry[3].string);
-	        markLocation(Context, params);
+	        if (!markLocation(Context, params))
+                   (void) markLocation(Context, urban_entry[0].string);
                 updateUrban(Context, Context->mark1.city);
 		Context->flags.update = 2;
 	     }
@@ -4606,8 +4707,7 @@ KeySym  keysym;
                 City *c = Context->mark1.city;
 		if (c) {
 		   erase_obj = 1;
-		   drawObject(Context, c->lon, c->lat,
-                      Context->flags.spotsize, c->mode, c->name);
+		   drawObject(Context, c->lon, c->lat, c->size, 1, c->name);
 		   erase_obj = 0;
 		} else return;
 	        deleteMarkedCity();
@@ -4625,13 +4725,11 @@ KeySym  keysym;
                          drawMarks(Context);
                          erase_obj = 0;
 		      }
-		      Context->mark1.city->mode = 0;
 		   }
                    Context->mark1.city = c;
-		   Context->mark1.city -> mode = 1;
 		   if (Context->flags.mono==2) {
-		      drawObject(Context, c->lon, c->lat,
-                         Context->flags.spotsize, c->mode, c->name);
+		      drawObject(Context,
+                         c->lon, c->lat, c->size, 1, c->name);
                       Context->mark1.flags = -1;
 		   }
 	           Context->flags.update = 2;
@@ -4716,11 +4814,9 @@ KeySym  keysym;
              if (key == XK_colon) key = XK_slash;
            case XK_slash:
              if (do_dock && Context==Seed) break;
-             i = Context->zoom.mode;
-             if (key!=XK_greater) {
+             if (key == XK_slash) {
                 Context->prevgeom = Context->geom;
-                if (i==0)
-                   Context->zoom.mode = 1;
+                Context->zoom.mode = 2;
                 Context->newzoom.mode = Context->zoom.mode;
              }
              if (!do_zoom)
@@ -4736,8 +4832,6 @@ KeySym  keysym;
                 buildMap(Context, Context->wintype, 0);
                 MapGeom = Context->geom;
              }
-             Context->zoom.mode = i;
-             Context->newzoom.mode = i;
              break;
            case XK_quotedbl:
              if (do_zoom) zoom_active = 1 - zoom_active;
@@ -4852,7 +4946,6 @@ KeySym  keysym;
              if (Context->mark1.city)
                setDayParams(Context);
              if (Context->mark2.city) {
-	        Context->mark2.city->mode = 0;
 		if (Context->flags.mono==0) {
 		   erase_obj = 2;
 		   drawMarks(Context);
@@ -4954,8 +5047,6 @@ KeySym  keysym;
 	        drawMarks(Context);
                 erase_obj = 0;
 	     }
-             if (Context->mark1.city) Context->mark1.city->mode = 0;
-             if (Context->mark2.city) Context->mark2.city->mode = 0;
              Context->mark1.city = NULL;
              Context->mark2.city = NULL;
              Context->flags.update = 2;
@@ -5023,7 +5114,6 @@ KeySym  keysym;
                Context->flags.dms = 1 - Context->flags.dms;
              Context->flags.map_mode = SOLARTIME;
              if (Context->mark2.city) {
-	        Context->mark2.city->mode = 0;
 		if (Context->flags.mono==0) {
 		   erase_obj = 2;
 		   drawMarks(Context);
@@ -5248,11 +5338,11 @@ void
 processResize(win)
 Window win;
 {
-           int x, y, w, h, num = 0;
+           int i, x, y, w, h, num = 0;
            struct Sundata * Context = NULL;
            struct Geometry * Geom = NULL;
 
-           if (win == Menu || win == Urban) return;
+           if (win == Menu) return;
 
            if (win == Filesel) {
 	      if (!do_filesel) return;
@@ -5269,6 +5359,11 @@ Window win;
               Geom = &OptionGeom;
               num = 5;
            }
+           if (win == Urban) {
+	      if (!do_urban) return;
+              Geom = &UrbanGeom;
+              num = 6;
+           }
 
            if (num) {
               if (getPlacement(win, &x, &y, &w, &h)) return;
@@ -5279,8 +5374,7 @@ Window win;
               Geom->height = h;
               if (verbose)
                  fprintf(stderr, "Resizing %s to %d %d\n", 
-                   (num==3)? "filesel" : ((num==4)? "zoom" : 
-                             "option window"), w, h);
+                    widget_type[num], w, h);
               XSelectInput(dpy, win, 0);
               XFlush(dpy);
               XResizeWindow(dpy, win, w, h);
@@ -5303,6 +5397,17 @@ Window win;
 		 resetStringLength(w, &option_entry);
                  setupOption(-1);
               }
+              if (num==6) {
+		 text_input = NULL_INPUT;
+		 setupUrban(-2);
+                 for (i=0; i<=4; i++) {
+	            w = (urban_w[i]/ 
+                        XTextWidth(UrbanCaller->gdata->menufont, "_", 1)) - 2;
+	            resetStringLength(w, &urban_entry[i]);
+		    urban_entry[i].string[urban_entry[i].maxlength] = '\0';
+		 }
+		 setupUrban(-1);
+	      }
               return;
            }
 
@@ -5616,7 +5721,10 @@ char **         argv;
 
         /* Correct some option parameters */
         if (placement<0) placement = NW;
+        city_spotsizes = (int *) salloc(num_cat * sizeof(int));
+        city_sizelimits = (int *) salloc(num_cat * sizeof(int));
         correctValues();
+
         rem_menu = do_menu; do_menu = 0;
         rem_filesel = do_filesel; do_filesel = 0;
         rem_zoom = do_zoom; do_zoom = 0;

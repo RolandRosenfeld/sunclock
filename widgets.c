@@ -38,7 +38,7 @@ extern int              text_input;
 
 extern Atom		wm_delete_window;
 extern Window		Menu, Filesel, Zoom, Option, Urban;
-extern Pixmap           zoompix;
+extern Pixmap           zoompix, textpix;
 extern Pixel		black, white;
 
 extern Flags            gflags;
@@ -54,6 +54,7 @@ extern struct Geometry  MenuGeom, FileselGeom, ZoomGeom, OptionGeom, UrbanGeom;
 
 extern char *	        ProgName;
 extern char *	        Title;
+extern char *           widget_type[7];
 
 extern char *	        ClassName;
 extern char *           ClockClassName;
@@ -77,6 +78,9 @@ extern char             Default_vmf[];
 extern char *           Clock_img_file;
 extern char *           Map_img_file;
 
+extern int              num_cat;
+extern int              *city_spotsizes;
+extern int              *city_sizelimits;
 extern int		do_menu, do_filesel, do_zoom, do_option, do_urban;
 extern int              do_dock, do_sync, do_zoomsync;
 
@@ -111,7 +115,10 @@ extern long             progress_value[6];
 extern double           darkness;
 extern unsigned int     adjust_dark;
 
+extern int              urban_t[5], urban_x[5], urban_y[5], urban_w[5];
+
 int                     areaw, areah;
+
 
 void shutDown();
 void destroyGCs();
@@ -281,9 +288,10 @@ int				num;
 	    if (num==6) {
 	      win = Urban;
 	      Geom = &UrbanGeom;
-	      xsh.flags |= PMaxSize;
-              xsh.min_width = xsh.max_width = Geom->width;
-              xsh.min_height = xsh.max_height = Geom->height;
+ 	      xsh.flags |= PMaxSize;
+              xsh.max_width = 2000;
+              xsh.min_width = Geom->w_mini;
+              xsh.min_height = xsh.max_height = Geom->h_mini;
 	    }
 	    xsh.x = Geom->x;
 	    xsh.y = Geom->y;
@@ -301,9 +309,6 @@ Window win;
 int    num;
 {
         char *titlename, *iconname;
-	char *instance[7] =     
-           { "clock", "map", "menu", "file selector", 
-             "zoom", "option", "urban selector" };
         XClassHint xch;
 
 	titlename = NULL;
@@ -343,7 +348,7 @@ int    num;
 
 	titlename = (char *)
            salloc((strlen(Title)+20)*sizeof(char));
-        sprintf(titlename, "%s / %s", Title, instance[num]);
+        sprintf(titlename, "%s / %s", Title, widget_type[num]);
         XStoreName(dpy, win, titlename);
 	free(titlename);
 }
@@ -1721,16 +1726,21 @@ activateOption()
 	   }
 	}
 	shutDown(Context, 0);
+	memcpy(Context->spotsizes, city_spotsizes, num_cat*sizeof(int));
+	memcpy(Context->sizelimits, city_sizelimits, num_cat*sizeof(int));
+
 	ptr = (short *) &gflags;
 	oldptr = (short *) &oldflags;
 	newptr = (short *) &Context->flags;
+        for (i=0; i<sizeof(Flags)/sizeof(short); i++) 
+            if (ptr[i]!=oldptr[i]) newptr[i] = ptr[i];
+
 	zptr = (double *) &gzoom;
 	zoldptr = (double *) &oldzoom;
 	znewptr = (double *) &Context->zoom;
-        for (i=0; i<sizeof(Flags)/sizeof(short); i++) 
-            if (ptr[i]!=oldptr[i]) newptr[i] = ptr[i];
         for (i=0; i<6; i++) 
             if (zptr[i]!=zoldptr[i]) znewptr[i] = zptr[i];
+
 	if (option_changes & 8)
 	    Context->geom = ClockGeom;
 	if (option_changes & 16)
@@ -1791,7 +1801,8 @@ int x, y, button, evtype;
 }
 
 void
-showUrbanHint()
+showUrbanHint(str)
+char * str;
 {
 	char hint[128];
 	int l, v;
@@ -1809,8 +1820,12 @@ showUrbanHint()
 	if (urban_newhint==' ')
            strcpy(hint, Help[getNumCmd('U')]);
 	else {
-	   l = getNumCmd(urban_newhint);
-	   if (l>=0 && l<N_HELP) strcpy(hint, Help[l]);
+	   if (str) 
+              strncpy(hint, str, 125);
+	   else {
+	      l = getNumCmd(urban_newhint);
+	      if (l>=0 && l<N_HELP) strcpy(hint, Help[l]);
+	   }
 	}
 
 	l = strlen(hint);
@@ -1822,11 +1837,6 @@ showUrbanHint()
               4, v + UrbanCaller->gdata->menufont->max_bounds.ascent + 3,
               hint, l);
 }
-
-int urban_t[] = { 7, 335, 7, 260, 540 };
-int urban_x[] = { 100, 420, 80, 340, 600};
-int urban_y[5];
-int urban_w[] = { 215, 215, 160, 160, 35};
 
 void
 updateUrbanEntries(Context, city)
@@ -1865,6 +1875,26 @@ int mode;
 
     if (!do_urban) return;
 
+    if (mode == -2) {
+       urban_t[0] = urban_t[2] = 7;
+       urban_t[1] = 15 + UrbanGeom.width/2;
+       urban_t[3] = (UrbanGeom.width - 120)/2;
+       urban_t[4] = UrbanGeom.width - 100;
+       urban_x[0] = 100;
+       urban_x[1] = 100 + UrbanGeom.width/2;
+       urban_x[2] = 80;
+       urban_x[3] = 20 + UrbanGeom.width/2;
+       urban_x[4] = UrbanGeom.width-40;
+       for (i=0; i<=1; i++)
+           urban_y[i] = UrbanCaller->gdata->mapstrip/2;
+       for (i=2; i<=4; i++)
+           urban_y[i] = 2*UrbanCaller->gdata->mapstrip;
+       urban_w[0] = urban_w[1] = (UrbanGeom.width-210)/2;
+       urban_w[2] = urban_w[3] = (UrbanGeom.width-320)/2;
+       urban_w[4] = 35;
+       return;
+    }
+
     XSetWindowColormap(dpy, Urban, UrbanCaller->gdata->cmap);
     XSetWindowBackground(dpy, Urban, UrbanCaller->gdata->pixlist.menubgcolor);
 
@@ -1900,8 +1930,6 @@ int mode;
 
        for (i=0; i<=4; i++) {
            strcpy(s, Label[L_CITYNAME+i]);
-           urban_y[i] = (i>=2)? 2*UrbanCaller->gdata->mapstrip : 
-                                UrbanCaller->gdata->mapstrip/2;
            XDrawImageString(dpy, Urban, UrbanCaller->gdata->gclist.menufont, 
 	       urban_t[i], 
                urban_y[i]+UrbanCaller->gdata->menufont->max_bounds.ascent+3, 
@@ -1932,7 +1960,10 @@ int mode;
                                  urban_x[i]+6, urban_y[i], 1);
     }
     XSetWindowBackground(dpy, Urban,UrbanCaller->gdata->pixlist.menubgcolor);
-    showUrbanHint();
+    if (urban_newhint == '?')
+       urban_newhint = urban_lasthint = '(';
+    else
+       showUrbanHint(NULL);
 }
 
 void
@@ -1952,14 +1983,14 @@ struct Sundata * Context;
         XSelectInput(dpy, Urban, 0);
         UrbanCaller = Context;
 
+	UrbanGeom.height = UrbanGeom.h_mini
+                          = (22 * Context->gdata->menustrip)/4;
+	setupUrban(-2);
         for (i=0; i<=4; i++) {
 	   w = (urban_w[i]/ 
               XTextWidth(UrbanCaller->gdata->menufont, "_", 1)) - 2;
 	   resetStringLength(w, &urban_entry[i]);
 	}
-
-	UrbanGeom.height = UrbanGeom.h_mini
-                          = (22 * Context->gdata->menustrip)/4;
 
 	if (!getPlacement(Context->win, &Context->geom.x, &Context->geom.y, &w, &h)) {
 	   x = Context->geom.x + UrbanGeom.x - horiz_drift;
@@ -2026,11 +2057,11 @@ int x, y, button, evtype;
 	   else
 	      urban_newhint = UrbanKey[2*click_pos];
 	   if (evtype==MotionNotify) 
-              showUrbanHint();
+              showUrbanHint(NULL);
 	   if (evtype==ButtonRelease) {
 	      if (click_pos<N_URBAN) {
 		 key = (KeySym)tolower(urban_newhint);
-		 showUrbanHint();
+		 showUrbanHint(NULL);
 	         processKey(Urban, key);
 	      } else
 	         PopUrban(Context);
@@ -2256,6 +2287,7 @@ int all;
 	   }
 	}
         destroyGCs(Context);
+
 	Context->flags.hours_shown = 0;
 
         if (all) {
@@ -2278,7 +2310,10 @@ int all;
               free(Context->map_img_file);
 	      Context->map_img_file = NULL;
 	   }
-	  
+	
+           free(Context->spotsizes);
+           free(Context->sizelimits);
+  
 	   if (all<0) {
 	      free(Context);
 	      if (NextContext) {
@@ -2287,21 +2322,22 @@ int all;
 	      }
 	      else {
 	        endup:
+         	 if (dirtable) free(dirtable);
          	 XDestroyWindow(dpy, Menu);
          	 XDestroyWindow(dpy, Filesel);
          	 XDestroyWindow(dpy, Option);
          	 XDestroyWindow(dpy, Zoom);
          	 XDestroyWindow(dpy, Urban);
                  if (zoompix) XFreePixmap(dpy, zoompix);
+                 if (textpix) XFreePixmap(dpy, textpix);
                  XCloseDisplay(dpy);
-         	 if (dirtable) free(dirtable);
          	 exit(0);
  	      }
  	   }
 	   if (ParentContext)
-	     ParentContext->next = Context->next;
+	      ParentContext->next = Context->next;
 	   else
-             Seed = Context->next;
+              Seed = Context->next;
 	   free(Context);
            if (Seed == NULL) goto endup;
 	}

@@ -54,6 +54,7 @@ Zone horaire
 Latitude
 Longitude
 Taille
+Attention: %s, lat = %s lon = %s déjà dans la liste des villes !!
 #
 Option
 Activation de l'option sélectionnée...

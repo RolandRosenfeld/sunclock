@@ -17,6 +17,7 @@ enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_PROGRESS, L_TIMEJUMP,
 
       L_CITYNAME, L_TIMEZONE, L_LATITUDE, L_LONGITUDE, L_CITYSIZE, 
+      L_CITYWARNING, 
 
       L_OPTION, L_ACTIVATE, L_INCORRECT, L_OPTIONINTRO,
       L_LISTOPTIONS, L_CONFIG, L_NEWIMAGE, L_SHORTHELP,
@@ -50,6 +51,7 @@ char	* Label[L_END] = {
 	"Latitude",
 	"Longitude",
 	"Size",
+	"Warning: %s, lat=%s lon=%s already in list of cities !!",
 
 	"Option",
         "Activating selected option...",
