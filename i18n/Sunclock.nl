@@ -107,6 +107,8 @@ Synchronize zoom operation
 Activate the option
 Erase the option command line
 Synchroniseer schermen of niet
+Copy map to root window
+Erase map from root window
 # Urban window help
 Use degrees, minutes, seconds, or decimal degrees
 Search/select city

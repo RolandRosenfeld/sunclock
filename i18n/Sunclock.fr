@@ -45,7 +45,7 @@ Contrôles Clavier/Souris
 Echap
 Sortir du menu
 Touche non liée à une fonction !!
-Synchro
+Synchro (")
 Progression =
 Décalage temporel =
 #
@@ -107,6 +107,8 @@ Synchroniser l'action du zoom
 Activer l'option
 Effacer les commandes et paramètres
 Synchroniser les fenêtres entre elles ou non
+Reproduire la carte en fond d'écran
+Effacer la carte du fond d'écran
 # Urban window help
 Utiliser degrés, minutes, secondes, ou degrés décimaux
 Chercher/sélectionner une localité

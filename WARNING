@@ -30,6 +30,11 @@ SHOULD NOT BE REDEFINED in ~/.sunclockrc
 In 3.43, the -spotsize option has been changed to -spotsizes, and its 
 behaviour HAS BEEN CHANGED
 
+In 3.44, the syntax of ALL COLOR OPTIONS HAS CHANGED. A unique option
+-setcolor field|color is to be used instead.  Similarly, options
+-monochrome, -invertcolors and -fullcolors have been replaced by a single 
+option -colorlevel <value> (0, 1, 2, 3)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 

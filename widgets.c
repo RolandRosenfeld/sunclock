@@ -27,6 +27,7 @@ extern void             createGCs();
 extern void             clearNightArea();
 extern void             drawCities();
 extern void             drawSunAndMoon();
+extern void             drawDottedRectangle();
 
 extern Display *	dpy;
 extern int		scr;
@@ -37,8 +38,8 @@ extern int              runlevel;
 extern int              text_input;
 
 extern Atom		wm_delete_window;
-extern Window		Menu, Filesel, Zoom, Option, Urban;
-extern Pixmap           zoompix, textpix;
+extern Window		Root, Menu, Filesel, Zoom, Option, Urban;
+extern Pixmap           zoompix, textpix, rootpix;
 extern Pixel		black, white;
 
 extern Flags            gflags;
@@ -121,7 +122,6 @@ int                     areaw, areah;
 
 
 void shutDown();
-void destroyGCs();
 
 int
 getPlacement(win, x, y, w, h)
@@ -419,7 +419,6 @@ createWindow(Context, num)
 struct Sundata * Context;
 int num;
 {
-	Window			root = RootWindow(dpy, scr);
 	struct Geometry *	Geom = NULL;
         Window *		win = NULL;
 	int                     strip;
@@ -471,7 +470,7 @@ int num;
 	}
 
         if (win) {
-	   *win = XCreateSimpleWindow(dpy, root,
+	   *win = XCreateSimpleWindow(dpy, Root,
                       Geom->x, Geom->y, 
                       Geom->width, Geom->height + strip, 0,
 		      black, white);
@@ -487,6 +486,15 @@ char key;
      for (i=0; i<N_HELP; i++) 
 	 if (key==CommandKey[i]) return i;
      return -1;	
+}
+
+void
+BasicSettings(Context)
+Sundata * Context;
+{
+        XSetBackground(dpy, Context->gdata->wingc, Context->gdata->pixel[MENUBGCOLOR]);
+        XSetForeground(dpy, Context->gdata->wingc, Context->gdata->pixel[MENUFGCOLOR]);
+        XSetFont(dpy, Context->gdata->wingc, Context->gdata->font[MENUFONT]->fid);
 }
 
 void
@@ -552,8 +560,9 @@ showMenuHint()
 	    for (i=l; i<120; i++) hint[i] = ' ';
 	hint[120] = '\0';
 
-	XDrawImageString(dpy, Menu, MenuCaller->gdata->gclist.menufont, 4, 
-              MenuCaller->gdata->menufont->max_bounds.ascent + 
+        BasicSettings(MenuCaller);
+	XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 4, 
+              MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
                  MenuCaller->gdata->menustrip + 4, 
               hint, strlen(hint));
 }
@@ -564,7 +573,6 @@ setupMenu()
 	char s[2];
 	char which[] = "CDEMPSTUK><!Q";
 	int i, j, j0, b, d;
-	GC gc;
 
 	if (!do_menu) return;
 
@@ -581,34 +589,36 @@ setupMenu()
 	         which[strlen(which)-5] = '\0';
 	}
 
+        BasicSettings(MenuCaller);
         XSetWindowColormap(dpy, Menu, MenuCaller->gdata->cmap);
-        XSetWindowBackground(dpy, Menu, MenuCaller->gdata->pixlist.menubgcolor);
+        XSetWindowBackground(dpy, Menu, MenuCaller->gdata->pixel[MENUBGCOLOR]);
         XClearArea(dpy, Menu,  0, 0, MenuGeom.width, MenuGeom.height, False);
 
-        s[1]='\0';
+        s[1] = '\0';
 	d = (5*MenuCaller->gdata->charspace)/12;
 	for (i=0; i<N_MENU; i++) {
 	      b = (MenuKey[2*i+1]==';');
 	      j0 = (i+1)*MenuCaller->gdata->charspace;
+              XSetForeground(dpy, MenuCaller->gdata->wingc, 
+                                MenuCaller->gdata->pixel[MENUFGCOLOR]);
 	      for (j=j0-b; j<=j0+b; j++)
-	          XDrawLine(dpy, Menu, MenuCaller->gdata->gclist.menufont, 
+	          XDrawLine(dpy, Menu, MenuCaller->gdata->wingc, 
                       j, 0, j, MenuCaller->gdata->menustrip);
-	      s[0]=MenuKey[2*i];
+	      s[0] = MenuKey[2*i];
 	      if (index(which,s[0])) 
-                 gc = MenuCaller->gdata->gclist.imagefont;
-	      else
-                 gc = MenuCaller->gdata->gclist.menufont;
-	      XDrawImageString(dpy, Menu, gc, 
+                 XSetForeground(dpy, MenuCaller->gdata->wingc, 
+                                MenuCaller->gdata->pixel[IMAGECOLOR]);
+	      XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 
                   d+i*MenuCaller->gdata->charspace, 
-                  MenuCaller->gdata->menufont->max_bounds.ascent + 4, s, 1);
-
+                  MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, s, 1);
 	}
 
-	XDrawImageString(dpy, Menu, MenuCaller->gdata->gclist.menufont, 
+        XSetForeground(dpy, MenuCaller->gdata->wingc, MenuCaller->gdata->pixel[MENUFGCOLOR]);
+	XDrawImageString(dpy, Menu, MenuCaller->gdata->wingc, 
                      d +N_MENU*MenuCaller->gdata->charspace,
-                     MenuCaller->gdata->menufont->max_bounds.ascent + 4, 
+                     MenuCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, 
 		     Label[L_ESCAPE], strlen(Label[L_ESCAPE]));
-        XDrawLine(dpy, Menu, MenuCaller->gdata->gclist.menufont, 0, 
+        XDrawLine(dpy, Menu, MenuCaller->gdata->wingc, 0, 
                      MenuCaller->gdata->menustrip, 
                      MENU_WIDTH * MenuCaller->gdata->menustrip, 
                      MenuCaller->gdata->menustrip);
@@ -665,7 +675,7 @@ struct Sundata * Context;
 void
 clearFileselPartially()
 {
-    XSetWindowBackground(dpy, Filesel, FileselCaller->gdata->pixlist.menubgcolor);
+    XSetWindowBackground(dpy, Filesel, FileselCaller->gdata->pixel[MENUBGCOLOR]);
     XClearArea(dpy, Filesel, 0, FileselCaller->gdata->menustrip+1, 
         FileselGeom.width-2, FileselGeom.height-FileselCaller->gdata->menustrip-2, False);
 }
@@ -681,9 +691,9 @@ int mode;
 
         if (!do_filesel) return;
 
+        BasicSettings(FileselCaller);
         XSetWindowColormap(dpy, Filesel, FileselCaller->gdata->cmap);
-        XSetWindowBackground(dpy, Filesel, 
-            FileselCaller->gdata->pixlist.menubgcolor);
+        XSetWindowBackground(dpy, Filesel, FileselCaller->gdata->pixel[MENUBGCOLOR]);
 
 	d = FileselCaller->gdata->charspace/3;
 
@@ -693,14 +703,14 @@ int mode;
              FileselGeom.width, FileselCaller->gdata->menustrip, False);
 
 	  for (i=0; i<=9; i++)
-             XDrawImageString(dpy, Filesel, FileselCaller->gdata->gclist.menufont,
+             XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc,
                 d+2*i*FileselCaller->gdata->charspace, 
-                FileselCaller->gdata->menufont->max_bounds.ascent + 4, 
+                FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 4, 
                 banner[i], strlen(banner[i]));
  
           for (i=1; i<=9; i++) {
 	     h = 2*i*FileselCaller->gdata->charspace;
-             XDrawLine(dpy, Filesel, FileselCaller->gdata->gclist.menufont, h,0,h,
+             XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, h,0,h,
              FileselCaller->gdata->menustrip);
 	  }
 
@@ -709,15 +719,15 @@ int mode;
 	  q = 3*FileselCaller->gdata->menustrip/4;
 	  h = 9*FileselCaller->gdata->charspace;
 	  for (i=0; i<=q-p; i++)
-	      XDrawLine(dpy,Filesel, FileselCaller->gdata->gclist.menufont,
+	      XDrawLine(dpy,Filesel, FileselCaller->gdata->wingc,
                     h-i, p+i, h+i, p+i);
 	  h = 11*FileselCaller->gdata->charspace;
 	  for (i=0; i<= q-p; i++)
 	      XDrawLine(dpy,Filesel,
-                 FileselCaller->gdata->gclist.menufont, h-i, q-i, h+i, q-i);
+                 FileselCaller->gdata->wingc, h-i, q-i, h+i, q-i);
 
 	  h = FileselCaller->gdata->menustrip;
-          XDrawLine(dpy, Filesel, FileselCaller->gdata->gclist.menufont, 
+          XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
               0, h, FileselGeom.width, h);
 	}
 	
@@ -725,13 +735,13 @@ int mode;
             XClearArea(dpy, Filesel,  0, FileselCaller->gdata->menustrip+1, 
                 FileselGeom.width, FileselGeom.height, False);
 
-            XDrawImageString(dpy, Filesel, FileselCaller->gdata->gclist.dirfont,
-                d, FileselCaller->gdata->menufont->max_bounds.ascent + 
+            XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc,
+                d, FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
                    FileselCaller->gdata->menustrip+4, 
                 image_dir, strlen(image_dir));
 
             h = 2*FileselCaller->gdata->menustrip;
-            XDrawLine(dpy, Filesel, FileselCaller->gdata->gclist.menufont, 
+            XDrawLine(dpy, Filesel, FileselCaller->gdata->wingc, 
                 0, h, FileselGeom.width, h);
 	}
 
@@ -741,8 +751,10 @@ int mode;
            qsort(dirtable, num_table_entries, sizeof(char *), dup_strcmp);
 	else {
 	   char error[] = "Directory inexistent or inaccessible !!!";
+	   XSetForeground(dpy, FileselCaller->gdata->wingc, 
+                               FileselCaller->gdata->pixel[IMAGECOLOR]);
            XDrawImageString(dpy, Filesel, 
-                     FileselCaller->gdata->gclist.dirfont, d, 
+                     FileselCaller->gdata->wingc, d, 
                      3*FileselCaller->gdata->menustrip,
 		     error, strlen(error));
 	   return;
@@ -751,36 +763,42 @@ int mode;
 	skip = (3*FileselCaller->gdata->menustrip)/4;
 	num_lines = (FileselGeom.height-2*FileselCaller->gdata->menustrip)/skip;
         for (i=0; i<num_table_entries-filesel_shift; i++) 
-	  if (i<num_lines) {
+	if (i<num_lines) {
 	  s = dirtable[i+filesel_shift];
 	  b = (s[strlen(s)-1]=='/');
           if (b==0) {
 	    if (strstr(s,".xpm") || strstr(s,".jpg") || strstr(s,".vmf"))
 	       b=2;
 	  }
-	  j = FileselCaller->gdata->menufont->max_bounds.ascent + 
+	  j = FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent + 
               2 * FileselCaller->gdata->menustrip + i*skip + 3;
 	  sp = (FileselCaller->wintype)? 
 	    FileselCaller->map_img_file : FileselCaller->clock_img_file;
 	  if (strstr(sp,s)) {
 	     if (mode<=3)
                 XClearArea(dpy, Filesel, 2, 
-                   FileselCaller->gdata->menufont->max_bounds.ascent+
+                   FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent+
                       2 * FileselCaller->gdata->menustrip, 3, 
                    FileselGeom.height, False);
-	     if (mode==3)
-                XDrawRectangle(dpy, Filesel, FileselCaller->gdata->gclist.change,
-		  d/4, j-FileselCaller->gdata->menufont->max_bounds.ascent/2, 3,4);
-	     else
-                XFillRectangle(dpy, Filesel, FileselCaller->gdata->gclist.choice,
-                  d/4, j-FileselCaller->gdata->menufont->max_bounds.ascent/2, 3,4);
+	     if (mode==3) {
+  	        XSetForeground(dpy, FileselCaller->gdata->wingc, 
+                               FileselCaller->gdata->pixel[CHANGECOLOR]);
+                XDrawRectangle(dpy, Filesel, FileselCaller->gdata->wingc,
+		  d/4, j-FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent/2, 3,4);
+	     } else {
+  	        XSetForeground(dpy, FileselCaller->gdata->wingc, 
+                               FileselCaller->gdata->pixel[CHOICECOLOR]);
+                XFillRectangle(dpy, Filesel, FileselCaller->gdata->wingc,
+                  d/4, j-FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent/2, 3,4);
+	     }
 	  }
-	  if (mode<=1)
-          XDrawImageString(dpy, Filesel, 
-              (b==1)? FileselCaller->gdata->gclist.dirfont : 
-              ((b==2)? FileselCaller->gdata->gclist.imagefont : 
-                       FileselCaller->gdata->gclist.menufont),
-              d, j, s, strlen(s));
+	  if (mode<=1) {
+  	     XSetForeground(dpy, FileselCaller->gdata->wingc,
+                (b==0)? FileselCaller->gdata->pixel[MENUFGCOLOR] :
+                        FileselCaller->gdata->pixel[DIRCOLOR+b-1]);
+             XDrawImageString(dpy, Filesel, FileselCaller->gdata->wingc, 
+                d, j, s, strlen(s));
+	  }
 	}
 }
 
@@ -901,7 +919,7 @@ int b;
 	if (b<num_table_entries) {
 	   s = dirtable[b];
 	   if (s==NULL || *s=='\0') return;
-	   if (a > XTextWidth (Context->gdata->menufont, s, 
+	   if (a > XTextWidth (Context->gdata->font[MENUFONT], s, 
                    strlen(s))+Context->gdata->charspace/4) return;
 	   b = strlen(s)-1;
 	   f = (char *) salloc(strlen(image_dir)+b+2);
@@ -1100,18 +1118,23 @@ showZoomHint()
         else
 	   strcpy(hint, Help[getNumCmd(zoom_newhint)]);
 
+	BasicSettings(ZoomCaller);
+        XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixel[MENUBGCOLOR]);
 	XClearArea(dpy, Zoom, 0, v+1, ZoomGeom.width, 
              ZoomCaller->gdata->menustrip-1, False);
-	XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 4, 
-              v + ZoomCaller->gdata->menufont->max_bounds.ascent + 3,
+	XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, 4, 
+              v + ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent + 3,
               hint, strlen(hint));
 }
+
+void
+PopZoom();
 
 void
 setupZoom(mode)
 int mode;
 {
-    int b, i, j, j0, k, l;
+    int b, i, j, j0, k;
     int zoomx, zoomy, zoomw, zoomh;
     char *num[] = { "1", "2", "5", "10", "20", "50", "100"};
     char *synchro = Label[L_SYNCHRO];
@@ -1119,19 +1142,19 @@ int mode;
 
     if (!do_zoom) return;
 
+    BasicSettings(ZoomCaller);
     XSetWindowColormap(dpy, Zoom, ZoomCaller->gdata->cmap);
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.menubgcolor);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixel[MENUBGCOLOR]);
 
     areaw = ZoomGeom.width - 74;
     areah = ZoomGeom.height - 2*ZoomCaller->gdata->menustrip - 65;
 
     if (mode == -1) {
-
        XClearArea(dpy, Zoom,  0,0, ZoomGeom.width, ZoomGeom.height, False);
-       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
-          160-XTextWidth(ZoomCaller->gdata->menufont, 
+       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, 
+          160-XTextWidth(ZoomCaller->gdata->font[MENUFONT], 
           synchro, strlen(synchro))+areah, 
-          24+ ZoomCaller->gdata->menufont->max_bounds.ascent, 
+          24+ ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent, 
           synchro, strlen(synchro));
 
        for (i=0; i<=N_ZOOM; i++) {
@@ -1141,40 +1164,40 @@ int mode;
 	     b = (ZoomKey[2*i+1]==';');
 	     j0 = (i+1)*ZoomCaller->gdata->charspace;
 	     for (j=j0-b; j<=j0+b; j++)
-                 XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
+                 XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 
                     j, areah+64, j, areah+64+ZoomCaller->gdata->menustrip);
 	  } else
 	     strcpy(s, Label[L_ESCAPE]);
-          XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
+             XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, 
 	       i*ZoomCaller->gdata->charspace + 
                5*ZoomCaller->gdata->charspace/12, 
-               ZoomCaller->gdata->menufont->max_bounds.ascent + areah+69, 
+               ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent + areah+69, 
                s, strlen(s));
        }
 
        for (i=0; i<=6; i++) {
           j = 63 + (int) ( (areah-6)*log(atof(num[i]))/log(100.0));
           k = j - ZoomCaller->gdata->charspace*strlen(num[i])/10;
-          XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, k,
-             ZoomCaller->gdata->menufont->max_bounds.ascent + 3, 
+          XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, k,
+             ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent + 3, 
              num[i], strlen(num[i]));
-          k = j + ZoomCaller->gdata->menufont->max_bounds.ascent/2 - 10;
-          XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont,
+          k = j + ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent/2 - 10;
+          XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc,
                 24-ZoomCaller->gdata->charspace*strlen(num[i])/4, k , 
                 num[i], strlen(num[i]));
-          XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, j, 20, j, 24);
-          XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 30, j-10, 34, j-10);
+          XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, j, 20, j, 24);
+          XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 30, j-10, 34, j-10);
        }
 
        for (i=0; i<=1; i++)
-          XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
+          XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 
              0, areah+64+i*ZoomCaller->gdata->menustrip, 
              ZoomGeom.width, areah+64+i*ZoomCaller->gdata->menustrip);
-       XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 60, 22, areah+60, 22);
-       XDrawLine(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 32, 50, 32, areah+50);
+       XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 60, 22, areah+60, 22);
+       XDrawLine(dpy, Zoom, ZoomCaller->gdata->wingc, 32, 50, 32, areah+50);
     }
 
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.white);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixel[ZOOMBGCOLOR]);
     if ((mode & 1) && !ZoomCaller->newzoom.mode)
        XClearArea(dpy, Zoom,  41, 31, 9, 9, False);
     if (mode & 2)
@@ -1183,10 +1206,11 @@ int mode;
        XClearArea(dpy, Zoom,  41, 51, 9, areah, False);
 
     if (!zoompix) {
-       int oldmono, oldfill;
-       oldmono = ZoomCaller->flags.mono;
+       int oldlevel, oldfill;
+
+       oldlevel = ZoomCaller->flags.colorlevel;
        oldfill = ZoomCaller->flags.fillmode;
-       ZoomCaller->flags.mono = 2;
+       ZoomCaller->flags.colorlevel = MONOCHROME;
        ZoomCaller->flags.fillmode = 1;
        i = ZoomCaller->geom.width;
        j = ZoomCaller->geom.height;
@@ -1194,28 +1218,35 @@ int mode;
        ZoomCaller->zoom.width = ZoomCaller->geom.width = areaw;
        ZoomCaller->zoom.height = ZoomCaller->geom.height = areah;
        ZoomCaller->zoom.dx = ZoomCaller->zoom.dy = 0;
+
        readVMF(Default_vmf, ZoomCaller);
+
        if (ZoomCaller->bits) {
-          zoompix = XCreatePixmapFromBitmapData(dpy, RootWindow(dpy, scr),
+          zoompix = XCreatePixmapFromBitmapData(dpy, Root,
                       ZoomCaller->bits, ZoomCaller->geom.width,
                       ZoomCaller->geom.height, 0, 1, 1);
           free(ZoomCaller->bits);
+       } else {
+	  PopZoom(ZoomCaller);
+	  return;
        }
        ZoomCaller->zoom = ZoomCaller->newzoom;
        ZoomCaller->geom.width = i;
        ZoomCaller->geom.height = j;
-       ZoomCaller->flags.mono = oldmono;
+       ZoomCaller->flags.colorlevel = oldlevel;
        ZoomCaller->flags.fillmode = oldfill;
     }
 
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.choicecolor);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixel[CHOICECOLOR]);
+    XSetBackground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[CHOICECOLOR]);
+    XSetForeground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[CHANGECOLOR]);
 
     if (mode & 2) {
        i = (int) ( (double)(areah-6)*log(ZoomCaller->zoom.fx)/log(100.00));
        XClearArea(dpy, Zoom,  61+i, 31, 6, 9, False);
        if (ZoomCaller->newzoom.fx != ZoomCaller->zoom.fx) {
          i = (int) ((double)(areah-6)*log(ZoomCaller->newzoom.fx)/log(100.00));
-         XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.change, 61+i, 31, 5, 8);
+         XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 61+i, 31, 5, 8);
        }
     }
     if (mode & 4) {
@@ -1223,7 +1254,7 @@ int mode;
        XClearArea(dpy, Zoom,  41, 51+j, 9, 6, False);
        if (ZoomCaller->newzoom.fy != ZoomCaller->zoom.fy) {
          j = (int) ((double)(areah-6)*log(ZoomCaller->newzoom.fy)/log(100.0));
-         XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.change, 41, 51+j, 8, 5);
+         XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 41, 51+j, 8, 5);
        }
     }
 
@@ -1235,20 +1266,32 @@ int mode;
        i = areaw-zoomx-zoomw-1;
        j = areah-zoomy-zoomh-1;
 
+       XSetBackground(dpy, ZoomCaller->gdata->wingc, 
+                      ZoomCaller->gdata->pixel[ZOOMBGCOLOR]);
+       XSetForeground(dpy, ZoomCaller->gdata->wingc, 
+                      ZoomCaller->gdata->pixel[ZOOMFGCOLOR]);
        if (zoomy)
-          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->gclist.zoombg, 
+          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
                 0, 0, areaw-1, zoomy, 61, 51, 1);
        if (j>0)
-          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->gclist.zoombg, 
+          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
                 0, zoomy+zoomh+1, areaw, j, 61, 52+zoomy+zoomh, 1);
        if (zoomx)
-          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->gclist.zoombg, 
+          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
                 0, 0, zoomx, areah-1, 61, 51, 1);
        if (i>0)
-          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->gclist.zoombg, 
+          XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
                 zoomx+zoomw+1, 0, i, areah, 62+zoomx+zoomw, 51, 1);
 
-       XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->gclist.zoomfg, 
+       if (ZoomCaller->flags.colorlevel == MONOCHROME) {
+          XSetBackground(dpy, ZoomCaller->gdata->wingc, 
+                      ZoomCaller->gdata->pixel[ZOOMFGCOLOR]);
+          XSetForeground(dpy, ZoomCaller->gdata->wingc, 
+                      ZoomCaller->gdata->pixel[ZOOMBGCOLOR]);
+       } else
+          XSetBackground(dpy, ZoomCaller->gdata->wingc, 
+                      ZoomCaller->gdata->pixel[CHOICECOLOR]);
+       XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
                 zoomx, zoomy, zoomw+1, zoomh+1, 61+zoomx, 51+zoomy, 1);
 
        if (ZoomCaller->newzoom.fx!=ZoomCaller->zoom.fx || 
@@ -1259,55 +1302,57 @@ int mode;
           zoomh = (areah*ZoomCaller->geom.height)/ZoomCaller->newzoom.height;
           zoomx = (areaw*ZoomCaller->newzoom.dx)/ZoomCaller->newzoom.width;
           zoomy = (areah*ZoomCaller->newzoom.dy)/ZoomCaller->newzoom.height;
-	  if (ZoomCaller->flags.mono==2)
-	  for (j=0; j<=zoomh; j++)
-	    for (i=0; i<=zoomw; i++) {
-               k = zoomx+i; 
-               l = zoomy+j; 
-	       XDrawPoint(dpy, Zoom, ((i+j)%2)? 
-                   ZoomCaller->gdata->gclist.zoomfg : ZoomCaller->gdata->gclist.zoombg, 
-                   61+k, 51+l);
-	       if (i==0 && j>0 && j<zoomh) i = zoomw-1;
-	    }
-	  else
-          XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.change,
-               61+zoomx, 51+zoomy, zoomw, zoomh);
+	  if (ZoomCaller->flags.colorlevel==MONOCHROME)
+	     drawDottedRectangle(dpy, Zoom, ZoomCaller->gdata->wingc,
+		61+zoomx, 51+zoomy, zoomw, zoomh,
+		ZoomCaller->gdata->pixel[ZOOMFGCOLOR],
+                ZoomCaller->gdata->pixel[ZOOMBGCOLOR]);
+	  else {
+             XSetForeground(dpy, ZoomCaller->gdata->wingc,
+		   ZoomCaller->gdata->pixel[CHANGECOLOR]);
+             XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc,
+                61+zoomx, 51+zoomy, zoomw, zoomh);
+	  }
        }
 
        i = 60 + (int) (areaw * ZoomCaller->newzoom.fdx);
        j = 50 + (int) (areah * ZoomCaller->newzoom.fdy);
 
+       XSetForeground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[CHANGECOLOR]);
        if (i<60+areaw && j<50+areah)
-          XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.change, i, j, 1, 1);
+          XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, i, j, 1, 1);
 
-       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 60, 50, 
-          areaw+1,areah+1);
+       XSetForeground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[MENUFGCOLOR]);
+       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 60, 50, areaw+1, areah+1);
     }
 
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.menubgcolor);
+    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixel[MENUBGCOLOR]);
+    XSetBackground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[MENUBGCOLOR]);
+    XSetForeground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[MENUFGCOLOR]);
 
     if (mode & 1) {
        XClearArea(dpy, Zoom,  33, 23, 17, 17, False);
        s[0] = '0'+ZoomCaller->newzoom.mode;
        s[1] = '\0';
-       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont,
-	  39, 25+ZoomCaller->gdata->menufont->max_bounds.ascent, s, 1);
+       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc,
+	  39, 25+ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent, s, 1);
     }
 
     if (mode & 16) {
-       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 
-          areah+177, 25+ ZoomCaller->gdata->menufont->max_bounds.ascent, 
+       XClearArea(dpy, Zoom,  areah+171, 23, 17, 17, False);
+       XDrawImageString(dpy, Zoom, ZoomCaller->gdata->wingc, 
+          areah+177, 25+ ZoomCaller->gdata->font[MENUFONT]->max_bounds.ascent, 
           (zoom_active)?"+":"-", 1);
     }
 
-    if (mode == -1) {
-    XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 60, 30, areah+1, 10);
-    XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 40, 50, 10, areah+1);
-    XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, 32, 22, 18, 18);
-    XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->gclist.menufont, areah+170, 22,18,18);
-    }
+    XSetForeground(dpy, ZoomCaller->gdata->wingc, ZoomCaller->gdata->pixel[MENUFGCOLOR]);
 
-    XSetWindowBackground(dpy, Zoom, ZoomCaller->gdata->pixlist.menubgcolor);
+    if (mode == -1) {
+       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 60, 30, areah+1, 10);
+       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 40, 50, 10, areah+1);
+       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, 32, 22, 18, 18);
+       XDrawRectangle(dpy, Zoom, ZoomCaller->gdata->wingc, areah+170, 22,18,18);
+    }
 
     zoom_lasthint = '\0';
     showZoomHint();
@@ -1319,17 +1364,18 @@ struct Sundata * Context;
 {
         int a, b, w, h, x=0, y=0;
 
-	if (do_zoom)
+	if (do_zoom) {
+	    XUnmapWindow(dpy, Zoom);
+	    ZoomCaller = NULL;
+	    zoom_active = 1;
             do_zoom = 0;
-	else
+	    if (zoompix) {
+	       XFreePixmap(dpy, zoompix);
+	       zoompix = 0;
+	    }
+	    return;
+	} else
 	    do_zoom = 1;
-
-        if (!do_zoom) {
-	  XUnmapWindow(dpy, Zoom);
-	  ZoomCaller = NULL;
-	  zoom_active = 1;
-	  return;
-	}
 
         Context->newzoom = Context->zoom;
         XSelectInput(dpy, Zoom, 0);
@@ -1507,12 +1553,15 @@ showOptionHint()
 	   l += 5;
 	   hint[l-2] = (do_sync)? '+' : '-';
 	}
-	   
+	 
+	BasicSettings(OptionCaller);
+        XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixel[MENUBGCOLOR]);
+
 	XClearArea(dpy, Option, 0, v+1, OptionGeom.width, 
              OptionCaller->gdata->menustrip-1, False);
 
-        XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
-              4, v + OptionCaller->gdata->menufont->max_bounds.ascent + 3,
+        XDrawImageString(dpy, Option, OptionCaller->gdata->wingc, 
+              4, v + OptionCaller->gdata->font[MENUFONT]->max_bounds.ascent + 3,
               hint, l);
 }
 
@@ -1525,14 +1574,13 @@ int x, y, mode;
 {
 int i, j;
 
-    i = XTextWidth(Context->gdata->menufont, entry->string, entry->caret);
-    j = XTextWidth(Context->gdata->menufont, "_", 1);
+    i = XTextWidth(Context->gdata->font[MENUFONT], entry->string, entry->caret);
+    j = XTextWidth(Context->gdata->font[MENUFONT], "_", 1);
 
-    XSetWindowBackground(dpy, win, (mode)?
-          Context->gdata->pixlist.caretcolor :
-          Context->gdata->pixlist.optionbgcolor);
+    XSetWindowBackground(dpy, win, 
+          Context->gdata->pixel[(mode)? CARETCOLOR : OPTIONBGCOLOR]);
     XClearArea(dpy, win, 
-          x+i, y+Context->gdata->menufont->max_bounds.ascent+ 
+          x+i, y+Context->gdata->font[MENUFONT]->max_bounds.ascent+ 
           Context->gdata->menustrip/3 - 1, j, 2, False);
 }
 
@@ -1545,8 +1593,9 @@ int mode;
 
     if (!do_option) return;
 
+    BasicSettings(OptionCaller);
     XSetWindowColormap(dpy, Option, OptionCaller->gdata->cmap);
-    XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixlist.menubgcolor);
+    XSetWindowBackground(dpy, Option, OptionCaller->gdata->pixel[MENUBGCOLOR]);
 
     opth = OptionGeom.height-2*OptionCaller->gdata->menustrip;
     vskip = 3*OptionCaller->gdata->menustrip/8;
@@ -1562,43 +1611,45 @@ int mode;
 	     b = (OptionKey[2*i+1]==';');
 	     j0 = (i+1)*OptionCaller->gdata->charspace;
 	     for (j=j0-b; j<=j0+b; j++)
-                 XDrawLine(dpy, Option, OptionCaller->gdata->gclist.menufont, 
+                 XDrawLine(dpy, Option, OptionCaller->gdata->wingc, 
                    j, opth, j, opth+OptionCaller->gdata->menustrip);
 	  } else
 	     strcpy(s, Label[L_ESCAPE]);
-          XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
+          XDrawImageString(dpy, Option, OptionCaller->gdata->wingc, 
 	       i*OptionCaller->gdata->charspace + 
                5*OptionCaller->gdata->charspace/12, 
-               OptionCaller->gdata->menufont->max_bounds.ascent + opth + 4, 
+               OptionCaller->gdata->font[MENUFONT]->max_bounds.ascent + opth + 4, 
                s, strlen(s));
        }
        for (i=0; i<=1; i++)
-          XDrawLine(dpy, Option, OptionCaller->gdata->gclist.menufont, 
+          XDrawLine(dpy, Option, OptionCaller->gdata->wingc, 
                0, opth+i*OptionCaller->gdata->menustrip, 
                OptionGeom.width, 
                opth+i*OptionCaller->gdata->menustrip);
 
        strcpy(s, Label[L_OPTION]);
-       XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.menufont, 
-	       8, OptionCaller->gdata->menufont->max_bounds.ascent + vskip + 3,
+       XDrawImageString(dpy, Option, OptionCaller->gdata->wingc, 
+	       8, OptionCaller->gdata->font[MENUFONT]->max_bounds.ascent + vskip + 3,
                s, strlen(s));
-       XDrawRectangle(dpy, Option, OptionCaller->gdata->gclist.menufont,
+       XDrawRectangle(dpy, Option, OptionCaller->gdata->wingc,
                            70, vskip, OptionGeom.width-85, 
                            OptionCaller->gdata->menustrip);
     }  
 
     XSetWindowBackground(dpy, Option,
-       OptionCaller->gdata->pixlist.optionbgcolor);
+       OptionCaller->gdata->pixel[OPTIONBGCOLOR]);
     XClearArea(dpy, Option, 71,vskip+1, OptionGeom.width-86,
            OptionCaller->gdata->menustrip-1, False);
-    XSetWindowBackground(dpy, Option,
-       OptionCaller->gdata->pixlist.menubgcolor);
-    XDrawImageString(dpy, Option, OptionCaller->gdata->gclist.optionfont, 76,
-       OptionCaller->gdata->menufont->max_bounds.ascent + vskip + 3,
+    XSetBackground(dpy, OptionCaller->gdata->wingc, 
+                        OptionCaller->gdata->pixel[OPTIONBGCOLOR]);
+    XSetForeground(dpy, OptionCaller->gdata->wingc, 
+                        OptionCaller->gdata->pixel[OPTIONFGCOLOR]);
+
+    XDrawImageString(dpy, Option, OptionCaller->gdata->wingc, 76,
+       OptionCaller->gdata->font[MENUFONT]->max_bounds.ascent + vskip + 3,
        option_entry.string, strlen(option_entry.string));
     if (text_input == OPTION_INPUT) 
        showCaret(OptionCaller, Option, &option_entry, 76, vskip, 1);
-    XSetWindowBackground(dpy, Option,OptionCaller->gdata->pixlist.menubgcolor);
     showOptionHint();
 }
 
@@ -1643,7 +1694,7 @@ struct Sundata * Context;
         OptionCaller = Context;
 
 	w = ((OptionGeom.width-86) / 
-              XTextWidth(OptionCaller->gdata->menufont, "_", 1)) - 2;
+              XTextWidth(OptionCaller->gdata->font[MENUFONT], "_", 1)) - 2;
 	resetStringLength(w, &option_entry);
 
 	if (runlevel>=RUNTIMEOPTION) 
@@ -1710,13 +1761,13 @@ activateOption()
 	}	     
         showOptionHint();
      /* Set runlevel=IMAGERECYCLE if previous image/pixmap can be recycled */
-	if (option_changes<4 && gflags.mono==oldflags.mono && 
+	if (option_changes<4 && gflags.colorlevel==oldflags.colorlevel && 
             gflags.fillmode==oldflags.fillmode) {
            runlevel = IMAGERECYCLE;
 	   tmp_cmap = Context->gdata->cmap;
-	   if (gflags.mono) {
+	   if (gflags.colorlevel<FULLCOLORS) {
               clearNightArea(Context);
-	      if (gflags.mono==2) {
+	      if (gflags.colorlevel==MONOCHROME) {
 	         drawCities(Context);
 	         drawSunAndMoon(Context);
 	      }
@@ -1767,7 +1818,7 @@ int x, y, button, evtype;
             x<=OptionGeom.width-15 &&
             y>=vskip && y<=Context->gdata->menustrip+vskip) {
 	   text_input = OPTION_INPUT;
-	   click_pos = (x-76)/XTextWidth(OptionCaller->gdata->menufont, "_", 1);
+	   click_pos = (x-76)/XTextWidth(OptionCaller->gdata->font[MENUFONT], "_", 1);
 	   i = strlen(option_entry.string);
 	   if (click_pos<0) click_pos = 0;
 	   if (click_pos>i) click_pos = i;
@@ -1830,11 +1881,13 @@ char * str;
 
 	l = strlen(hint);
 
+        BasicSettings(UrbanCaller);
+        XSetWindowBackground(dpy, Urban, UrbanCaller->gdata->pixel[MENUBGCOLOR]);
+
 	XClearArea(dpy, Urban, 0, v+1, UrbanGeom.width, 
              UrbanCaller->gdata->menustrip-1, False);
-
-        XDrawImageString(dpy, Urban, UrbanCaller->gdata->gclist.menufont, 
-              4, v + UrbanCaller->gdata->menufont->max_bounds.ascent + 3,
+        XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc, 
+              4, v + UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent + 3,
               hint, l);
 }
 
@@ -1895,8 +1948,9 @@ int mode;
        return;
     }
 
+    BasicSettings(UrbanCaller);
     XSetWindowColormap(dpy, Urban, UrbanCaller->gdata->cmap);
-    XSetWindowBackground(dpy, Urban, UrbanCaller->gdata->pixlist.menubgcolor);
+    XSetWindowBackground(dpy, Urban, UrbanCaller->gdata->pixel[MENUBGCOLOR]);
 
     urbanh = UrbanGeom.height-2*UrbanCaller->gdata->menustrip;
     vskip = 3*UrbanCaller->gdata->menustrip/8;
@@ -1912,29 +1966,29 @@ int mode;
 	     b = (UrbanKey[2*i+1]==';');
 	     j0 = (i+1)*UrbanCaller->gdata->charspace;
 	     for (j=j0-b; j<=j0+b; j++)
-                 XDrawLine(dpy, Urban, UrbanCaller->gdata->gclist.menufont, 
+                 XDrawLine(dpy, Urban, UrbanCaller->gdata->wingc, 
                    j, urbanh, j, urbanh+UrbanCaller->gdata->menustrip);
 	  } else
 	     strcpy(s, Label[L_ESCAPE]);
-          XDrawImageString(dpy, Urban, UrbanCaller->gdata->gclist.menufont, 
+          XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc, 
 	       i*UrbanCaller->gdata->charspace + 
                5*UrbanCaller->gdata->charspace/12, 
-               UrbanCaller->gdata->menufont->max_bounds.ascent + urbanh + 4, 
+               UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent + urbanh + 4, 
                s, strlen(s));
        }
        for (i=0; i<=1; i++)
-          XDrawLine(dpy, Urban, UrbanCaller->gdata->gclist.menufont, 
+          XDrawLine(dpy, Urban, UrbanCaller->gdata->wingc, 
                0, urbanh+i*UrbanCaller->gdata->menustrip, 
                UrbanGeom.width, 
                urbanh+i*UrbanCaller->gdata->menustrip);
 
        for (i=0; i<=4; i++) {
            strcpy(s, Label[L_CITYNAME+i]);
-           XDrawImageString(dpy, Urban, UrbanCaller->gdata->gclist.menufont, 
+           XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc, 
 	       urban_t[i], 
-               urban_y[i]+UrbanCaller->gdata->menufont->max_bounds.ascent+3, 
+               urban_y[i]+UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent+3, 
                s, strlen(s));
-           XDrawRectangle(dpy, Urban, UrbanCaller->gdata->gclist.menufont,
+           XDrawRectangle(dpy, Urban, UrbanCaller->gdata->wingc,
                            urban_x[i], urban_y[i], urban_w[i], 
                            UrbanCaller->gdata->menustrip);
        }
@@ -1946,20 +2000,22 @@ int mode;
                                  urban_x[i]+6, urban_y[i], 0);
     for (i=0; i<=4; i++)  
        if (text_input == URBAN_INPUT+i || text_input < URBAN_INPUT) {
-       XSetWindowBackground(dpy, Urban,
-          UrbanCaller->gdata->pixlist.optionbgcolor);
+       XSetWindowBackground(dpy, Urban, UrbanCaller->gdata->pixel[OPTIONBGCOLOR]);
        XClearArea(dpy, Urban, urban_x[i]+1, urban_y[i]+1, 
               urban_w[i]-1,
               UrbanCaller->gdata->menustrip-1, False);
-       XDrawImageString(dpy, Urban, UrbanCaller->gdata->gclist.optionfont,
+       XSetBackground(dpy, UrbanCaller->gdata->wingc, 
+                      UrbanCaller->gdata->pixel[OPTIONBGCOLOR]);
+       XSetForeground(dpy, UrbanCaller->gdata->wingc, 
+                      UrbanCaller->gdata->pixel[OPTIONFGCOLOR]);
+       XDrawImageString(dpy, Urban, UrbanCaller->gdata->wingc,
           urban_x[i]+6,
-          urban_y[i]+ UrbanCaller->gdata->menufont->max_bounds.ascent + 3,
+          urban_y[i]+ UrbanCaller->gdata->font[MENUFONT]->max_bounds.ascent + 3,
           urban_entry[i].string, strlen(urban_entry[i].string));
        if (text_input == URBAN_INPUT+i)
           showCaret(UrbanCaller, Urban, &urban_entry[i], 
                                  urban_x[i]+6, urban_y[i], 1);
     }
-    XSetWindowBackground(dpy, Urban,UrbanCaller->gdata->pixlist.menubgcolor);
     if (urban_newhint == '?')
        urban_newhint = urban_lasthint = '(';
     else
@@ -1988,7 +2044,7 @@ struct Sundata * Context;
 	setupUrban(-2);
         for (i=0; i<=4; i++) {
 	   w = (urban_w[i]/ 
-              XTextWidth(UrbanCaller->gdata->menufont, "_", 1)) - 2;
+              XTextWidth(UrbanCaller->gdata->font[MENUFONT], "_", 1)) - 2;
 	   resetStringLength(w, &urban_entry[i]);
 	}
 
@@ -2036,7 +2092,7 @@ int x, y, button, evtype;
             y>=urban_y[i] && y<=urban_y[i]+Context->gdata->menustrip) {
 	   text_input = URBAN_INPUT+i;
 	   click_pos = 
-             (x-urban_x[i]-6)/XTextWidth(UrbanCaller->gdata->menufont, "_", 1);
+             (x-urban_x[i]-6)/XTextWidth(UrbanCaller->gdata->font[MENUFONT], "_", 1);
 	   j = strlen(urban_entry[i].string);
 	   if (click_pos<0) click_pos = 0;
 	   if (click_pos>j) click_pos = j;
@@ -2060,7 +2116,10 @@ int x, y, button, evtype;
               showUrbanHint(NULL);
 	   if (evtype==ButtonRelease) {
 	      if (click_pos<N_URBAN) {
-		 key = (KeySym)tolower(urban_newhint);
+		 if (button<=2)
+		    key = (KeySym)tolower(urban_newhint);
+		 else
+		    key = (KeySym)urban_newhint;
 		 showUrbanHint(NULL);
 	         processKey(Urban, key);
 	      } else
@@ -2087,12 +2146,13 @@ struct Sundata * Context;
 {
       int i;
 
-      if (do_menu || do_filesel || do_zoom || do_option) {
+      if (do_menu || do_filesel || do_zoom || do_option || do_urban) {
 	 XFlush(dpy);
 	 usleep(2*TIMESTEP);
          if (verbose)
 	    fprintf(stderr, "Remapping auxiliary widgets...\n");
-      }
+      } else
+	 return;
 
       if (do_menu) { 
 	 do_menu = 1;
@@ -2128,26 +2188,34 @@ Sundata * Context;
 	 return;
       }
 
-      if (verbose && (do_menu || do_filesel || do_zoom || do_option))
-	 fprintf(stderr, "Resetting auxiliary widgets...\n");
-      
-      if (do_menu && Context == MenuCaller) {
+      if (do_menu || do_filesel || do_zoom || do_option || do_urban) {
+	if (verbose)
+	   fprintf(stderr, "Resetting auxiliary widgets...\n");
+      } else
+	return;
+
+      if (do_menu) {
+         MenuCaller = Context;
 	 menu_lasthint = '\0';
 	 setupMenu();
       }
-      if (do_filesel && Context == FileselCaller) { 
+      if (do_filesel) { 
+         FileselCaller = Context;
 	 do_filesel = 1;
 	 setupFilesel(0);
       }
-      if (do_zoom && Context == ZoomCaller) { 
+      if (do_zoom) { 
+         ZoomCaller = Context;
          do_zoom = 1; 
 	 setupZoom(-1);
       }
-      if (do_option && Context == OptionCaller) { 
+      if (do_option) { 
+         OptionCaller = Context;
          do_option = 1; 
 	 setupOption(-1);
       }
-      if (do_urban && Context == UrbanCaller) { 
+      if (do_urban) { 
+         UrbanCaller = Context;
          do_urban = 1; 
 	 setupUrban(-1);
       }
@@ -2169,66 +2237,23 @@ void
 destroyGCs(Context)
 Sundata * Context;
 {
-         GClist *gclist;
-
+int i; 
 	 if (Context->gdata->links>0) {
             --Context->gdata->links;
 	    return;
 	 }
 
+         XFreeGC(dpy, Context->gdata->wingc);
+	 Context->gdata->wingc = 0;
+         XFreeGC(dpy, Context->gdata->pixgc);
+         Context->gdata->pixgc = 0;
+
          if (runlevel!=IMAGERECYCLE && Context->gdata->cmap!=cmap0)
 	    XFreeColormap(dpy, Context->gdata->cmap);
 
-         XFreeFont(dpy, Context->gdata->menufont);
-         XFreeFont(dpy, Context->gdata->coordfont);
-         XFreeFont(dpy, Context->gdata->cityfont);
-         XFreeFont(dpy, Context->gdata->clockstripfont);
-         XFreeFont(dpy, Context->gdata->mapstripfont);
+	 for (i=0; i<NUMFONTS; i++)
+             XFreeFont(dpy, Context->gdata->font[i]);
 	
-	 gclist = &Context->gdata->gclist;
-
- 	 XFreeGC(dpy, gclist->menufont);
- 	 XFreeGC(dpy, gclist->cityfont);
- 	 XFreeGC(dpy, gclist->meridianfont);
- 	 XFreeGC(dpy, gclist->mapstripfont);
- 	 XFreeGC(dpy, gclist->clockstripfont);
-
-         if (Context->flags.mono) {
-	    XFreeGC(dpy, gclist->invert);
- 	    XFreeGC(dpy, gclist->clockstore);
- 	    XFreeGC(dpy, gclist->mapstore);
-	 }
-
-         XFreeGC(dpy, gclist->zoomfg);
-
- 	 if (Context->flags.mono<2) {
- 	    XFreeGC(dpy, gclist->parallelfont);
-
-            XFreeGC(dpy, gclist->dirfont);
-            XFreeGC(dpy, gclist->imagefont);
-	    XFreeGC(dpy, gclist->choice);
-	    XFreeGC(dpy, gclist->change);
-
-	    XFreeGC(dpy, gclist->zoombg);
-
-	    XFreeGC(dpy, gclist->optionfont);
-
-            if (Context->flags.mono == 0) {
-	       XFreeGC(dpy, gclist->coordpix);	    
-               XFreeGC(dpy, gclist->citypix);
-	    }
-
- 	    XFreeGC(dpy, gclist->citycolor0);
- 	    XFreeGC(dpy, gclist->citycolor1);
- 	    XFreeGC(dpy, gclist->citycolor2);
- 	    XFreeGC(dpy, gclist->markcolor1);
- 	    XFreeGC(dpy, gclist->markcolor2);
- 	    XFreeGC(dpy, gclist->linecolor);
- 	    XFreeGC(dpy, gclist->tropiccolor);
- 	    XFreeGC(dpy, gclist->suncolor);
- 	    XFreeGC(dpy, gclist->mooncolor);
- 	 }
-
 	 free(Context->gdata);
 }
 
@@ -2322,7 +2347,6 @@ int all;
 	      }
 	      else {
 	        endup:
-         	 if (dirtable) free(dirtable);
          	 XDestroyWindow(dpy, Menu);
          	 XDestroyWindow(dpy, Filesel);
          	 XDestroyWindow(dpy, Option);
@@ -2331,6 +2355,7 @@ int all;
                  if (zoompix) XFreePixmap(dpy, zoompix);
                  if (textpix) XFreePixmap(dpy, textpix);
                  XCloseDisplay(dpy);
+         	 if (dirtable) free(dirtable);
          	 exit(0);
  	      }
  	   }

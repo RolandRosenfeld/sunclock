@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "June 3, 2001"
+.TH SUNCLOCK 1 "June 22, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -29,16 +29,16 @@ where the list of licit options is the following long list
 [-menufont fontname] [-coordfont fontname] [-cityfont fontname] \
 [-mapstripfont fontname] [-clockstripfont fontname] \
 [-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
-[-fullcolors] [-invertcolors] [-monochrome] [-aspect mode] \
 [-placement (random, fixed, center, NW, NE, SW, SE)] \
 [-placementshift x y] [-extrawidth value] \
-[-decimal] [-dms] [-city name] [-position latitude longitude] \
+[-decimal] [-dms] [-city name] [-position latitude|longitude] \
 [-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)] \
 [-jump number[s,m,h,d,M,Y]] [-progress number[s,m,h,d,M,Y]] \
+[-aspect mode] [-colorlevel level=0,1,2,3] \
+[-fillmode number=0,1,2] [-coastlines] [-contour] [-landfill] \
 [-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
 [-night] [-terminator] [-twilight] [-luminosity] [-lightgradient] \
 [-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
-[-coastlines] [-contour] [-landfill] [-fillmode number=0,1,2] \
 [-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
 [-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)] \
 [-sizelimits w1|w2|w3|... (wi = zoom width values)] \
@@ -47,34 +47,20 @@ where the list of licit options is the following long list
 [-meridianspacing value] [-parallelspacing value] \
 [-tropics] [-notropics] \
 [-dottedlines] [-plainlines] [-bottomline] [-nobottomline] \
-[-objectmode mode=0,1,2] [-sun] [-nosun] [-moon] [-nomoon] \
-[-clockbgcolor color] [-clockfgcolor color] \
-[-clockstripbgcolor color] [-clockstripfgcolor color] \
-[-mapbgcolor color] [-mapfgcolor color] \
-[-mapstripbgcolor color] [-mapstripfgcolor color] \
-[-linecolor color] [-suncolor color] [-mooncolor color] \
-[-meridiancolor color] [-parallelcolor] [-tropiccolor color] \
-[-citycolor0 color] [-citycolor1 color] [-citycolor2 color] \
-[-citynamecolor color] [-markcolor1 color] [-markcolor2 color] \
-[-menubgcolor color] [-menufgcolor color] \
-[-zoombgcolor color] [-zoomfgcolor color] \
-[-optionbgcolor color] [-optionfgcolor color] [-caretcolor] \
-[-changecolor color] [-choicecolor color] \
-[-dircolor color] [-imagecolor color]
+[-objectmode mode=0,1,2] [-sun] [-nosun] [-moon] [-nomoon]
 
 .SH DESCRIPTION
 .I sunclock
-is an X11 application that displays a map of the Earth and indicates
-the illuminated portion of the globe by drawing sunlit areas dark on
-light, night areas as light on dark.  In addition to providing local
+is an X11 application that displays a map of the Earth and shows
+the illuminated portion of the globe.  In addition to providing local
 time for the default timezone, it also displays GMT time, legal and
-solar time of major cities, their latitude and longitude, and the
-mutual distances of arbitrary locations on Earth. Sunclock can display
-meridians, parallels, tropics and arctic circles. It has builtin
-functions that accelerate the speed of time and show the evolution of
-seasons. Sunclock can be internationalized for various western languages.
-It is possible to customize the app-default file and add new entries
-for additional cities. 
+solar time of major cities, their latitude and longitude, the
+mutual distances of arbitrary locations on Earth, the position at
+zenith of Sun and Moon. Sunclock can display meridians, parallels, 
+tropics and arctic circles. It has builtin functions that accelerate 
+the speed of time and show the evolution of seasons. Sunclock can be 
+internationalized for various western languages. It is possible to 
+customize the app-default file and enter additional city entries.
 
 Sunclock can commute between two states, the "clock window" and
 the "map window". The clock window displays a small map of the Earth
@@ -103,16 +89,22 @@ strip, according to the Sun position.
 - "Distance" mode: shows distances in km and miles between two arbitrary
 locations.
 .PP
-- "Progress" mode: allows to speed up the evolution of time, so as to
-observe the evolution of day/night periods and seasons.
-.PP
 Depending on the mode chosen, the bottom line shows a short text
-displaying the required information. The bottom line can be scrolled to
-the right or to the left by pressing the horizontal key arrows.
+displaying the requested information. The bottom line can be scrolled to
+the right or to the left by pressing the PageUp/PageDown and Home/End 
+key arrows.
+.PP
+A further functionality is the "Progress" feature, which allows to
+accelerate the evolution of time, so as to observe the evolution of
+day/night periods and seasons. By default, the Sun and Moon are also
+shown on the map (rather, the positions of Earth where Sun and Moon
+are at zenith are shown).  Coordinates of meridians, parallels,
+cities, the names of cities can be displayed on the map.
 
-All functionalities can be accessed though GUI actions on the main window
-or the auxiliary windows. The main window is resizable by pulling the window
-edges as the window manager under use permits it. There are 4 auxiliary windows:
+All functionalities can be accessed though GUI actions on the main
+window or the auxiliary windows. The main window is resizable by
+pulling the window edges - as the current window manager permits it. 
+There are 5 auxiliary windows:
 .PP
 - Menu Window. This is the main menu, which offers a wide list of actions. 
 The menu window is launched by typing 'H' or clicking on the bottom 
@@ -136,11 +128,14 @@ it up to 100 times. High resolutions (larger than 10) are only recommended
 with the "huge" Earthmap of 11 Mbytes, which offers clean images up to
 20 times magnification at least.
 .PP
+- Urban selector window. Allows to modify interactively the list of 
+shown cities and locations.
+.PP
 - Option window. Allows to reconfigure pretty much everything on the fly
 (colors, fonts, etc), exactly as with the command line options.
 .SH OPTIONS
 The program does not use the Xt nor any other more advanced toolkit,
-and hence only those options explicitly enumerated below may be used.
+and hence only (!) those options explicitly enumerated below may be used.
 The only needed resource is the list of coordinates and timezones of
 cities to be displayed. The system administrator can possibly customize 
 the system-wide prepackaged config file Sunclockrc before installing the
@@ -248,23 +243,25 @@ other colorful images. Day and night can be drawn with various shading
 parameters. This is the recommended option if you have a reasonably
 recent machine with enough video RAM, otherwise see below.
 .TP
-.B "\-monochrome "
-Use monochrome settings. Day and night appear respectively as 
-mapbgcolor (white by default) and mapfgcolor (black by default), and 
-no shading is available. This mode saves a lot of CPU power - since 
-a simple algorithm of inversion of colors is used to set colors of all 
-points in the map. It can be useful for very slow CPUs, such as those 
-in use in PDAs with black and white screen. Only .vmf vector maps can
-be loaded in this mode. 
-.TP
-.B "\-invertcolors "
-The map appears exactly as for the -monochrome option, but menus
-and cities are now shown in colors. This mode only involves about 15 colors 
-in total, and can be used for Pseudocolor displays which only have a
-small number of available colors. The -monochrome and -invertcolors options
-considerably reduce memory and CPU usage, and can be useful on
-slower machines. The option can also be useful if you want to produce 
-Earth maps in which only the coast lines of continents and lands.
+.B "\-colorlevel " level=0,1,2,3
+Sets the color level (0=monochrome, 1=few colors, 2=many colors,
+3=full colors). With the "monochrome" setting, day and night appear 
+respectively as mapbgcolor (white by default) and mapfgcolor (black 
+by default), and no shading is available; all other features
+(city names, coordinates) appear also as monochrome. 
+With the "few colors" setting, the menus and city spots can be 
+represented with dedicated colors, but the meridians/parallels/tropics
+are still monochrome. With the "many colors" oprions, 
+meridians/parallels/tropics can also be drawn in color. 
+In these first 3 modes, only .vmf vector maps can be loaded.
+These modes save a lot of CPU power - since a simple algorithm of 
+inversion of colors is used to set colors of all points in the map. 
+Monochrome mode can be useful for very slow CPUs, such as those 
+in use in PDAs with black and white screen. The full color mode (level=3)
+allows to load jpeg or other colorful images; day and night can be drawn 
+with various shading parameters. This is the recommended mode 
+if you have a reasonably recent machine with enough video RAM.
+The default mode is the full color mode.
 .TP
 .B "\-dock "
 This option is meant to give sunclock the ability to be docked in the
@@ -477,12 +474,12 @@ Default value for magx is 1.0.
 Same as for the -mag option, but only the y direction (height) is rescaled. 
 Default value for magy is 1.0.
 .TP
-.BI "\-dx " value (degrees)
+.BI "\-dx " "value (degrees)"
 Options -dx and -dy allow to set the longitude, respectively the latitude,
 of the city or location at which the zoom area should be centered.
 The values should be given in degrees. Default (dx,dy) is (0.0,0.0). 
 .TP
-.BI "\-dy " value (degrees)
+.BI "\-dy " "value (degrees)"
 See -dx above.
 .TP
 .BI "\-coastlines "
@@ -524,14 +521,14 @@ Specify an external action or program that will be called through keyboard
 shortcut double 'h' (call help). Default is 
 "xterm -fn 9x15 -cr green -ms red -e man sunclock &".
 .TP
-.BI "\-jump " number[unit] (where unit=s,m,h,d,M,Y)
+.BI "\-jump " "number[unit] (where unit=s,m,h,d,M,Y)"
 Number of seconds (respectively minutes, hour, days, Months, Years) 
 by which the current date and time should be shifted. No blank space
 should separate the number and its unit. If the unit is absent, the 
 number is understood to be expressed by default in seconds. Useful to get 
 sunclock display information on earlier or later epochs.
 .TP
-.BI "\-progress " number[unit] (where unit=s,m,h,d,M,Y)
+.BI "\-progress " "number[unit] (where unit=s,m,h,d,M,Y)"
 Number of seconds (respectively minutes, hour, days, Months, Years) 
 by which the time progression should operate. No blank space
 should separate the number and its unit. If the unit is absent, the number
@@ -556,20 +553,20 @@ incorrect timezones cause the clock to display GMT. It is also possible to
 reference a file in a directory relative to /usr/share/zoneinfo for example
 Canada/Eastern instead of EST5EDT.
 .TP
-.BI "\-city " name (\"name|lat|lon\")
+.BI "\-city " name "(name|lat|lon)"
 Initialize program so as to display data of city 'name', respectively
 (name, with latitude and longitude specified). This becomes effective only 
 if the above mentioned city is listed in the systemwide RC file Sunclockrc
 or in the user's private ~/.sunclockrc. The operating mode is set to 
 Coordinates mode.
 .TP
-.BI "\-position " \"latitude|longitude\"
+.BI "\-position " "latitude|longitude"
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
 Notice that \"latitude|longitude\" should be given as a single parameter
 with a vertical bar | (a blank space is also admitted instead of a |).
 .TP
-.BI "\-addcity " \"size|name|lat|lon|tz\"
+.BI "\-addcity " "size|name|lat|lon|tz"
 Adds a city in the list of cities to be displayed on the map. They must be
 defined by exactly 5 parameters: size, name, latitude, longitude, timezone,
 in this order, with parameters being separated by a vertical bar |. Blank
@@ -578,7 +575,7 @@ the group of parameters (but there shouldn't be any blank characters
 in the other parameters). In the RC config file, blank characters should
 be replaced by the octal character 037 (i.e. Ctrl-Q Ctrl-_ within emacs).
 .TP
-.BI "\-removecity " name (\"name|lat|lon\")
+.BI "\-removecity " name ("name|lat|lon")
 Removes name (respectively name|lat|lon) from the list of cities to be
 displayed. Same remarks as above for blank characters.
 .TP
@@ -636,23 +633,23 @@ Equivalent to \-shading 4
 .BI "\-lightgradient "
 Equivalent to \-shading 5
 .TP
-.BI "\-diffusion " value (degrees)
+.BI "\-diffusion " "value\ (degrees)"
 Sets the amplitude of the area in which diffusion of light in the
 atmosphere is still sufficient to keep some luminosity after sunset.
 Default is 3 degrees.
 .TP
-.BI "\-refraction " value (degrees)
+.BI "\-refraction " "value\ (degrees)"
 Sets the value of the refraction angle for tangential sun rays at sunset.
 This is related to the fact that the sun sometimes looks bigger at sunset.
 Changing the refraction degree slightly affects the computation of sunrise
 and sunset times. Default is 0.1 degree.
 .TP
-.BI "\-darkness " value (in the range 0.0 ... 1.0)
+.BI "\-darkness " "value\ (in the range 0.0 ... 1.0)"
 Sets the constrast between day and night areas. A 0.0 value means that 
 the night area will not be distinguishable from day, while 1.0 means that 
 it will be completely black. Default is 0.5.
 .TP
-.BI "\-colorscale " value (integer in the range 1 ... 256)
+.BI "\-colorscale " "value\ (integer in the range 1 ... 256)"
 Sets the number of color subdvisions which will be in use for producing
 shading, that is, the number of colors ranging from bright colors (day)
 to dark colors (night). Default is 16.
@@ -669,11 +666,11 @@ mode=0 : no parallels, mode=1 : parallels drawn, mode=2 : parallels drawn
 with labels at the left hand side, mode=3 : parallels drawn with labels 
 at the right hand side. The default mode is 0 (no parallels).
 .TP
-.BI "\-meridianspacing value (degree)"
+.BI "\-meridianspacing value\ (degree)"
 Specify how many degrees (or fractions of degree) should separate
 meridians drawn on the map.
 .TP
-.BI "\-parallelspacing value (degree)"
+.BI "\-parallelspacing value\ (degree)"
 Specify how many degrees (or fractions of degree) should separate
 parallels drawn on the map.
 .TP
@@ -700,117 +697,83 @@ These options just negate the above ones.
 Mode=0 stands for no objects (Sun, Moon) at all, mode=1 for objects just
 drawn by their symbol, mode=2 for objects drawn with their symbol
 and coordinates in decimal degrees (or degrees, minutes, seconds, using
-the Tab switch).
-.TP
-.BI "\-menubgcolor " color
-Specifies the various menus text background color. Default is Grey92.
-.TP
-.BI "\-menufgcolor " color
-Specifies the various menus text foreground color. Default is Black.
-.TP
-.BI "\-clockbgcolor " color
-Specifies the clock background color to be used with inverted color maps
-(option -invertcolors). Default is White.
-.TP
-.BI "\-clockfgcolor " color
-Specifies the clock foreground color to be used with inverted color maps
-(option -invertcolors). Default is Black.
-.TP
-.BI "\-mapbgcolor " color
-Specifies the map background color to be used with inverted color maps
-(option -invertcolors). Default is White.
-.TP
-.BI "\-mapfgcolor " color
-Specifies the map foreground color to be used with inverted color maps
-(option -invertcolors). Default is Black.
-.TP
-.BI "\-mapstripbgcolor " color
-Specifies the background color to be used for the strip of the map window
-(options -invertcolors and -fullcolors). Default is White.
-.TP
-.BI "\-mapstripfgcolor " color
-Specifies the foreground color to be used for the strip of the map window
-(options -invertcolors and -fullcolors). Default is White.
-.TP
-.BI "\-clockstripbgcolor " color
-Specifies the background color to be used for the strip of the clock window
-(options -invertcolors and -fullcolors). Default is White.
-.TP
-.BI "\-clockstripfgcolor " color
-Specifies the foreground color to be used for the strip of the clock window
-(options -invertcolors and -fullcolors). Default is White.
-.TP
-.BI "\-zoombgcolor " color
-Specifies the zoom area background color to be used with the small
-monochrome map used in the zoom widget. Default is White.
-.TP
-.BI "\-zoomfgcolor " color
-Specifies the zoom area foreground color to be used with the small
-monochrome map used in the zoom widget. Default is Black.
-.TP
-.BI "\-optionbgcolor " color
-Specifies the option text entry background color. Default is White.
-.TP
-.BI "\-optionfgcolor " color
-Specifies the option text entry foreground color. Default is Black.
-.TP
-.BI "\-caretcolor " color
-Specifies the color of the caret used in the option text entry. 
-Default is SkyBlue2.
-.TP
-.BI "\-changecolor " color
-Specifies the color to be used for widget objects that are supposed
-to indicate a change or a move (selector and zoom). Default is Brown.
-.TP
-.BI "\-choicecolor " color
-Specifies the color to be used for widget objects that are supposed
-to indicate a new selection (selector and zoom). Default is SkyBlue2.
-.TP
-.BI "\-dircolor " color
-Specifies the color used for representing directories in the file selection
-widget. Default is Blue.
-.TP
-.BI "\-imagecolor " color
-Specifies the color used in the file selection widget for representing the 
-image files whose formats are recognized and can be read. Default is Magenta.
-.TP
-.BI "\-citynamecolor " color
-Specifies the color of text to be used to indicate city names. Default is Red.
-.TP
-.BI "\-citycolor0 " color
-Specifies the color of cities (as described in ~/.sunclockrc or in
-the systemwide app-default file), when they have not yet been clicked 
-on with the mouse. Default is Orange.
-.TP
-.BI "\-citycolor1 " color
-Specifies the color to be applied to the city which has been selected just
-before the last selection, during the process of calculating distances.
-Default is Red.
-.TP
-.BI "\-citycolor2 " color
-Specifies the color to be applied to the last selected city. The name and
-coordinates of this city are displayed in the bottom line. Default is 
-Red3 (darker red).
-.TP
-.BI "\-markcolor1 " color
-Specifies the color to be applied to the first marked position
-(any location on Earth other than one of the cities). Default is Pink1.
-.TP
-.BI "\-markcolor2 " color
-Specifies the color to be applied to the second marked position.
-Default is Pink2.
-.TP
-.BI "\-linecolor " color
-Specifies the color to be applied to meridian and parallel lines.
-Default is White.
-.TP
-.BI "\-tropiccolor " color
-Specifies the color to be applied to Equator/Tropics/Arctic circles.
-Default is White.
-.BI "\-suncolor " color
-Specifies the color to be applied to Sun.
-Default is Yellow.
+the ° key switch).
+.TP 
+.BI "\-setcolor " "field|color"
+Sets the color of a specified field in the sunclock widgets. 
+The color can be specified as any litteral value (red, yellow, etc...,
+as defined in the resource file rgb.txt), or as a 6 digit hexadecimal 
+value #ijklmn, or even 12 digits (for 48 bits displays!) The field can 
+take any of the following values (between parentheses, the meaning and
+default value):
 .PP
+clockbg (clock background color; White)
+.PP
+clockfg (clock foreground color; Black)
+.PP
+mapbg (map background color; White)
+.PP
+mapfg (map foreground color; Black)
+.PP
+menubg (menu text background color; Grey92)
+.PP
+menufg (menu text foreground color; Black)
+.PP
+clockstripbg (background color of bottom strip in clock window; Grey92)
+.PP
+clockstripfg (foreground color of bottom strip in clock window; Black)
+.PP
+mapstripbg (background color of bottom strip in map window; Grey92)
+.PP
+mapstripfg (foreground color of bottom strip in map window; Black)
+.PP
+zoombg (background color of the small monochrome map used in the 
+zoom widget; White)
+.PP
+zoomfg (foreground color of the small monochrome map used in the 
+zoom widget; Black)
+.PP
+optionbg (background color of option text entry; White)
+.PP
+optionfg (foreground color of option text entry; Black)
+.PP
+caret (color of text caret; SkyBlue2)
+.PP
+change (color for temporary changes; Brown)
+.PP
+choice (color for selected changes and choices; SkyBlue2)
+.PP
+directory (color of text indicating directory entries; Blue)
+.PP
+image (color of text indicating image files; Magenta)
+.PP
+cityname (color of text indicating city names; Red)
+.PP
+city0 (color of unmarked cities; Orange)
+.PP
+city1 (color of marked cities, main selection; Red)
+.PP
+city2 (color of marked cities, secondary selection; Red3)
+.PP
+mark1 (color of first mark; Pink1)
+.PP
+mark2 (color of secondary mark; Pink2)
+.PP
+line (color of geodesic lines; White).
+.PP
+meridian (color of meridians; White).
+.PP
+parallel (color of parallels; White).
+.PP
+tropic (color of Equator/Tropics/Arctic circles; White)
+.PP
+sun (color of Sun; Yellow)
+.PP
+moon (color of Moon; Khaki)
+.PP
+star (color of Stars; White)
+.PP
+.SH PRIVATE CONFIGURATION FILE
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain specify any number of options which are also available
 as command line options:
@@ -828,10 +791,7 @@ mapimage: /usr/share/sunclock/earthmaps/jpeg/caida.jpg
 tropics
 .PP
 twilight
-.PP
-The user may click on the dot on the map associated with a place
-defined in the list of cities. When this is done, the city name and its 
-corresponding local time and time zone will be displayed in the bottomline.
+
 .SH "HOW IT WORKS"
 .I sunclock
 calculates the position of the Sun using the algorithm in chapter 18 of:

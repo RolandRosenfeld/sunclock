@@ -44,32 +44,32 @@ Tasto
 Tasto/Mouse
 Escape
 Uscire dal menu
-Unknown key binding !!
-Synchro
+Tasto sconosciuto!!!
+Sincronizza
 Progressione =
 Scarto temporale =
 #
-City name
-Timezone
-Latitude
-Longitude
-Size
-Warning: %s, lat = %s lon = %s already in list of cities !!
+Nome città
+Fuso orario
+Latitudine
+Longitudine
+Dimensione
+Attenzione: %s, lat = %s lon = %s è già nella lista delle città!
 #
-Option
-Activating selected option...
-Option incorrect or not available at runtime !!
-Options: strike <Ctrl><Space> for blank space within an item
-with the following rather long list of options:
-Starting from **, options are runtime configurable.
-Calculating new image...
+Opzione
+Attivo l'opzione selezionata...
+Opzione scorretta o non disponibile durante l'esecuzione!
+Opzioni: premi <Ctrl><Spazio> per uno spazio in un elemento
+con la seguente lista di opzioni abbastanza lunga:
+A partire da **, le opzioni sono configurabili durante l'esecuzione.
+Calcolo la nuova immagine...
 Sunclock dispone di un certo numero di funzioni accessibili per mezzo del mouse o della tastiera:
 # General help
 Mostrare aiuto ed opzioni (H o mouse, bottone 1)
 Caricare carta della Terra (F o mouse, bottone 2)
 Zoom (Z o mouse, bottone 3)
-Parameters of Urban locations
-Option command window
+Parametri dei centri urbani
+Opzione finestra comandi
 Utilizza la modalità coordinate
 Utilizza la modalità ora solare
 Utilizza la modalità distanze
@@ -94,23 +94,25 @@ Invertire le finestre mappa/orologio
 Attivare il comando specifico per l'opzione -command
 Abbandonare il programma
 # Zoom window help
-Activate new zoom settings
-Return to previous zoom settings
-Set aspect by resizing main window
-Cycle through zoom modes 0,1,2
-Zoom in by factor 1.2
-Zoom out by factor 1/1.2 = 0.833
-Return to zoom factor = 1 (full map)
-Center zoom area on selected city or location
-Synchronize zoom operation
+Attiva le nuove impostazioni di zoom
+Ritorna alle impostazioni di zoom precedenti 
+Imposta la proporzione ridimensionando la finestra
+Cicla attraverso le modalità zoom 0,1,2
+Ingrandisci di un fattore 1.2
+Rimpicciolisci di un fattore 1/1.2 = 0.833
+Ritorna al fattore di zoom = 1 (mappa completa)
+Centra l'area ingrandita sulla città o luogo prescelto
+Sincronizza l'operazione di zoom
 # Option window help
-Activate the option
-Erase the option command line
-Finestri sincronizzati o no
+Attiva l'opzione
+Cancella la linea comandi dell'opzione
+Finestre sincronizzati o no
+Copy map to root window
+Erase map from root window
 # Urban window help
-Use degrees, minutes, seconds, or decimal degrees
-Search/select city
-Modify city parameters
-Create new city location
-Delete city
+Usa gradi, minuti, secondi, oppure gradi decimali
+Cerca/scegli città
+Modifica i parametri delle città
+Aggiungi una nuova città
+Cancella città
 # End

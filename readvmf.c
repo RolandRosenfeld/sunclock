@@ -425,7 +425,7 @@ struct Sundata * Context;
     register Status s;
     str = getdata(fd);
     if (!str) goto abort;
-    if (!map->flags.mono) {
+    if (map->flags.colorlevel==FULLCOLORS) {
       s = XAllocNamedColor(dpy, tmp_cmap, str, &c, &e);
 	if (s != (Status)1) {
 		fprintf(stderr, "%s: warning: can't allocate color `%s'\n",
@@ -574,18 +574,18 @@ struct Sundata * Context;
   fclose(fd);
   filterdata();
 
-  if (map->flags.mono)
-     Context->bits = blacknwhite_image();
-  else
+  if (map->flags.colorlevel==FULLCOLORS)
      Context->xim = pixmap_image();
+  else
+     Context->bits = blacknwhite_image();
 
  abort:
   free(grid); 
   free(colors);
   free(palette);
   if (color_alloc_failed) return 6;
-  if ((map->flags.mono && Context->bits==NULL) || 
-      (!map->flags.mono && Context->xim==NULL)) 
+  if ((map->flags.colorlevel<FULLCOLORS && Context->bits==NULL) || 
+      (map->flags.colorlevel==FULLCOLORS && Context->xim==NULL)) 
      return 2;
   else
      return 0;

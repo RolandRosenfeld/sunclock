@@ -20,11 +20,6 @@
 
 #define HELPCOMMAND     "xterm -fn 9x15 -cr green -ms red -e man sunclock &"
 #define	FAILFONT	"fixed"
-#define MENUFONT        "6x13"
-#define COORDFONT       "6x13"
-#define CITYFONT        "6x10"
-#define MAPSTRIPFONT    "6x13"
-#define CLOCKSTRIPFONT  "6x10"
 
 /* num of bitmaps to accomodate 1 mark and 2 spatial objets (Sun, Moon) */
 #define SPECIALBITMAPS 3
@@ -71,12 +66,29 @@
 #define TIMECOUNT 25
 #define TIMESTEP  10000
 
+enum {MONOCHROME=0, FEWCOLORS, MANYCOLORS, FULLCOLORS};
+
 enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
 
-enum {READSYSRC=0, READUSERRC, PARSECMDLINE, RUNNING, RUNTIMEOPTION, 
+enum {READSYSRC = 0, READUSERRC, PARSECMDLINE, RUNNING, RUNTIMEOPTION, 
       IMAGERECYCLE, FAILEDOPTION};
 
-enum {NULL_INPUT=0, OPTION_INPUT, URBAN_INPUT};
+enum {NULL_INPUT = 0, OPTION_INPUT, URBAN_INPUT};
+
+enum { 
+  CLOCKBGCOLOR=0, MAPBGCOLOR, MENUBGCOLOR, CLOCKSTRIPBGCOLOR, MAPSTRIPBGCOLOR, 
+  ZOOMBGCOLOR, OPTIONBGCOLOR, STARCOLOR,
+  CLOCKFGCOLOR, MAPFGCOLOR, MENUFGCOLOR, CLOCKSTRIPFGCOLOR, MAPSTRIPFGCOLOR,
+  ZOOMFGCOLOR, OPTIONFGCOLOR,
+  CARETCOLOR, CHANGECOLOR, CHOICECOLOR, DIRCOLOR, IMAGECOLOR, CITYNAMECOLOR, 
+  CITYCOLOR0, CITYCOLOR1, CITYCOLOR2, MARKCOLOR1, MARKCOLOR2, 
+  SUNCOLOR, MOONCOLOR, LINECOLOR, MERIDIANCOLOR, PARALLELCOLOR, TROPICCOLOR, 
+  NUMPIXELS
+};
+
+enum {
+  CLOCKSTRIPFONT, MAPSTRIPFONT, COORDFONT, CITYFONT, MENUFONT, NUMFONTS
+};
 
 /* Geometry structure */
 
@@ -93,7 +105,7 @@ typedef struct Geometry {
 /* Behavioral flags */
 typedef struct Flags {
   /* Status values */
-        short mono;                     /* 0=color 1=invert 2=B&W */
+        short colorlevel;               /* 0=mono 1=invert1 2=invert2 3=color*/
         short fillmode;                 /* 0=coastlines 1=contour 2=landfill */
         short dotted;                   /* use dotted lines ? */
         short colorscale;               /* number of colors in shading */
@@ -130,94 +142,13 @@ typedef struct ZoomSettings {
         int             dy;             /* translation along height */
 } ZoomSettings;
 
-/* List of GCs, as name indicates! */
-
-typedef struct GClist {
-        GC clockstore;
-        GC mapstore;
-        GC invert;
-
-        GC choice;
-        GC change;
-        GC zoombg;
-        GC zoomfg;
-
-        GC clockstripfont;
-        GC mapstripfont;
-        GC cityfont;
-        GC parallelfont;
-        GC meridianfont;
-        GC menufont;
-        GC optionfont;
-        GC dirfont;
-        GC imagefont;
-
-        GC coordpix;
-        GC citypix;
-
-        GC citycolor0;
-        GC citycolor1;
-        GC citycolor2;
-        GC markcolor1;
-        GC markcolor2;
-        GC suncolor;
-        GC mooncolor;
-
-        GC linecolor;
-        GC meridiancolor;
-        GC parallelcolor;
-        GC tropiccolor;
-} GClist;
-
-/* List of Pixel values, as name indicates! */
-
-typedef struct Pixlist {
-        Pixel black;
-        Pixel white;
-
-        Pixel clockbgcolor;
-        Pixel clockfgcolor;
-
-        Pixel mapbgcolor;
-        Pixel mapfgcolor;
-
-        Pixel clockstripbgcolor;
-        Pixel clockstripfgcolor;
-        Pixel mapstripbgcolor;
-        Pixel mapstripfgcolor;
-
-        Pixel menubgcolor;
-        Pixel menufgcolor;
-        Pixel dircolor;
-        Pixel imagecolor;
-
-        Pixel changecolor;
-        Pixel choicecolor;
-        Pixel zoombgcolor;
-        Pixel zoomfgcolor;
-
-        Pixel optionbgcolor;
-        Pixel optionfgcolor;
-        Pixel caretcolor;
-
-        Pixel citynamecolor;
-        Pixel citycolor0;
-        Pixel citycolor1;
-        Pixel citycolor2;
-        Pixel markcolor1;
-        Pixel markcolor2;
-        Pixel suncolor;
-        Pixel mooncolor;
-
-        Pixel linecolor;
-        Pixel meridiancolor;
-        Pixel parallelcolor;
-        Pixel tropiccolor;
-} Pixlist;
 
 /* Graphic Data */
 
 typedef struct GraphicData {
+        GC              wingc;          /* window gc */
+        GC              pixgc;          /* pixmap gc */
+        Pixel           pixel[NUMPIXELS];  /* list of extra pixels used */
         int             precedence;     /* ordinal number of creation */
         int             clockstrip;     /* height of strip for clock */
         int             mapstrip;       /* height of strip for map */
@@ -226,13 +157,7 @@ typedef struct GraphicData {
         short           links;          /* how many other Windows linked ? */
         short           usedcolors;     /* number of colors used */
         Colormap        cmap;           /* window (private?) colormap */  
-        XFontStruct *   clockstripfont; /* clock font structure */
-        XFontStruct *   mapstripfont;   /* map font structure */
-        XFontStruct *   menufont;       /* menu font structure */
-        XFontStruct *   coordfont;      /* coordinates font structure */
-        XFontStruct *   cityfont;       /* city font structure */
-        GClist          gclist;         /* window GCs */  
-        Pixlist         pixlist;        /* special color pixels */  
+        XFontStruct *   font[NUMFONTS]; /* font structures */
 } GraphicData;
 
 /* Records to hold cities */
@@ -269,6 +194,9 @@ typedef struct TextEntry {
 typedef struct Sundata {
         int             wintype;        /* is window map or clock ? */
         Window          win;            /* window id */
+        Pixmap          mappix;         /* map pixmap */
+        XImage *        xim;            /* ximage of map */ 
+        char *          ximdata;        /* ximage data copy */
         int             *spotsizes;     /* city spot sizes, by category */
         int             *sizelimits;    /* city size limits */
         GraphicData *   gdata;          /* associated graphical data */
@@ -287,9 +215,6 @@ typedef struct Sundata {
         double *        daywave;        /* pointer to daywave values */
         double *        cosval;         /* pointer to cosine values */
         double *        sinval;         /* pointer to sine values */
-        Pixmap          mappix;         /* map pixmap */
-        XImage *        xim;            /* ximage of map */ 
-        char *          ximdata;        /* ximage data copy*/ 
         unsigned char * daypixel;       /* pointer to day pixels */
         unsigned char * nightpixel;     /* pointer to night pixels */
         int             ncolors;        /* number of colors in day pixels */

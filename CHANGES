@@ -11,6 +11,24 @@ Planned versions 3.4x, 3.5x... (features to appear in some order)
 - Adding new images formats: png, other vector map formats (the rmap 
   database would be great...)
 
+Version 3.44, June 22, 2001
+
+- Sunclock is now able to write the map to the root window, and presents
+  a starry sky beyond the size of the map.
+- The syntax of color options has changed. A unique option 
+  "-setcolor field|color" can be used instead. This single change reduced
+  the size of the binary code by 1.5 kB !!
+  Similarly, options -monochrome, -invertcolors and -fullcolors have been
+  replaced by a single option -colorlevel <value> (0, 1, 2, 3) [thus there
+  is a new color level as well, see man page]
+- Italian dialogs have been updated, thanks to Alessio F. Bragadini 
+  <alessio@sevenseas.org>
+- The code has been cleaned-up a little bit and should consume slightly
+  less memory, perhaps at the expense of slightly more CPU power.
+- Search of city works with respect to city names as well as with 
+  coordinates (when name entry is left empty).
+- A lot of minor bug fixes
+
 Version 3.43, June 14, 2001
 
 - Larger data base of cities/coordinates, with level of size

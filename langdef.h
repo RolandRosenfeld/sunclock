@@ -1,8 +1,8 @@
 #define N_MENU 28
 #define N_ZOOM 13
-#define N_OPTION 6
+#define N_OPTION 8
 #define N_URBAN 12
-#define N_HELP 45
+#define N_HELP 47
 
 #define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
 
@@ -42,7 +42,7 @@ char	* Label[L_END] = {
 	"Escape",
         "Escape menu",
 	"Unknown key binding !!",
-        "Synchro",
+        "Synchro (\")",
 	"Progress value =",
         "Global time shift =",
 
@@ -71,13 +71,13 @@ char    ZoomKey[2*N_ZOOM] =
 "*,#,/;&,+,-,1,.;>,<,!,W,K;";
 
 char    OptionKey[2*N_OPTION] = 
-"@,%;=;!,W,K;";
+"@,%;=;[,];!,W,K;";
 
 char    UrbanKey[2*N_URBAN] = 
 "U,°,§,%;C,S;~,(,);!,W,K;";
 
 char    CommandKey[N_HELP] = 
-"HFZUOCSDELABGJNYMPTWKIR><!XQ*#/&+-1.\"@%=°§~()";
+"HFZUOCSDELABGJNYMPTWKIR><!XQ*#/&+-1.\"@%=[]°§~()";
 
 char  * Help[N_HELP] = {
 
@@ -126,6 +126,8 @@ char  * Help[N_HELP] = {
 "Activate the selected option",
 "Erase the command/parameter line(s)",
 "Synchronize windows or not",
+"Copy map to root window",
+"Erase map from root window",
 
 /* Urban window help */
 "Use degree, minute, seconds, or decimal degrees",
