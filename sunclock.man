@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "Mar 30, 1998"
+.TH SUNCLOCK 1 "Apr 07, 1999"
 .SH NAME
 sunclock \- show illuminated portion of Earth
 .SH SYNOPSIS
@@ -42,22 +42,32 @@ information given is ignored.
 Animate the icon by continuous scrolling.  Many window managers permit
 only a fixed icon size of 64x64 pixels.  This option makes the whole
 icon map visible over time.
+.TP
+.BI "\-fg " Colour
+Set the foreground colour to 'Colour'.  This is the colour which is used
+to draw the map outline in the daylight areas.
+.TP
+.BI "\-bg " Colour
+Set the background colour to 'Colour'. This is the colour which is used
+for the background in the daylight areas.  Night areas are shown with
+foreground and background colours reversed.
 .RE
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain lines of the following format:
 .PP
-[+]name latitude longtitude timezone
+[+]name latitude longitude timezone
 .PP
-where name is the ascii name of the place to be shown on the map. If the
-name starts with a '+' the label will be displayed above the dot instead of
-below. latitude and logtitude are floating point numbers representing the
-geographical location of the place. Western logtitudes and southern latitudes
-should be entered as negative numbers. timezone is the name of the timezone
-that the place is in. This should be the name of a file under /lib/zoneinfo,
-incorrect timezones cause the clock to display GMT. It is also possible to 
-reference a file in a directory relative to /lib/zoneinfo for example
-Canada/Eastern instead of EST5EDT.
+where name is the ascii name of the place to be shown on the map. If
+the name starts with a '+', the label will be displayed above the dot
+instead of below. latitude and longitude are floating point numbers
+representing the geographical location of the place. Western
+longitudes and southern latitudes should be entered as negative
+numbers. timezone is the name of the timezone that the place is
+in. This should be the name of a file under /usr/share/zoneinfo;
+incorrect timezones cause the clock to display GMT. It is also
+possible to reference a file in a directory relative to
+/usr/share/zoneinfo, for example Canada/Eastern instead of EST5EDT.
 .PP
 The user may click on the dot on the map associated with a place
 defined in the .sunclockrc
@@ -89,3 +99,6 @@ by John Walker, Autodesk, Inc.; <kelvin@acad.uu.NET>.
 .PP
 Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca;
 added support for interactive map.
+.PP
+Wolfram Gloger, wmglo@dent.med.uni-muenchen.de;
+added animation of icon, miscellaneous minor fixes.

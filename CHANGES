@@ -1,3 +1,14 @@
+Version 1.5
+- Updates of the main window and the icon should now work with
+  all window managers (e.g. WindowMaker's `shading' caused problems
+  before)
+- Uploaded by Wolfram Gloger (wmglo@Dent.MED.Uni-Muenchen.DE)
+
+Version 1.4-colour
+- Added options for user to specify the colours used to draw the 
+  map. Updated man page. - Michael Richmond
+    (mar@mri.mq.edu.au)
+
 Version 1.4
 - Packaged files into subdirectory
 - Fixed timeout handling for modern window managers (e.g. WindowMaker)
