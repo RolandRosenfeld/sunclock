@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "June 28, 2001"
+.TH SUNCLOCK 1 "July 3, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -33,7 +33,9 @@ where the list of licit options is the following long list
 [-placementshift x y] [-extrawidth value] \
 [-decimal] [-dms] [-city name] [-position latitude|longitude] \
 [-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)] \
-[-rootperiod value(in sec)] [-animateperiod value(in sec)] \
+[-rootdx value] [-rootdy value] [-fixedrootpos] [-randomrootpos] \
+[-screensaver] [-noscreensaver] [-rootperiod value (in seconds)] \
+[-animation] [-noanimation] [-animateperiod value (in seconds)] \
 [-progress number[s,m,h,d,M,Y]] [-jump number[s,m,h,d,M,Y]] \
 [-aspect mode] [-colorlevel level=0,1,2,3] \
 [-fillmode number=0,1,2] [-coastlines] [-contour] [-landfill] \
@@ -43,12 +45,12 @@ where the list of licit options is the following long list
 [-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
 [-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)] \
 [-sizelimits w1|w2|w3|... (wi = zoom width values, 1<=i<=citycategories)] \
-[-citymode mode=0,1,2,3] \
+[-citymode mode=0,1,2,3] [-objectmode mode=0,1,2] \
+[-sun] [-nosun] [-moon] [-nomoon] [-tropics] [-notropics] \
 [-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3] \
 [-meridianspacing value] [-parallelspacing value] \
-[-tropics] [-notropics] \
 [-dottedlines] [-plainlines] [-bottomline] [-nobottomline] \
-[-objectmode mode=0,1,2] [-sun] [-nosun] [-moon] [-nomoon]
+[-vmfcolors color1|color2|color3...] [-setcolor field|color]
 
 .SH DESCRIPTION
 .I sunclock
@@ -530,11 +532,47 @@ is understood to be expressed by default in seconds. Useful to get sunclock
 progress by other steps than the predefined ones (by default the steps 
 cycle between the values 1 mn, 1 hour, 1 day, 7 days, 30 days).
 .TP
+.BI "\-rootdx " "value (between 0.0 and 1.0)"
+Options -rootdx and -rootdy allow to set the position where the sunclock
+map is copied on the root window in rootwindow or screensaver modes.
+'-rootdx 0.0' means on the left side, '-rootdx 1.0' on the right side,
+'-rootdy 0.0' means at the top, '-rootdy 1.0' at the bottom of the root
+window. Default is 0.5 for both values, i.e. a centered map.
+.TP
+.BI "\-rootdy " "value (degrees)"
+See -rootdx above.
+.TP
+.BI "\-fixedrootpos "
+Use the above rootdx and rootdy values to fix the position of the map on 
+the root window. This is the default unless -screensaver has been
+specified.
+.TP
+.BI "\-randomrootpos "
+Instead of using the above rootdx and rootdy values to fix the position 
+of the map on the root window, just use a random position instead.
+This is the default in case the -screensaver option has been set.
+.TP
+.BI "\-screensaver "
+Start sunclock in screensaver mode (no window nor any GUI controls
+are available in that case, and the only way to terminate the program
+is to kill it explicitly).
+.TP
+.BI "\-noscreensaver "
+Do not start sunclock in screensaver mode. This is the default.
+.TP
 .BI "\-rootperiod " "value (in seconds, between 1 and 120 sec)"
 Set the period for refreshing the root window. Default is 30 seconds.
 This takes effect only when writing the map onto the root window is active
 (strike twice on '[' or hit the relevant box in the Option window).
 Writing onto the root window is disabled by using the ']' key.
+.TP
+.BI "\-animation "
+Start the animation mode right away when sunclock is launched.
+.TP
+.BI "\-noanimation "
+Don't start the animation mode when sunclock is launched - this is the
+default. Sunclock can anyway switch between the animation/noanimation
+modes by typing key ' (apostrophe) at runtime.
 .TP
 .BI "\-animateperiod " "value (in seconds, between 0 and 5 sec)"
 Set the period for animating the map. Default is 0 seconds, which means that
@@ -716,6 +754,13 @@ Mode=0 stands for no objects (Sun, Moon) at all, mode=1 for objects just
 drawn by their symbol, mode=2 for objects drawn with their symbol
 and coordinates in decimal degrees (or degrees, minutes, seconds, using
 the ° key switch).
+.TP 
+.BI "\-vmfcolors " "color1|color2|color3..."
+Redefine the list of colors to be used in the .vmf file. This option has
+no effect when loading files with other formats. Default is NULL string
+(so that the default colors are loaded). The string "|" is also considered
+to be a void string and can be used in the option widget to enforce
+default colors back.
 .TP 
 .BI "\-setcolor " "field|color"
 Sets the color of a specified field in the sunclock widgets. 

@@ -31,6 +31,7 @@
 #include "sunclock.h"
 
 extern char *ProgName;
+extern char *vmfcolors;
 
 extern Display *	dpy;
 extern Colormap         tmp_cmap;
@@ -374,7 +375,7 @@ char * path;
 struct Sundata * Context;
 {
   int num_colors, correct, maxgrid;
-  int color, i, j, num, count, u=0, v=0, up, vp;
+  int color, i, j, k, l, num, count, u=0, v=0, up, vp;
   int m, min, max, addumin, addvmin, addumax, addvmax, diffu, diffv, sum;
   int ix, iy, ix0=0, iy0=0;
   double theta, phi;
@@ -421,9 +422,22 @@ struct Sundata * Context;
   maxgrid = (mapwidth+1)*mapheight;
   grid = (int *) salloc(maxgrid*sizeof(int));
 
+  k = 0;
   for (j=0; j<num_colors; j++) {
     register Status s;
     str = getdata(fd);
+    if (vmfcolors) {
+       if (vmfcolors[k] && vmfcolors[k]!='|') {
+          strcpy(buf, vmfcolors+k);
+	  l = 0;
+          while (buf[l]!='|' && buf[l] != '\0') ++l;
+	  if (buf[l]=='|') 
+	     k=k+l+1;
+	  else
+	     k=k+l;
+	  buf[l] = '\0';
+       }
+    }
     if (!str) goto abort;
     if (map->flags.colorlevel==FULLCOLORS) {
       s = XAllocNamedColor(dpy, tmp_cmap, str, &c, &e);

@@ -1,7 +1,10 @@
 TODO
 ====
 
-- Find a second vector map showing time zones
+- Implement a (Sunclocksaver , ~/.sunclocksaver) pair of config files 
+  for fancier screensaver functionality
+- Produce other vector maps, especially one(s) showing time zones
+  and/or nation boundaries
 - Spherical representation of Earth
 - Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 

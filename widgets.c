@@ -79,7 +79,7 @@ extern char             Default_vmf[];
 extern char *           Clock_img_file;
 extern char *           Map_img_file;
 
-extern int              num_cat;
+extern int              city_cat;
 extern int              *city_spotsizes;
 extern int              *city_sizelimits;
 extern int		do_menu, do_filesel, do_zoom, do_option, do_urban;
@@ -123,6 +123,15 @@ int                     areaw, areah;
 
 
 void shutDown();
+
+int 
+getState(w)
+Window w;
+{
+XWindowAttributes xwa;
+   XGetWindowAttributes(dpy, w, &xwa);
+   return xwa.map_state;
+}
 
 int
 getPlacement(win, x, y, w, h)
@@ -364,6 +373,7 @@ int				num;
 	long                    mask;
 
 	mask = FocusChangeMask | VisibilityChangeMask | ExposureMask | 
+               StructureNotifyMask |
                ButtonPressMask | ButtonReleaseMask | KeyPressMask;
 
         /* use StructureNotifyMask rather than  ResizeRedirectMask 
@@ -378,7 +388,6 @@ int				num;
 	   case 1:
                 if (!Context) return;
 		win = Context->win;
-		mask |= StructureNotifyMask;
 		break;
 
 	   case 2:
@@ -388,22 +397,21 @@ int				num;
 
 	   case 3:
 	        win = Filesel;
-		mask |= StructureNotifyMask;
 		break;
 
 	   case 4:
 	        win = Zoom;
-		mask |= PointerMotionMask | StructureNotifyMask;
+		mask |= PointerMotionMask;
 		break;
 
 	   case 5:
 	        win = Option;
-		mask |= PointerMotionMask | KeyReleaseMask | StructureNotifyMask;
+		mask |= PointerMotionMask | KeyReleaseMask;
 		break;
 
 	   case 6:
 	        win = Urban;
-		mask |= PointerMotionMask | KeyReleaseMask | StructureNotifyMask;
+		mask |= PointerMotionMask | KeyReleaseMask;
 		break;
 
  	   default:
@@ -416,68 +424,32 @@ int				num;
 	XSetWMProtocols(dpy, win, &wm_delete_window, 1);
 }
 
-void
-createWindow(Context, num)
+Window
+newWindow(Context, Geom, num)
 struct Sundata * Context;
+struct Geometry * Geom;
 int num;
 {
-	struct Geometry *	Geom = NULL;
-        Window *		win = NULL;
+        Window 		        win = 0;
 	int                     strip;
 
-	strip = 0;
-
-        switch (num) {
-
-	   case 0:
-	   case 1:
-	        win = &Context->win;
-		Geom = &Context->geom;
-		strip = (num)? Context->gdata->mapstrip:
-                               Context->gdata->clockstrip;
-		Context->hstrip = strip;
-		break;
-
-	   case 2:
-	        if (!Menu) win = &Menu;
-		Geom = &MenuGeom;
-		break;
-
-	   case 3:
-	        if (!Filesel) win = &Filesel;
-		Geom = &FileselGeom;
-		break;
-
-	   case 4:
-	        if (!Zoom) win = &Zoom;
-		Geom = &ZoomGeom;
-		break;
-
-	   case 5:
-	        if (!Option) win = &Option;
-		Geom = &OptionGeom;
-		break;
-
-	   case 6:
-	        if (!Urban) win = &Urban;
-		Geom = &UrbanGeom;
-		break;
-	}
-
 	if (num<=1) {
+ 	   strip = (num)? Context->gdata->mapstrip :
+                          Context->gdata->clockstrip;
+	   Context->hstrip = strip;
 	   if (Geom->mask & XNegative)
 	      Geom->x = DisplayWidth(dpy, scr) - Geom->width + Geom->x;
 	   if (Geom->mask & YNegative)
 	      Geom->y = DisplayHeight(dpy, scr) - Geom->height + Geom->y-strip;
-	}
+	} else
+	   strip = 0;
 
-        if (win) {
-	   *win = XCreateSimpleWindow(dpy, Root,
+	win = XCreateSimpleWindow(dpy, Root,
                       Geom->x, Geom->y, 
                       Geom->width, Geom->height + strip, 0,
 		      black, white);
-           setClassHints(*win, num);
-	}
+        if (win) setClassHints(win, num);
+	return win;
 }
 
 int
@@ -593,7 +565,8 @@ showMenuHint()
 }
 
 void
-setupMenu()
+setupMenu(mode)
+int mode;
 {
 	char s[2];
 	char which[] = "QCDEMPSTUK><!";
@@ -663,10 +636,14 @@ struct Sundata * Context;
 
         if (!do_menu) 
 	  {
-	  XUnmapWindow(dpy, Menu);
+	  XDestroyWindow(dpy, Menu);
+	  Menu = 0;
 	  MenuCaller = NULL;
 	  return;
 	  }
+
+        if (!Menu)
+           Menu = newWindow(NULL, &MenuGeom, 2);
 
 	XSelectInput(dpy, Menu, 0);
         MenuCaller = Context;
@@ -693,8 +670,8 @@ struct Sundata * Context;
         XMoveWindow(dpy, Menu, x, y);
         XSync(dpy, True);
 	usleep(2*TIMESTEP);
-	menu_lasthint = '\0';
-	setupMenu();
+	menu_lasthint = ' ';
+	setupMenu(-1);
         setProtocols(NULL, 2);
 }
 
@@ -723,7 +700,7 @@ int mode;
 
 	d = FileselCaller->gdata->charspace/3;
 
-	if (mode <= 0) {
+	if (mode < 0) {
 
           XClearArea(dpy, Filesel,  0, 0, 
              FileselGeom.width, FileselCaller->gdata->menustrip, False);
@@ -757,7 +734,7 @@ int mode;
               0, h, FileselGeom.width, h);
 	}
 	
-        if (mode <= 1) {
+        if (mode <= 0) {
             XClearArea(dpy, Filesel,  0, FileselCaller->gdata->menustrip+1, 
                 FileselGeom.width, FileselGeom.height, False);
 
@@ -801,12 +778,12 @@ int mode;
 	  sp = (FileselCaller->wintype)? 
 	    FileselCaller->map_img_file : FileselCaller->clock_img_file;
 	  if (strstr(sp,s)) {
-	     if (mode<=3)
+	     if (mode<=2)
                 XClearArea(dpy, Filesel, 2, 
                    FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent+
                       2 * FileselCaller->gdata->menustrip, 3, 
                    FileselGeom.height, False);
-	     if (mode==3) {
+	     if (mode==2) {
   	        XSetForeground(dpy, FileselCaller->gdata->wingc, 
                                FileselCaller->gdata->pixel[CHANGECOLOR]);
                 XDrawRectangle(dpy, Filesel, FileselCaller->gdata->wingc,
@@ -818,7 +795,7 @@ int mode;
                   d/4, j-FileselCaller->gdata->font[MENUFONT]->max_bounds.ascent/2, 3,4);
 	     }
 	  }
-	  if (mode<=1) {
+	  if (mode<=0) {
   	     XSetForeground(dpy, FileselCaller->gdata->wingc,
                 (b==0)? FileselCaller->gdata->pixel[MENUFGCOLOR] :
                         FileselCaller->gdata->pixel[DIRCOLOR+b-1]);
@@ -841,12 +818,16 @@ struct Sundata * Context;
 
         if (!do_filesel) 
 	  {
-	  XUnmapWindow(dpy, Filesel);
+	  XDestroyWindow(dpy, Filesel);
+	  Filesel = 0;
+	  FileselCaller = NULL;
 	  if (dirtable) free_dirlist(dirtable);
 	  dirtable = NULL;
-	  FileselCaller = NULL;
 	  return;
 	  }
+
+        if (!Filesel)
+           Filesel = newWindow(NULL, &FileselGeom, 3);
 
         XSelectInput(dpy, Filesel, 0);
 	FileselCaller = Context;
@@ -873,7 +854,7 @@ struct Sundata * Context;
         XMoveWindow(dpy, Filesel, x, y);
 	XSync(dpy, True);
 	usleep(2*TIMESTEP);
-	setupFilesel(0);
+	setupFilesel(-1);
         setProtocols(NULL, 3);
 }
 
@@ -932,12 +913,12 @@ int b;
 	     do_filesel = 0;
 	     return;
 	  }
-	  setupFilesel(1);
+	  setupFilesel(0);
 	  return;
 	}
         if (b <= 2*Context->gdata->menustrip) {
 	  filesel_shift = 0;
-	  setupFilesel(1);
+	  setupFilesel(0);
 	  return;
 	}
 	b = (b-2*Context->gdata->menustrip-4)/(3*Context->gdata->menustrip/4)
@@ -972,7 +953,7 @@ int b;
 	      num_table_entries=0;
 	      StringReAlloc(&image_dir, f);
 	      free(f);
-              setupFilesel(1);
+              setupFilesel(0);
 	      return;
 	   } else {
 	      path = (Context->wintype)? 
@@ -985,7 +966,7 @@ int b;
                     StringReAlloc(&Context->map_img_file, f);
 		 else
 		    StringReAlloc(&Context->clock_img_file, f);
-		 setupFilesel(3);
+		 setupFilesel(2);
 		 adjustGeom(Context, 0);
 	         shutDown(Context, 0);
 	         buildMap(Context, Context->wintype, 0);
@@ -1391,7 +1372,8 @@ struct Sundata * Context;
         int a, b, w, h, x=0, y=0;
 
 	if (do_zoom) {
-	    XUnmapWindow(dpy, Zoom);
+	    XDestroyWindow(dpy, Zoom);
+	    Zoom = 0;
 	    ZoomCaller = NULL;
 	    zoom_active = 1;
             do_zoom = 0;
@@ -1402,6 +1384,9 @@ struct Sundata * Context;
 	    return;
 	} else
 	    do_zoom = 1;
+
+        if (!Zoom)
+           Zoom = newWindow(NULL, &ZoomGeom, 4);
 
         Context->newzoom = Context->zoom;
         XSelectInput(dpy, Zoom, 0);
@@ -1706,10 +1691,14 @@ struct Sundata * Context;
 
         if (!do_option) 
 	  {
-	  XUnmapWindow(dpy, Option);
+	  XDestroyWindow(dpy, Option);
+	  Option = 0;
 	  OptionCaller = NULL;
 	  return;
 	  }
+
+        if (!Option)
+           Option = newWindow(NULL, &OptionGeom, 5);
 
         XSelectInput(dpy, Option, 0);
         OptionCaller = Context;
@@ -1740,7 +1729,7 @@ struct Sundata * Context;
 	}
         setSizeHints(NULL, 5);
         XMoveWindow(dpy, Option, x, y);
-        XResizeWindow(dpy, Zoom, OptionGeom.width, OptionGeom.height);
+        XResizeWindow(dpy, Option, OptionGeom.width, OptionGeom.height);
         XMapRaised(dpy, Option);
         XMoveWindow(dpy, Option, x, y);
         XSync(dpy, True);
@@ -1767,6 +1756,7 @@ activateOption()
 	if (!do_option || !Context) return;
 
 	oldflags = gflags;
+	gflags.animate += 2;
 	oldzoom = gzoom;
 	oldbf = BigFont_name;
 	oldsf = SmallFont_name;
@@ -1798,9 +1788,13 @@ activateOption()
 	   }
 	}
 	shutDown(Context, 0);
-	memcpy(Context->spotsizes, city_spotsizes, num_cat*sizeof(int));
-	memcpy(Context->sizelimits, city_sizelimits, num_cat*sizeof(int));
+	memcpy(Context->spotsizes, city_spotsizes, city_cat*sizeof(int));
+	memcpy(Context->sizelimits, city_sizelimits, city_cat*sizeof(int));
 
+	if (gflags.animate<2) 
+	   Context->flags.animate = gflags.animate;
+	else
+           gflags.animate -= 2;
 	ptr = (short *) &gflags;
 	oldptr = (short *) &oldflags;
 	newptr = (short *) &Context->flags;
@@ -1955,7 +1949,7 @@ int mode;
        urban_t[3] = (UrbanGeom.width - 120)/2;
        urban_t[4] = UrbanGeom.width - 100;
        urban_x[0] = 100;
-       urban_x[1] = 100 + UrbanGeom.width/2;
+       urban_x[1] = 100 + (UrbanGeom.width+1)/2;
        urban_x[2] = 80;
        urban_x[3] = 20 + UrbanGeom.width/2;
        urban_x[4] = UrbanGeom.width-40;
@@ -2052,10 +2046,14 @@ struct Sundata * Context;
 	do_urban = 1 - do_urban;
 
         if (!do_urban) {
-	  XUnmapWindow(dpy, Urban);
+	  XDestroyWindow(dpy, Urban);
+	  Urban = 0;
 	  UrbanCaller = NULL;
 	  return;
 	}
+
+        if (!Urban)
+           Urban = newWindow(NULL, &UrbanGeom, 6);
 
         XSelectInput(dpy, Urban, 0);
         UrbanCaller = Context;
@@ -2163,98 +2161,91 @@ struct Sundata * Context;
 }
 
 void
-remapAuxilWins(Context, mode)
-struct Sundata * Context;
+setAuxilWins(Context, mode)
+Sundata * Context;
 int mode;
 {
-      int i;
+#define NUMWIDGETS 5
 
-      if (do_menu || do_filesel || do_zoom || do_option || do_urban) {
-	 XFlush(dpy);
-	 usleep(2*TIMESTEP);
-         if (verbose && mode)
-	    fprintf(stderr, "Remapping auxiliary widgets...\n");
-      } else
-	 return;
 
-      if (do_filesel) {
-	 if (mode>0 || Context==FileselCaller) {
-            do_filesel = 1;
-            for (i=0; i<=mode; i++) PopFilesel(Context);
+int * bool_state[NUMWIDGETS] = { 
+  &do_menu, &do_filesel, &do_zoom, &do_option, &do_urban };
+
+Window * window[NUMWIDGETS] = { &Menu, &Filesel, &Zoom, &Option, &Urban };
+
+struct Sundata ** caller[NUMWIDGETS] = { 
+  &MenuCaller, &FileselCaller, &ZoomCaller, &OptionCaller, &UrbanCaller };
+
+char * char_newhint[NUMWIDGETS] = {
+   (char *)&menu_newhint, NULL, 
+   &zoom_newhint, &option_newhint, &urban_newhint };
+
+setupCB setup_proc[NUMWIDGETS] = {
+   &setupMenu, &setupFilesel, &setupZoom, &setupOption, &setupUrban };
+
+popCB pop_proc[NUMWIDGETS] = {
+   &PopMenu, &PopFilesel, &PopZoom, &PopOption, &PopUrban };
+
+int i, announce=1;
+  
+      if (option_changes && mode==RESET) mode = REMAP;
+
+      for (i=0; i<NUMWIDGETS; i++) if (*bool_state[i]) {
+	 if (announce && verbose && mode!=RESET) {
+	   fprintf(stderr, 
+              "Resetting auxiliary widgets in mode %d...\n", mode);
+	   announce = 0;
 	 }
-      }
-      if (do_zoom) {
-	 if (mode>0 || Context==ZoomCaller) {
-	    do_zoom = 1;
-	    zoom_lasthint = '0';
-            for (i=0; i<=mode; i++) PopZoom(Context);
-	 }
-      }
-      if (do_option) {
-	 if (mode>0 || Context==OptionCaller) {
-	    do_option = 1;
-	    option_lasthint = ' ';
-            for (i=0; i<=mode; i++) PopOption(Context);
-	 }
-      }
-      if (do_urban) {
-	 if (mode>0 || Context==UrbanCaller) {
-	    do_urban = 1;
-            for (i=0; i<=mode; i++) PopUrban(Context);
-	 }
-      }
-      if (do_menu) { 
-	 if (mode>0 || Context==MenuCaller) {
-	    do_menu = 1;
-	    menu_lasthint = '\0';
-            for (i=0; i<=mode; i++) PopMenu(Context); 
+	 
+	 switch(mode) {
+
+         case RESET:
+	    if (Context == *caller[i]) {
+  	       *bool_state[i] = 1;
+	       *caller[i] = Context;
+	       setup_proc[i](-1);
+	    }
+	    break;
+
+         case REMAP:
+	    if (Context != *caller[i]) break;
+	 case REATTRIB:
+	    *bool_state[i] = 0;
+	    if (*window[i]) 
+               XUnmapWindow(dpy, *window[i]);
+	    if (char_newhint[i])
+	       *char_newhint[i] = ' ';
+	    pop_proc[i](Context);
+	    break;
+
+         case DESTROY:
+	    if (Context == *caller[i]) {
+	       if (*window[i]) {
+		  XDestroyWindow(dpy, *window[i]);
+                  *window[i] = 0;
+	       }
+	       *bool_state[i] = 0;
+	       *caller[i] = NULL;
+	    }
+	    break;
+
+         case ICONIFY:
+	    if (Context == *caller[i])
+	       XIconifyWindow(dpy, *window[i], scr);
+	    break;
+
+         case DEICONIFY:
+	    if (Context == *caller[i]) {
+	       XMapWindow(dpy, *window[i]);
+	       setup_proc[i](-1);
+	    }
+	    break;
+
 	 }
       }
 
       XFlush(dpy);
-
-}
-
-void
-resetAuxilWins(Context)
-Sundata * Context;
-{
-      if (option_changes) {
-	 remapAuxilWins(Context);
-	 return;
-      }
-
-      if (do_menu || do_filesel || do_zoom || do_option || do_urban) {
-	if (verbose)
-	   fprintf(stderr, "Resetting auxiliary widgets...\n");
-      } else
-	return;
-
-      if (do_filesel) { 
-         FileselCaller = Context;
-	 do_filesel = 1;
-	 setupFilesel(0);
-      }
-      if (do_zoom) { 
-         ZoomCaller = Context;
-         do_zoom = 1; 
-	 setupZoom(-1);
-      }
-      if (do_option) { 
-         OptionCaller = Context;
-         do_option = 1; 
-	 setupOption(-1);
-      }
-      if (do_urban) { 
-         UrbanCaller = Context;
-         do_urban = 1; 
-	 setupUrban(-1);
-      }
-      if (do_menu) {
-         MenuCaller = Context;
-	 menu_lasthint = '\0';
-	 setupMenu();
-      }
+      if (mode == REMAP) usleep(2*TIMESTEP);
 }
 
 void RaiseAndFocus(win)
@@ -2355,11 +2346,7 @@ int all;
 	   last_time = 0;
 
            if (Context->win) {
-	      if (do_menu && Context == MenuCaller) PopMenu(Context);
-	      if (do_filesel && Context == FileselCaller) PopFilesel(Context);
-	      if (do_zoom && Context == ZoomCaller) PopZoom(Context);
-	      if (do_option && Context == OptionCaller) PopOption(Context);
-	      if (do_urban && Context == UrbanCaller) PopUrban(Context);
+	      setAuxilWins(Context, DESTROY);
 	      if (Context == RootCaller) {
                  RootCaller = NULL;
 		 do_root = 0;
@@ -2387,13 +2374,9 @@ int all;
 	      }
 	      else {
 	        endup:
-         	 XDestroyWindow(dpy, Menu);
-         	 XDestroyWindow(dpy, Filesel);
-         	 XDestroyWindow(dpy, Option);
-         	 XDestroyWindow(dpy, Zoom);
-         	 XDestroyWindow(dpy, Urban);
                  if (zoompix) XFreePixmap(dpy, zoompix);
                  if (textpix) XFreePixmap(dpy, textpix);
+                 if (rootpix) XFreePixmap(dpy, rootpix);
                  XCloseDisplay(dpy);
          	 if (dirtable) free(dirtable);
          	 exit(0);

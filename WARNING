@@ -40,7 +40,7 @@ In 3.44, the syntax of ALL COLOR OPTIONS HAS CHANGED. A unique option
 option -colorlevel <value> (0, 1, 2, 3)
 
 3.44/3.45 have introduced the ability to DISPLAY MAPS ON THE ROOT WINDOW
+3.46 can be used as a SCREENSAVER (-screensaver option)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 

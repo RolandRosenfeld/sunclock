@@ -68,6 +68,8 @@
 
 enum {MONOCHROME=0, FEWCOLORS, MANYCOLORS, FULLCOLORS};
 
+enum {RESET=0, REMAP, REATTRIB, DESTROY, ICONIFY, DEICONIFY};
+
 enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
 
 enum {READSYSRC = 0, READUSERRC, PARSECMDLINE, RUNNING, RUNTIMEOPTION, 
@@ -244,6 +246,12 @@ typedef struct Sundata {
         struct Mark     mark2;          /* second mark */
         struct Sundata  *next;          /* pointer to next structure */
 } Sundata;
+
+/* setupCallback structure */
+
+typedef void (*setupCB)(int mode);
+
+typedef void (*popCB)(Sundata * Context);
 
 /* Which OS are we using ? */
 

@@ -5,11 +5,25 @@ Jean-Pierre Demailly, demailly@fourier.ujf-grenoble.fr
 
 Planned versions 3.4x, 3.5x... (features to appear in some order)
 
-- Produce other vector maps, especially one showing time zones
+- Implement a (Sunclocksaver , ~/.sunclocksaver) pair of config files 
+  for fancier screensaver functionality (almost done - planned for 3.47...)
+- Produce other vector maps, especially one(s) showing time zones
+  and/or nation boundaries
 - Spherical representation of Earth
 - Moon phases
 - Adding new images formats: png, other vector map formats (the rmap 
   database would be great...)
+
+Version 3.46, July 5, 2001
+
+- New -screensaver option (that turns sunclock into a screensaver, when
+  used e.g. with Jamie Zawinski's xscreensaver...)
+- New options -randomrootpos -fixedrootpos -rootdx -rootdy which 
+  determine the behaviour of the screensaver functionality
+- New option -vmfcolors <list_of_colors> from which one can change 
+  interactively the list of predefined colors in a .vmf file
+- Fixes in the behaviour of auxiliary windows under opening or closing
+  the main maps (iconification/deiconification and so on...)
 
 Version 3.45v2, June 28, 2001
 
