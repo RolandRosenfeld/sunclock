@@ -38,6 +38,11 @@ HFILES=langdef.h sunclock.h version.h
 
 all: sunclock
 
+sunclock.o: $(HFILES)
+readjpeg.o: $(HFILES)
+readvmf.o: $(HFILES)
+readxpm.o: $(HFILES)
+
 sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 

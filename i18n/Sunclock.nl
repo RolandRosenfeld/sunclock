@@ -73,8 +73,13 @@ Schakel tussen klok en kaart scherm
 Activeer commando (-command optie)
 Verlaat programma
 Beeindig menu
-Pas hoogte/breedte verhouding van scherm aan
-Pas hoogte/breedte verhouding van gezoomed gebied aan
+Activate new zoom settings
+Return to previous zoom settings
+Cycle through zoom modes 0,1,2
+Zoom in by factor 1.2
+Zoom out by factor 1/1.2 = 0.833
+Return to zoom factor = 1 (full map)
+Center zoom area on selected city or location
 # Short help
 Sunclock heeft een aantal interne procedures welke met de muis of toetsen
 geactiveerd kunnen worden:

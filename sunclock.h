@@ -29,6 +29,7 @@
 #define fixangle(a) ((a) - 360.0 * (floor((a) / 360.0)))  /* Fix angle	  */
 
 #define PI 3.14159265358979323846
+#define ZFACT 1.2
 
 #define COLORLENGTH 48             /* maximum length of color names */
 
@@ -69,7 +70,6 @@ typedef struct Geometry {
 	unsigned int	height;
         unsigned int    w_mini;
         unsigned int    h_mini;
-        unsigned int    strip;
 } Geometry;
 
 typedef struct Flags {
@@ -82,14 +82,12 @@ typedef struct Flags {
         short clock_mode;               /* clock mode */
         short progress;                 /* special progress time ?*/
         short shading;                  /* shading mode */
-        short resized;                  /* has window been resized ? */
         short dms;                      /* degree, minute, second mode */
         short sunpos;                   /* is Sun to be shown ? */
         short cities;                   /* are cities to be shown ? */
         short meridian;                 /* are meridian to be shown ? */
         short parallel;                 /* are parallel to be shown ? */
         short tropics;                  /* are tropics to be shown ? */
-        short zoomsync;                 /* synchronize x and y in zoom ? */
 } Flags;
 
 typedef struct ZoomSettings {
@@ -97,6 +95,7 @@ typedef struct ZoomSettings {
         double          fy;             /* zoom factor along height */
         double          fdx;            /* translation factor along width */
         double          fdy;            /* translation factor along height */
+        int             mode;           /* zoom behaviour mode=0,1,2,3 */
         int             width;          /* width of full extent zoomed area */
         int             height;         /* height of full extent zoomed area */
         int             dx;             /* translation along width */
@@ -157,17 +156,17 @@ typedef struct Mark {
 
 /* Sundata structure */
 typedef struct Sundata {
-        int             wintype;        /* is window map or clock ? */
         Window          win;            /* window id */
         Colormap        cmap;           /* window private colormap */  
         GClist          gclist;         /* window GCs */  
         Pixlist         pixlist;        /* special color pixels */  
-	Flags		flags;		/* window behavioral flags */
+        int             wintype;        /* is window map or clock ? */
+        int             hstrip;         /* height of bottom strip */
         Geometry        geom;           /* geometry */
-	Geometry        mapgeom;        /* map geometry */
-	Geometry        clockgeom;      /* clock geometry */
 	Geometry        prevgeom;       /* previous geometry */
-        ZoomSettings    zoom;           /* Zoom settings ! */
+        ZoomSettings    zoom;           /* Zoom settings of window */
+        ZoomSettings    newzoom;        /* New zoom settings */
+	Flags		flags;		/* window behavioral flags */
         char *          clock_img_file; /* name of clock xpm file */
         char *          map_img_file;   /* name of map xpm file */
 	char *		bits;           /* pointer to char * bitmap bits */

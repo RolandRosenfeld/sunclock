@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "Feb 26, 2001"
+.TH SUNCLOCK 1 "March 30, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing time and
 geographical data through point and click actions.
@@ -222,18 +222,37 @@ conformal to its actual geometry on Earth, i.e. will not appear to be
 distorted horizontally or vertically.  This won't be true elsewhere,
 though, especially if the zoomed area is large.
 .TP
+.B "\-zoomsync "
+When the option is set, the zoom window will open in synchronization mode:
+any zooming action made from the main map or from the zoom window will 
+take place as the mouse button is released (or as a key is pressed).
+This is the default when the zoom window has not been opened 
+(synchronization is automatically set).
+.TP
+.B "\-nozoomsync "
+When set, the zoom window will open in non-synchro mode. Synchronizing
+the zoom will still be possible, though, by clicking on the "Synchro"
+button. By default, synchronization does not occur when the zoom window
+is opened, unless option -zoomsync has been set.
+.TP
 .BI "\-mapmode * (single character = C, D, E, L or S)"
 Start the map functions in mode (C)oordinates, (D)istances, hour (E)xtension,
 (L)egal time or (S)olar time respectively. Any other specification is 
 ignored. Default is legal time mode.
 .TP
-.BI "\-clockgeom " +x+y
-Specify the position of the clock window.  Only the position is used; any 
-size information given is ignored.
+.BI "\-clockgeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the clock window, i.e. its size and position.
 .TP
-.BI "\-mapgeom " +x+y
-Specify the position of the map window.  Only the position is used; any 
-size information given is ignored.
+.BI "\-mapgeom " (width)x(height)+(x coord)+(y coord)
+Specify the geometry of the map window, i.e. its size and position.
+.TP
+.BI "\-selgeom " (width)x(height)
+Specify the geometry of the selector window. Any specification of 
+position is ignored, as it is optimized by the program.
+.TP
+.BI "\-zoomgeom " (width)x(height)
+Specify the geometry of the zoom window. Any specification of 
+position is ignored, as it is optimized by the program.
 .TP
 .BI "\-placement " <choice>\ (random, fixed, center, NW, NE, SW, SE)
 Specify whether commuting between clock and map windows should proceed
@@ -271,15 +290,13 @@ Default value for magx is 1.0.
 Same as for the -mag option, but only the y direction (height) is rescaled. 
 Default value for magy is 1.0.
 .TP
-.BI "\-dx " value
-If the total width of the map is <width>, the upper left corner of the
-window will show the rescaled map starting at a distance from left border 
-(180 degree longitude) equal to <value> x <width>. Default dx value is 0.
+.BI "\-dx " value (degrees)
+Options -dx and -dy allow to set the longitude, respectively the latitude,
+of the city or location at which the zoom area should be centered.
+The values should be given in degrees. Default (dx,dy) is (0.0,0.0). 
 .TP
-.BI "\-dy " value
-If the total height of the map is <height>, the upper left corner of the
-window will show the rescaled map starting at a distance from top 
-border line (North pole) equal to <value> x <height>. Default dy value is 0.
+.BI "\-dy " value (degrees)
+See -dx above.
 .TP
 .BI "\-coastlines "
 In the builtin vector map, generate coast lines without filling the
@@ -339,7 +356,7 @@ increasingly sophisticated shading algorithms. Mode 1 stands for no shading
 terminator area -- the area in which the sun is partially hidden by the 
 horizon. Mode 3 shades the region in which there is still substantial 
 luminosity left after sunset (depending on the diffusion parameter below). 
-Default is 6° below horizon. Mode 4 additionally represents the luminosity 
+Default is 3° below horizon. Mode 4 additionally represents the luminosity 
 values in all parts of the illuminated area.
 .TP 
 .BI "\-terminator " 
@@ -366,6 +383,11 @@ and sunset times. Default is 0.1 degree.
 Sets the constrast between day and night areas. A 0.0 value means that 
 the night area will not be distinguishable from day, while 1.0 means that 
 it will be completely black. Default is 0.5.
+.TP
+.BI "\-colorscale " value (integer in the range 1 ... 256)
+Sets the number of color subdvisions which will be in use for producing
+shading, that is, the number of colors ranging from bright colors (day)
+to dark colors (night). Default is 16.
 .TP
 .BI "\-night "
 Start sunclock with the night region displayed (by default, it is).
@@ -449,9 +471,29 @@ Specifies the color to be applied to Sun.
 Default is Yellow.
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
-file can contain lines of the following format:
+file can contain specify any number of options which are also available
+as command line options, following a heading [Options]:
 .PP
-name: latitude longtitude timezone
+[Options]
+.PP
+mapmode: L
+.PP
+language: en
+.PP
+city: Washington
+.PP
+map
+.PP
+mapimage: /usr/share/sunclock/earthmaps/jpeg/caida.jpg
+.PP
+tropics
+.PP
+twilight
+.PP
+There should be only one option specified per line. A list of cities can
+also be specified under a heading [Cities], in the following format:
+.PP
+name: latitude longitude timezone
 .PP
 where name is the ascii name of the place to be shown on the map. 
 Latitude and longitude are floating point numbers representing the
@@ -463,9 +505,8 @@ reference a file in a directory relative to /lib/zoneinfo for example
 Canada/Eastern instead of EST5EDT.
 .PP
 The user may click on the dot on the map associated with a place
-defined in the .sunclockrc
-file. When this is done, the city name and its corresponding local time 
-and time zone will be displayed in the bottomline.
+defined in the .sunclockrc file. When this is done, the city name and its 
+corresponding local time and time zone will be displayed in the bottomline.
 .SH "HOW IT WORKS"
 .I sunclock
 calculates the position of the Sun using the algorithm in chapter 18 of:
@@ -477,14 +518,14 @@ and Mercator projects the illuminated area onto map image.  The
 Sun's position is calculated to better than one arc-second
 in accuracy.
 .SH BUGS
-The maps are not rescaled if you resize the open window or icon.  (I don't want
-to have to store a vector database for the map.)  The program contravenes
-section 4.1.9 of the ICCCM in that its icon window is a fixed size, and any
-WM_ICON_SIZE property of the root window is ignored.
+The program is still to be somewhat debugged and may crash unexpectedly 
+under some circumstances. As new features are introduced, older ones
+may become broken during the phase of development :-(
 .PP
 The illuminated area shown is the area which would be sunlit
-if the Earth had no atmosphere.  The actual illuminated area is
-larger because of atmospheric refraction and twilight.
+if the Earth atmosphere would be absolutely uniform.  The actual 
+illuminated area may depend on weather, temperature, atmospheric 
+refraction and diffusion, etc.
 .SH AUTHORS
 John Walker, Autodesk, Inc., <kelvin@acad.uu.NET>, wrote the original
 Suntools program from which sunclock is derived.
@@ -496,7 +537,6 @@ Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca,
 added support for interactive map.
 .PP
 Jean-Pierre Demailly, Université de Grenoble I, 
-demailly@fourier.ujf-grenoble.fr added support for numerous new options and
-functions in the interface, and made them available through the GUI.
-
-
+demailly@fourier.ujf-grenoble.fr added many new major features (loading maps,
+shading, zoom functionalities), as well as support for numerous new options 
+and functions in the GUI interface.

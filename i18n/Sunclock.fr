@@ -73,8 +73,13 @@ Commuter les fenêtres carte/horloge
 Activer la commande spécifiée par l'option -command
 Quitter le programme
 Sortir du menu
-Ajuster le rapport hauteur/largeur de la fenêtre
-Ajuster le rapport hauteur/largeur de la partie zoomée
+Activer les nouvelles valeurs de zoom
+Revenir aux anciennes valeurs de zoom
+Permuter les modes de zoom 0,1,2
+Zoomer d'un facteur 1.2
+Rétrécir d'un factor 1/1.2 = 0.833
+Revenir à un facteur de zoom = 1 (carte entière)
+Centrer le rectangle de zoom sur la localité choisie
 # Short help
 Sunclock dispose d'un certain nombre de fonctions accessibles au
 moyen de la souris ou des touches du clavier:

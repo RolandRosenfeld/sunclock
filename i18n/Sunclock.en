@@ -62,7 +62,6 @@ Draw/Erase cities
 Draw/Erase meridians
 Draw/Erase parallels
 Draw/Erase Tropics/Equator/Arctic circles
-Switch clock and map windows 
 Open new map window
 Close window
 Iconify window
@@ -70,11 +69,17 @@ Refresh map window
 Adjust window width to screen size
 Back to previous window size
 Synchronize windows or not
+Switch clock and map windows 
 Activate command (-command option)
 Quit program
 Escape menu
-Adjust height/width ratio of window
-Adjust height/width ratio of zoomed area
+Activate new zoom settings
+Return to previous zoom settings
+Cycle through zoom modes 0,1,2
+Zoom in by factor 1.2
+Zoom out by factor 1/1.2 = 0.833
+Return to zoom factor = 1 (full map)
+Center zoom area on selected city or location
 # Short help
 Sunclock has a number of internal procedures which can be accessed
 through mouse clicks or key controls:

@@ -73,8 +73,13 @@ Cambiar entre ventana mapa y ventana reloj
 Activar comando (opción -command)
 Salir del programa
 Escapar del menú
-Adjust height/width ratio of window
-Adjust height/width ratio of zoomed area
+Activate new zoom settings
+Return to previous zoom settings
+Cycle through zoom modes 0,1,2
+Zoom in by factor 1.2
+Zoom out by factor 1/1.2 = 0.833
+Return to zoom factor = 1 (full map)
+Center zoom area on selected city or location
 # Short help
 Sunclock tiene varios procedimientos internos a los que se puede
 acceder usando el ratón o el teclado.

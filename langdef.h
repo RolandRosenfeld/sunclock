@@ -35,13 +35,14 @@ char	Label[L_END][60] = {
         "days"
 };
 
-#define ZOOMMENU "*/><!WK";
-#define N_OPTIONS 28
-char    Option[2*N_OPTIONS+6] = 
-"H,F,Z;C,S,D,E,L;A,B,G,J;N,O,U;M,P,T;W,K,I,R;>,<,=,!;X,Q;\033,/,*";
-char	ListOptions[4*N_OPTIONS+2];
+#define N_ZOOM 7
+#define ZOOMMENU "*#&+-1.><!WK"
 
-char	Help[N_OPTIONS+3][80] = {
+#define N_OPTIONS 28
+char    Option[2*N_OPTIONS] = 
+"H,F,Z;C,S,D,E,L;A,B,G,J;N,O,U;M,P,T;W,K,I,R;>,<,=,!;X,Q;";
+
+char	Help[N_OPTIONS+N_ZOOM+1][80] = {
 "Show help and options (H or click on strip)",
 "Load Earth map file (F or mouse button 2)",
 "Zoom (Z or mouse button 3)",
@@ -71,8 +72,13 @@ char	Help[N_OPTIONS+3][80] = {
 "Activate command (-command option)",
 "Quit program",
 "Escape menu",
-"Adjust height/width ratio of window",
-"Adjust height/width ratio of zoomed area",
+"Activate new zoom settings",
+"Return to previous zoom settings",
+"Cycle through zoom modes 0,1,2",
+"Zoom in by factor 1.2",
+"Zoom out by factor 1/1.2 = 0.833",
+"Return to zoom factor = 1 (full map)",
+"Center zoom area on selected city or location"
 };
 
 char	ShortHelp[512] = 

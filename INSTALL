@@ -2,13 +2,13 @@ INSTALLATION instructions
 =========================
 
 1. (Optional)
-Customize the Sunclock.ad file and add locations of cities you would like
+Customize the Sunclockrc file and add locations of cities you would like
 to see appearing on sunclock's main map. Information on geographic
 coordinates of many important cities (probably with a bias towards 
 North America) is included in the "coordinates.txt" file. This
 will provide system wide data. If you prefer to set your private 
 data instead, copy these settings in ~/.sunclockrc instead (the format
-is the same as for Sunclock.ad).
+is the same as for Sunclockrc).
 
 2. (Optional)
 If your native language is not one of the currently supported languages, 
