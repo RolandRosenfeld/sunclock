@@ -1,12 +1,12 @@
-#
-# Compile options:
-#
-# Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
-#   your struct tm contains a tm_zone field), i.e. SunOS 4.1.x. Don't
-#   define for system V or Solaris
-# Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
-# Pick -O or -g
-#
+XCOMM
+XCOMM Compile options:
+XCOMM
+XCOMM Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
+XCOMM   your struct tm contains a tm_zone field), i.e. SunOS 4.1.x. Don't
+XCOMM   define for system V or Solaris
+XCOMM Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
+XCOMM Pick -O or -g
+XCOMM
 
 SHAREDIR=/usr/share/sunclock
 
@@ -19,26 +19,34 @@ CCOPTIONS = -Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DAPPDEF=\"$(DESTDIR)$(X
 CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
-SRCS=sunclock.c astro.c tildepath.c
-OBJS=sunclock.o astro.o tildepath.o
-LOCAL_LIBRARIES=$(XLIB) -lm
+SRCS=sunclock.c astro.c tildepath.c mapdata.c dirlist.c
+OBJS=sunclock.o astro.o tildepath.o mapdata.o dirlist.o
+LOCAL_LIBRARIES=$(XLIB) -lXpm -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
-all::
-	gcc mapgen.c -o mapgen -lm
-	./mapgen -xbm -mode 0 -width 720 -height 360 -name map_icon \
-	   > map_icon.xbm
-	./mapgen -xbm -mode 3 -width 128 -height 64 -name clock_icon \
-	   > clock_icon.xbm
+genmap:: mapdata.o
+	gcc -c mapgen.c -o mapgen.o 
+	gcc -o mapgen -O mapgen.o mapdata.o -lm
+
+maps:: genmap
+	./mapgen -width 960 -height 540 -xpm | xv - &
+	./mapgen -width 640 -height 320 -xbm | xv - &
+
+pixfiles:: genmap
+	./mapgen -width 960 -height 540 -xpm > earthmap.xpm
+	./mapgen -width 640 -height 320 -xbm > earthmap.xbm
 
 clean::
-	rm -f mapgen map_icon.xbm clock_icon.xbm
+	rm -f mapgen
 
 realclean:: clean
-	rm -f Makefile
+	rm -f Makefile *.xpm *.xbm
 
 ComplexProgramTarget(sunclock)
 InstallAppDefaults(Sunclock)
-	mkdirhier $(DESTDIR)$(SHAREDIR)
-	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)
+	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
+	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	cat WARNING
+	./check_i18n $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
+
+all:: sunclock genmap

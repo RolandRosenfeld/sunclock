@@ -31,7 +31,8 @@ Sonnenuntergang
 Klicke auf eine Stadt
 Klicke auf eine Position
 Klicke nacheinander auf zwei Positionen
-Doppel Klicke oder Betätige * für ° ' "
+Doppel Klicke oder Betätige Tab für ° ' "
+Interne vektorielle Karte
 Taste
 Tastatur/Maus Steuerung
 Abbruch
@@ -43,6 +44,10 @@ Stunde
 Tag
 Tage
 # Help
+Eingabe Erde kartendatei (F oder Mausknopf 2)
+Zoom + (funktionieren nur mit vektoriellen Karte)
+Zoom -
+Vorhergehende Fenster Grösse zurück
 Verwende Koordinaten-Modus
 Verwende Sonnenzeit-Modus
 Verwende Abstands-Modus
@@ -61,7 +66,7 @@ Zeichne/Lösche Tropische/Äquator/Polarkreise
 Zeige die Hilfe und Optionen an
 Iconifiziere das Fenster
 Kartenfenster auffrischen
-Wechsle zwischen Uhr- und Kartenfenster
+Wechsle zwischen Uhr- und Kartenfenster (W oder Mausknopf 3)
 Aktiviere Kommando (-command Option)
 Beende Programm
 Abbruch Menü

@@ -31,7 +31,8 @@ Tramonto
 Cliccare su una città
 Cliccare su un punto
 Cliccare su due punti
-Cliccare ancora o premere * per ° ' "
+Cliccare ancora o premere Tab per ° ' "
+Internal vector map
 Tasto
 Tasto/Mouse
 Escape
@@ -43,6 +44,10 @@ ora
 giorno
 giorni
 # Help
+Caricare carta della Terra (F o mouse, bottone 2)
+Zoom + (impianti soltanto con carta vettoriale)
+Zoom -
+Ritornare a dimensione anteriore della carta
 Utilizza la modalità coordinate
 Utilizza la modalità ora solare
 Utilizza la modalità distanze
@@ -61,7 +66,7 @@ Mostrare/non mostrare i tropici/circoli polari/l'equatore
 Mostrare aiuto ed opzioni
 Ridurre la finestra
 Rinfrescare la finestra
-Invertire le finestre mappa/orologio
+Invertire le finestre mappa/orologio (W o mouse, bottone 3)
 Attivare il comando specifico per l'opzione -command
 Abbandonare il programma
 Uscire dal menu

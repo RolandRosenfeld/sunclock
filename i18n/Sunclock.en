@@ -31,7 +31,8 @@ Sunset
 Click on a city
 Click on a location
 Click consecutively on two locations
-Double click or strike * for ° ' "
+Double click or strike Tab for ° ' "
+Internal vector map
 Key
 Key/Mouse controls
 Escape
@@ -43,6 +44,10 @@ hour
 day
 days
 # Help
+Load Earth map file (F or mouse button 2)
+Zoom +
+Zoom -
+Back to previous window size
 Use coordinate mode
 Use solar time mode
 Use distance mode
@@ -61,7 +66,7 @@ Draw/Erase Tropics/Equator/Arctic circles
 Show help and options
 Iconify window
 Refresh map window
-Switch clock and map windows
+Switch clock and map windows (W or mouse button 3)
 Activate command (-command option)
 Quit program
 Escape menu

@@ -31,7 +31,8 @@ Coucher
 Cliquer sur une ville
 Cliquer sur un point
 Cliquer sur deux points
-Cliquer 2 fois ou taper * pour ° ' "
+Cliquer 2 fois ou taper Tab pour ° ' "
+Carte vectorielle interne
 Touche
 Contrôles Clavier/Souris
 Echap
@@ -43,6 +44,10 @@ heure
 jour
 jours
 # Help
+Charger une carte de la Terre (F ou souris, bouton 2)
+Zoom +
+Zoom -
+Retour à la taille de fenêtre précédente
 Utiliser le mode Coordonnées
 Utiliser le mode heure Solaire
 Utiliser le mode Distances
@@ -61,7 +66,7 @@ Montrer/ne pas montrer les Tropiques/Equateur/Cercles polaires
 Afficher l'aide et les options
 Iconifier la fenêtre
 Rafraîchir la fenêtre
-Commuter les fenêtres carte/horloge
+Commuter les fenêtres carte/horloge (W ou souris, bouton 3)
 Activer la commande spécifiée par l'option -command
 Quitter le programme
 Sortir du menu

@@ -1,17 +1,23 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-If you are upgrading from a version of sunclock prior to 3.10, notice
-that the language files Sunclock_** were installed in the app-defaults
-directory 
-  /usr/lib/X11/app-defaults/ 
-or possibly in
-  /usr/X11R6/lib/X11/app-defaults/
-
-Starting with 3.11, this is no longer the case, they are rather installed
-in /usr/share/sunclock/ as Sunclock.** Moreover, the format changed between
-versions 3.10 and 3.11. You should probably remove the older files 
-Sunclock_** from the app-defaults directory...
+Optional **.xpm or  **.xpm.gz  Earth map files can be installed in 
+/usr/share/sunclock/earthmaps. A package of very nice Earth maps is
+available from  ftp://ftp.ac-grenoble.fr/ge/geosciences
+Go and get them if you wish...
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+If you are upgrading from a version of sunclock prior to 3.20, notice
+that the internationalization files were probably installed elsewhere,
+either in the app-defaults directory or at the root of the share
+directory 
+    /usr/share/sunclock/
+
+Starting with 3.20, this is no longer the case, the file Sunclock.**
+are by default installed in 
+    /usr/share/sunclock/i18n
+
+Starting removing the obsolete Sunclock.** files from their older place ??
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

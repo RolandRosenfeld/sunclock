@@ -9,7 +9,7 @@ char    Month_name[12][10] = {
 
 enum {L_POINT=0, L_GMTTIME, L_SOLARTIME, L_LEGALTIME,
       L_DAYLENGTH, L_SUNRISE, L_SUNSET, 
-      L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, L_DEGREE,
+      L_CLICKCITY, L_CLICKLOC, L_CLICK2LOC, L_DEGREE, L_VECTMAP,
       L_KEY, L_CONTROLS, L_ESCAPE, 
       L_PROGRESS, L_TIMEJUMP, L_SEC, L_MIN, L_HOUR, L_DAY, L_DAYS, L_END};
 
@@ -20,6 +20,7 @@ char	Label[L_END][60] = {
         "Click on a location",
         "Click consecutively on two locations",
         "Double click or strike * for ° ' \"",
+	"Internal vector map",
 	"Key",
         "Key/Mouse controls",
 	"Escape",
@@ -32,12 +33,16 @@ char	Label[L_END][60] = {
         "days"
 };
 
-#define N_OPTIONS 21
+#define N_OPTIONS 25
 char    Option[2*N_OPTIONS] = 
-"C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T;H,I,R,W,X,Q;";
+"F,+,-,<;C,S,D,E,L;A,B,G,Z;N,O,U;M,P,T;H,I,R,W,X,Q;";
 char	ListOptions[4*N_OPTIONS+2];
 
 char	Help[N_OPTIONS+1][80] = {
+"Load Earth map file",
+"Zoom +",
+"Zoom -",
+"Back to previous window size",
 "Use coordinate mode",
 "Use solar time mode",
 "Use distance mode",

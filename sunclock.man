@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "Aug 26, 2000"
+.TH SUNCLOCK 1 "Nov 18, 2000"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing time and
 geographical data through point and click actions.
@@ -21,10 +21,13 @@ seasons. Sunclock can be internationalized for various western languages.
 It is possible to customize the app-default file and add new entries
 for additional cities. 
 
-It can commute between two states, the "clock window" and
+Sunclock can commute between two states, the "clock window" and
 the "map window". The clock window displays a small map of the Earth
 and therefore occupies little space on the screen, while the "map window" 
-displays a large map and offers more advanced functions. 
+displays a large map and offers more advanced functions. Sunclock
+includes a builtin resizable and zoomable vector map. External
+Earth maps can also be loaded (however, only .xpm and .xpm.gz formats 
+are available at the moment).
 
 The map window can work in five different modes:
 .PP
@@ -56,17 +59,27 @@ needed resource is the list of coordinates and timezones of
 cities to be displayed. Users will possibly have to customize
 the prepackaged app-default file Sunclock.ad.
 .TP
-.BI "\-version "
-Show program version and exit.
-.TP
 .BI "\-help "
 Show brief help and exit.
+.TP
+.BI "\-listmenu "
+Explanations on the actions available from the builtin menu.
+.TP
+.BI "\-version "
+Show program version and exit.
 .TP
 .B "\-display " dispname
 Give the name of the X server to contact.
 .TP
 .B "\-language " name
 Select language to be used in the sunclock menu and help.
+.TP
+.B "\-bigfont " name
+Select the big font (used in the bottom line of the map window, in the 
+menu and file selection windows). Default is 6x13
+.TP
+.B "\-smallfont " name (used in the bottom line of the clock window).
+Default is 6x10.
 .TP
 .B "\-rcfile " filename
 Select a configuration file that is possibly different than the system 
@@ -75,8 +88,41 @@ wide app-default Sunclock or the user default ~/.sunclockrc. The rcfile
 but it can be overriden by the command line options which still have 
 a higher priority.
 .TP
+.B "\-sharedir " directory
+Set the directory where system wide shared Earthmaps are located.
+Default is /usr/share/sunclock/earthmaps.
+.TP
+.B "\-mapimage " file.xpm.(gz)
+Start sunclock with an Earth map image loaded in the map window.
+.TP
+.B "\-clockimage " file.xpm.(gz)
+Start sunclock with an Earth map image loaded in the clock window. Those
+maps are supposed to be somewhat smaller than for the map window, but 
+sunclock will still accept large ones in the clock window...
+.TP
 .B "\-mono "
 Use monochrome settings (recommended only for monochrome screens!).
+.TP
+.B "\-invert "
+Instead of using the builtin color vector map of Earth, show a black and 
+white frame and use inversion of colors to generate the night area. This
+considerably reduces both memory and CPU usage, and could be useful on
+more modest machines.
+.TP
+.B "\-private "
+Allocate a private colormap. This has no effect on truecolor displays. 
+On pseudocolor displays (depth <= 8), this option allows sunclock to run
+even when the environment makes intensive use of colors. Thanks to the 
+-private option, Pixmap earthmaps can also be loaded if they do not
+use more than about 100 colors. Otherwise, a color quantization will
+be necessary before the map can be loaded.
+.TP
+.B "\-usememory "
+With this option, sunclock stores formerly loaded pixmap files in memory.
+This allows a slightly shorter commuting time between clock and map windows,
+at the expense of a larger memory usage. Use of this option is discouraged,
+since sunclock is anyway quite fast at loading files, at least on
+reasonably recent machines...
 .TP
 .B \-clock
 Start in the clock state. This is the default and thus need not be
@@ -91,6 +137,14 @@ Start the clock in "Seconds" mode (default is "date" mode).
 .BI "\-map "
 Start in the map state.  Useful to start right away with advanced 
 functionalities.
+.TP
+.BI "\-decimal "
+Initializes coordinate values of geographical data in decimal degrees.
+However, this can still be switched at runtime.
+.TP
+.BI "\-dms "
+Initializes coordinate values of geographical data in degrees, minutes
+and seconds. However, this can still be switched at runtime.
 .TP
 .B "\-menu "
 Raise the menu window along with the map window. This has no effect unless
@@ -119,17 +173,45 @@ with letting the the window centers, respectively, the NW, NE, SW, SE
 corners fixed, or rather whether it should operate randomly, or through 
 user defined placement. Default is NW placement.
 .TP
+.BI "\-horizshift " w
+Specify number of pixels which should separate the central bottom points
+of map and menu windows. The default is 0 and may need to be adjusted 
+according to the window manager used.
+.TP
 .BI "\-vertshift " h
 Specify number of pixels which should separate the map and menu windows.
 The default is 12 and may need to be adjusted according to the window
 manager used.
 .TP
-.BI "\-spot " size
+.BI "\-spotsize " size
 Define size=0 [=no spots] or 1,2,3 to use either thin circles, medium
 size spots or big spots and circles to represent cities. Size=3
 can be useful for monochrome displays on which cities are hardly
 visible, otherwise small color spots of size 1 or 2 are better).
 Default is 2 for color mode and 3 for monochrome mode.
+.TP
+.BI "\-coastlines "
+In the builtin vector map, generate coast lines without filling the
+land areas.
+.TP
+.BI "\-contour "
+As before, but use a smart algorithm which eliminates \"redundant\" coast
+lines, especially at lower resolutions (in case the coasts are very
+irregular, some parts may disappear but the overall picture looks sharper).
+.TP
+.BI "\-landfill "
+In the builtin vector map, fill the land areas without generating coast 
+lines.
+.TP
+.BI "\-fillmode " 0,1,2
+Fillmode=0 is equivalent to -coastlines, fillmode=1 is equivalent to 
+-contour, and fillmode=2 is equivalent to -landfill.
+.TP
+.BI "\-dottedlines "
+Use dotted lines to represent meridians and parallels.
+.TP
+.BI "\-plainlines "
+Use plain lines to represent meridians and parallels.
 .TP
 .BI "\-command " string
 Specify an external action or program that will be called by keyboard 
@@ -159,13 +241,34 @@ or rc file. The operating mode is set to Coordinates mode.
 Initialize program so as to display data of the position specified by 
 two coordinates (in degrees). The operating mode is set to Solar time mode.
 .TP
+.BI "\-shading " mode=0,1,2,3,4
+Start sunclock with the specified shading mode. Mode 0 means that the night
+area is not displayed. In higher modes, the night area is displayed, with
+increasingly sophisticated shading algorithms. Mode 1 stans for no shading
+(i.e. just bright and dark colors). Mode 2 shades the area in which the
+sun is partially hidden by the horizon. Mode 3 shades the region in which
+there is still substantial luminosity left after sunset (depending on
+the diffusion parameter below). Mode 4 additionally represents the 
+luminosity in the full illuminated area.
+.TP
+.BI "\-diffusion " value (degrees)
+Sets the amplitude of the area in which diffusion of light in the
+atmosphere is still sufficient to keep some luminosity after sunset.
+Default is 3 degrees.
+.TP
+.BI "\-refraction " value (degrees)
+Sets the value of the refraction angle for tangential sun rays at sunset.
+This is related to the fact that the sun sometimes looks bigger at sunset.
+Changing the refraction degree slightly affects the computation of sunrise
+and sunset times. Default is 0.1 degree.
+.TP
 .BI "\-night "
 Start sunclock with the night region displayed (by default, it is).
 .TP
 .BI "\-cities "
 Start sunclock with the cities displayed (by default, they are).
 .TP
-.BI "\-sunpos "
+.BI "\-sun "
 Start sunclock with the Sun position displayed (by default, it is).
 .TP
 .BI "\-meridians "
@@ -178,20 +281,29 @@ Start sunclock with parallels displayed (by default, they aren't).
 Start sunclock with tropics and arctic circles displayed (by default, 
 they aren't).
 .TP
-.BI "\-nonight \-nocities \-nosunpos \-nomeridians \-noparallels \-notropics"
+.BI "\-nonight \-nocities \-nosun \-nomeridians \-noparallels \-notropics"
 These options just negate the above ones.
 .TP
-.BI "\-bg " color
-Specifies the clock background color. Default is White.
+.BI "\-landcolor " color
+Specifies the color of land areas produced by the builtin vector map. 
+Default is Chartreuse2. This option has no effect on external image
+earthmaps being loaded.
 .TP
-.BI "\-fg " color
-Specifies the clock foreground color. Default is Black.
+.BI "\-watercolor " color
+Specifies the color of water (sea) areas. Default is RoyalBlue.
 .TP
-.BI "\-textbg " color
-Specifies the bottom text background color. Default is Thistle1.
+.BI "\-arcticcolor " color
+Specifies the color of arctic areas. Default is LemonChiffon.
 .TP
-.BI "\-textfg " color
+.BI "\-textbgcolor " color
+Specifies the bottom text background color. Default is Grey92.
+.TP
+.BI "\-textfgcolor " color
 Specifies the bottom text foreground color. Default is Black.
+.TP
+.BI "\-dircolor " color
+Specifies the color used for representing dircetories in the file selection
+window. Default is Blue.
 .TP
 .BI "\-citycolor0 " color
 Specifies the color of cities (as described in ~/.sunclockrc or in
@@ -210,23 +322,22 @@ Red3 (darker red).
 .TP
 .BI "\-markcolor1 " color
 Specifies the color to be applied to the first marked position
-(any location on Earth other than one of the cities). Default is Green.
+(any location on Earth other than one of the cities). Default is Pink1.
 .TP
 .BI "\-markcolor2 " color
 Specifies the color to be applied to the second marked position.
-Default is Green3.
+Default is Pink2.
 .TP
 .BI "\-linecolor " color
 Specifies the color to be applied to meridian and parallel lines.
-Default is Blue.
+Default is White.
 .TP
 .BI "\-tropiccolor " color
-Specifies the color to be applied to tropics and arctic circles.
-Default is Purple.
-.TP
+Specifies the color to be applied to Equator/Tropics/Arctic circles.
+Default is White.
 .BI "\-suncolor " color
 Specifies the color to be applied to Sun.
-Default is Gold.
+Default is Yellow.
 .PP
 Users may keep a file in their home directory called ~/.sunclockrc. This
 file can contain lines of the following format:

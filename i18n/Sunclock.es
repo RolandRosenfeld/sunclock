@@ -31,7 +31,8 @@ Puesta de sol
 Marca una ciudad
 Marca un lugar
 Marca dos lugares consecutivos
-Repetir clic o presionar * para ° ' "
+Repetir clic o presionar Tab para ° ' "
+Interna tarjeta vectorial
 Tecla
 Control Teclado/Ratón
 Escape
@@ -43,6 +44,10 @@ hora
 día
 días
 # Help
+Encargar carta de la Tierra (F o ratón, botone 2)
+Zoom + (funcione solamente con la carta vectorial)
+Zoom -
+Retornar a dimensiónes anteriores de la carta
 Usar modo coordenadas
 Usar modo hora solar
 Usar modo distancia
@@ -61,7 +66,7 @@ Dibujar/Borrar círculos Trópicos/Polares/Ecuador
 Mostrar ayuda y opciones
 Minimizar ventanas
 Refrescar ventana de mapa
-Cambiar entre ventana mapa y ventana reloj
+Cambiar entre ventana mapa y ventana reloj (W o ratón, botone 3)
 Activar comando (opción -command)
 Salir del programa
 Escapar del menú

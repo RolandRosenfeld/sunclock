@@ -1,13 +1,7 @@
 TODO
 ====
 
-- Replace the bitmap images by a runtime vector map which will allow the
-  sunclock map to be rescaled in an arbitrary way. This is in my agenda 
-  for the forthcoming version 3.20 -- it should be not so hard to do
-  as everything is already implemented in xearth and analogues, and
-  we just need to plug these nice features in...
+- Should still improve shading algorithm; shading is in fact somewhat
+  incorrect near the extrema.
 
-- Supplement the bitmap or vector image by colorful pixmaps of Earth. 
-  This would make the program more pretty -- but would also make it
-  have a larger memory footprint without substantially increasing
-  the functionality...
+- Implementing the zoom...

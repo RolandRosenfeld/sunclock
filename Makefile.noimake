@@ -16,10 +16,10 @@ XBINDIR=/bin/X11
 #
 
 # For HP
-#CFLAGS=-Ae -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CFLAGS=-Ae -DFONT=\"6x13\" -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # For SunOS
-#CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CFLAGS=-I/usr/openwin/include -DFONT=\"6x13\" -O -DNEW_CTIME -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # For Solaris
 #CFLAGS=-I/usr/openwin/include -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
@@ -27,37 +27,42 @@ XBINDIR=/bin/X11
 
 # For Linux
 CFLAGS=-I/usr/include/X11 -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -Wall -DAPPDEF=\"$(DESTDIR)$(XAPPLOADDIR)\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
-LFLAGS=-L/usr/X11/lib
+LFLAGS=-L/usr/X11/lib -lXpm
 
-OFILES=sunclock.o astro.o tildepath.o
+OFILES=sunclock.o astro.o tildepath.o mapdata.o dirlist.o
 HFILES=langdef.h sunclock.h version.h
 
-all: maps sunclock
-
-maps:
-	gcc mapgen.c -o mapgen -lm
-	./mapgen -xbm -mode 0 -width 720 -height 360 -name map_icon \
-	   > map_icon.xbm
-	./mapgen -xbm -mode 3 -width 128 -height 64 -name clock_icon \
-	   > clock_icon.xbm
+all: sunclock genmap
 
 sunclock: $(OFILES) $(HFILES)
 	cc $(CFLAGS) $(LFLAGS) $(OFILES) -o $@ -lX11 -lm
 
-install: sunclock
+genmap: mapdata.o
+	gcc -c mapgen.c -o mapgen.o 
+	gcc -o mapgen -O mapgen.o mapdata.o -lm
+
+maps: genmap
+	./mapgen -width 960 -height 540 -xpm | xv - &
+	./mapgen -width 640 -height 320 -xbm | xv - &
+
+pixfiles: genmap
+	./mapgen -width 960 -height 540 -xpm > earthmap.xpm
+	./mapgen -width 640 -height 320 -xbm > earthmap.xbm
+
+install: sunclock genmap
 	install -c -s sunclock $(DESTDIR)/$(XBINDIR)
+	install -c -s mapgen $(DESTDIR)/$(XBINDIR)
 	cp -f Sunclock.ad $(DESTDIR)$(XAPPLOADDIR)/Sunclock
-	mkdirhier $(DESTDIR)$(SHAREDIR)
-	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)
+	mkdirhier $(DESTDIR)$(SHAREDIR)/i18n
+	cp -f i18n/Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	cat WARNING
+	./check_i18n $(DESTDIR)$(XAPPLOADDIR) $(DESTDIR)$(SHAREDIR)
 
 clean:
-	rm -f core *.o *~ sunclock
-	rm -f mapgen map_icon.xbm clock_icon.xbm
+	rm -f core *.o *~ sunclock mapgen
 
-realclean:
-	rm -f core *.o *~ sunclock Makefile
-	rm -f mapgen map_icon.xbm clock_icon.xbm
+realclean: clean
+	rm -f *.xpm *.xbm Makefile 
 
 tgz:
 	tar cvf ../sunclock.tar .

@@ -31,7 +31,8 @@ Solnedgång
 Klicka på en stad
 Klicka på en plats
 Klicka på två platser
-Klick två gånger eller slå * för ° ' "
+Klick två gånger eller slå Tab för ° ' "
+Internal vector map
 Tastatur
 Tastatur/Mus kontroll
 Escape
@@ -43,6 +44,10 @@ timme
 dag
 dagar
 # Help
+Laddar karta Jord (F or mouse button 2)
+Zoom + (bara med vektor karta)
+Zoom -
+Back to previous window size
 Använd koordinat mode
 Använd solstånd mode
 Använd distans mode
@@ -61,7 +66,7 @@ Rita/Radera Tropik/Ekvator/Arktik cirklar
 Visa hjälp och alternativ
 Ikonifiera fönster
 Förnya kartfönster
-Växla tidszon och kartfönster
+Växla tidszon och kartfönster (W or mouse button 3)
 Aktivera kommando (-command option)
 Avsluta program
 Escape menu
