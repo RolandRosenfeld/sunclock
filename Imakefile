@@ -16,7 +16,7 @@ XCOMM
 XCOMM Set -DNEW_CTIME if using the table-driven version of ctime (i.e., if
 XCOMM   your struct tm contains a tm_zone field), i.e. SunOS 4.1.x. Don't
 XCOMM   define for system V or Solaris
-XCOMM Set -DBIGFONT= and -DSMALLFONT= whatever fonts you like
+XCOMM Set -DMENUFONT= and -DCLOCKFONT= whatever fonts you like
 XCOMM Pick -O or -g
 XCOMM
 
@@ -26,7 +26,7 @@ XPMINC=-I/opt/xpm/include
 JLIB=-L/opt/jpeg-6/lib
 JINC=-I/opt/jpeg-6/include
 
-CCOPTIONS = -Ae $(XPMINC) $(JINC) -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS = -Ae $(XPMINC) $(JINC) -DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #else
 # SunOS
 
@@ -34,7 +34,7 @@ CCOPTIONS = -Ae $(XPMINC) $(JINC) -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAR
 #XPMINC=-I/usr/X11R6/include/X11
 #JLIB=-L/usr/lib
 #JINC=-I/usr/include
-#CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+#CCOPTIONS=-DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -DNEW_CTIME -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 
 # Solaris, Linux
 #XPMLIB=-L/usr/X11R6/lib
@@ -42,7 +42,7 @@ CCOPTIONS = -Ae $(XPMINC) $(JINC) -DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -DSHAR
 #JLIB=-L/usr/lib
 #JINC=-I/usr/include
 
-CCOPTIONS=-DBIGFONT=\"6x13\" -DSMALLFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS=-DMENUFONT=\"6x13\" -DCLOCKFONT=\"6x10\" -O -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #endif
 
 SRCS=sunclock.c astro.c widgets.c tildepath.c dirlist.c \

@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "April 11, 2001"
+.TH SUNCLOCK 1 "April 13, 2001"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing time and
 geographical data through point and click actions.
@@ -72,8 +72,11 @@ Explanations on the actions available from the builtin menu.
 Show program version and exit.
 .TP
 .BI "\-verbose "
-Make Sunclock verbose. The program then sends to stderr some internal
-information on the operations performed. This is disabled by default.
+Make Sunclock verbose. The program then sends to stderr some information 
+on the internal operations performed. This is disabled by default.
+.TP
+.BI "\-silent "
+Make Sunclock silent about internal operations performed. This is the default.
 .TP
 .B "\-display " dispname
 Give the name of the X server to contact.
@@ -81,13 +84,13 @@ Give the name of the X server to contact.
 .B "\-language " name
 Select language to be used in the sunclock menu and help.
 .TP
-.B "\-bigfont " name
-Select the big font (used in the bottom line of the map window, in the 
-menu and file selection windows). Default is 6x13
+.B "\-menufont " name
+Select the menu font, used in the bottom line of the map window, in the 
+menu, file selection, zoom and option windows. Default is 6x13
 .TP
-.B "\-smallfont " name 
-Select the small font (used in the bottom line of the clock window).
-Default is 6x10.
+.B "\-clockfont " name 
+Select the (normally smaller) clock font, used in the bottom line of the 
+clock window. Default is 6x10.
 .TP
 .B "\-rcfile " filename
 Select a configuration file that is possibly different than the system 
@@ -422,17 +425,6 @@ they aren't).
 .BI "\-nonight \-nocities \-nosun \-nomeridians \-noparallels \-notropics"
 These options just negate the above ones.
 .TP
-.BI "\-landcolor " color
-Specifies the color of land areas produced by the builtin vector map. 
-Default is Chartreuse2. This option has no effect on external image
-earthmaps being loaded.
-.TP
-.BI "\-watercolor " color
-Specifies the color of water (sea) areas. Default is RoyalBlue.
-.TP
-.BI "\-arcticcolor " color
-Specifies the color of arctic areas. Default is LemonChiffon.
-.TP
 .BI "\-textbgcolor " color
 Specifies the bottom text background color. Default is Grey92.
 .TP
@@ -452,8 +444,18 @@ Specifies the zoom area background color to be used with the small
 monochrome map used in the zoom widget. Default is White.
 .TP
 .BI "\-zoomfgcolor " color
-Specifies the zoom area background color to be used with the small
+Specifies the zoom area foreground color to be used with the small
 monochrome map used in the zoom widget. Default is Black.
+.TP
+.BI "\-optionbgcolor " color
+Specifies the option text entry background color. Default is White.
+.TP
+.BI "\-optionfgcolor " color
+Specifies the option text entry foreground color. Default is Black.
+.TP
+.BI "\-caretcolor " color
+Specifies the color of the caret used in the option text entry. 
+Default is SkyBlue2.
 .TP
 .BI "\-changecolor " color
 Specifies the color to be used for widget objects that are supposed

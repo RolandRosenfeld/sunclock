@@ -2,6 +2,6 @@
  * Keep track of version and patch level of sunclock.
  */
 
-#define	VERSION		"3.35"
+#define	VERSION		"3.36"
 #define COPYRIGHT       "© J.-P. Demailly"
-#define RELEASE         "11 04 2001"
+#define RELEASE         "13 04 2001"

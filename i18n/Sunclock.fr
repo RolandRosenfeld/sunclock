@@ -86,6 +86,7 @@ Zoomer d'un facteur 1.2
 Rétrécir d'un factor 1/1.2 = 0.833
 Revenir à un facteur de zoom = 1 (carte entière)
 Centrer le rectangle de zoom sur la localité choisie
+Synchroniser l'action du zoom
 # Option window help
 Activer l'option
 Effacer la ligne de commande

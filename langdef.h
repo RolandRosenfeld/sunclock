@@ -1,7 +1,7 @@
 #define N_MENU 28
 #define N_ZOOM 13
 #define N_OPTION 6
-#define N_HELP 39
+#define N_HELP 40
 
 #define STDFORMATS "%H:%M%_%a%_%d%_%b%_%y|%H:%M:%S%_%Z|%a%_%j/%t%_%U/52"
 
@@ -45,10 +45,10 @@ char    ZoomKey[2*N_ZOOM] =
 "*,#,/;&,+,-,1,.;>,<,!,W,K;";
 
 char    OptionKey[2*N_OPTION] = 
-"@,\";=;!,W,K;";
+"@,%;=;!,W,K;";
 
 char    CommandKey[N_HELP] = 
-"HFZOCSDELABGJNYUMPTWKIR><!XQ*#/&+-1.@\"=";
+"HFZOCSDELABGJNYUMPTWKIR><!XQ*#/&+-1.\"@%=";
 
 char  * Help[N_HELP] = {
 
@@ -91,6 +91,7 @@ char  * Help[N_HELP] = {
 "Zoom out by factor 1/1.2 = 0.833",
 "Return to zoom factor = 1 (full map)",
 "Center zoom area on selected city or location",
+"Synchronize zoom operation",
 
 /* Option window help */
 "Activate the selected option",

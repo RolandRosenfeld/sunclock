@@ -86,6 +86,7 @@ Zoom in by factor 1.2
 Zoom out by factor 1/1.2 = 0.833
 Return to zoom factor = 1 (full map)
 Center zoom area on selected city or location
+Synchronize zoom operation
 # Option window help
 Activate the option
 Erase the option command line

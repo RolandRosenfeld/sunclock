@@ -112,8 +112,8 @@ typedef struct ZoomSettings {
 typedef struct GClist {
         GC mapstore;
         GC mapinvert;
-        GC smallfont;
-        GC bigfont;
+        GC menufont;
+        GC clockfont;
         GC optionfont;
         GC dirfont;
         GC imagefont;
@@ -143,6 +143,9 @@ typedef struct Pixlist {
         Pixel mapfgcolor;
         Pixel zoombgcolor;
         Pixel zoomfgcolor;
+        Pixel optionbgcolor;
+        Pixel optionfgcolor;
+        Pixel caretcolor;
         Pixel dircolor;
         Pixel imagecolor;
         Pixel changecolor;
@@ -164,6 +167,12 @@ typedef struct GraphicData {
         Colormap        cmap;           /* window (private?) colormap */  
         short links;                    /* how many other Windows linked ? */
         short usedcolors;               /* number of colors used */
+        int   mapstrip;                 /* height of strip for map */
+        int   clockstrip;               /* height of strip for clock */
+        int   charspace;                /* menu char spacing */
+        int   precedence;               /* ordinal number of creation */
+        XFontStruct *   menufont;       /* menu font structure */
+        XFontStruct *   clockfont;      /* clock font structure */
         GClist          gclist;         /* window GCs */  
         Pixlist         pixlist;        /* special color pixels */  
 } GraphicData;
@@ -220,8 +229,6 @@ typedef struct Sundata {
 	int		noon;		/* position of noon, integer */
         int             local_day;      /* previous local day */
         int             solar_day;      /* previous solar day */
-	int		textx;		/* x where to draw the text */
-	int		texty;		/* y where to draw the text */
 	int		count;	        /* number of time iterations */
         struct City     pos1;           /* first position */
         struct City     pos2;           /* second position */

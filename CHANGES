@@ -12,6 +12,12 @@ Planned versions 3.3x, 3.40... (features to appear in some order)
 - Moon phases
 - Spherical representation of Earth (?)
 
+Version 3.36, April 12, 2001
+
+- Code clean-ups and bug fixes. Language and fonts are now runtime
+  configurable as promised (and without segfaulting !).
+- When changing parameters, the XImage is recycled whenever possible.
+
 Version 3.35, April 11, 2001
 
 - A new "Option" widget appears; many command line options can be set
