@@ -10,12 +10,13 @@ North America) is included in the "coordinates.txt" file.
 
 2. (Optional)
 
-If your native language is not one of the currently supported languages
-(English and French), translate Sunclock_en into Sunclock_XX where XX
-are the initials of the desired language, as referred to by the
-environment parameter $LANG. And please send Sunclock_XX to the current
-maintainer (demailly@fourier.ujf-grenoble.fr) so that it can be
-included in later releases...
+If your native language is not one of the currently supported languages, 
+translate Sunclock_en into Sunclock_XX where XX are the initials of the 
+desired language, as referred to by the environment parameter $LANG
+(already supported internationalization files are located in the 
+subdirectory i18n). And please send Sunclock_XX to the current maintainer 
+(demailly@fourier.ujf-grenoble.fr) so that it can be included in later
+releases...
 
 3. Type 'xmkmf' and then 'make' to build the binary executable. If
 your system does not support the Imakefile process, customize by hand

@@ -44,6 +44,7 @@
 #define TIMECOUNT 25
 #define PRECOUNT  TIMECOUNT-1
 #define TIMESTEP  10000
+#define CHWID	  24
 
 enum {RANDOM=0, FIXED, CENTER, NW, NE, SW, SE};
 

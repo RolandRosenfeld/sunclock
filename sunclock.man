@@ -102,14 +102,23 @@ can be useful for monochrome displays on which cities are hardly
 visible, otherwise small color spots of size 1 or 2 are better).
 Default is 2 for color mode and 3 for monochrome mode.
 .TP
+.BI "\-cmd " command
+Specify an external action or program that will be called by keyboard 
+shortcut 'x'. Default is empty command.
+.TP
 .BI "\-shift " number
 Number of seconds by which time should be shifted. Useful to get
 sunclock display information on earlier or later epochs
 (recall that one day = 86400 seconds). 
 .TP
-.BI "\-cmd " command
-Specify an external action or program that will be called by keyboard 
-shortcut 'x'. Default is empty command.
+.BI "\-city " name
+Initialize program so as to display data of city 'name'. This becomes
+effective only if the above mentioned city is listed in the app-default 
+or rc file. The operating mode is set to Coordinates mode.
+.TP
+.BI "\-position " latitude longitude
+Initialize program so as to display data of the position specified by 
+two coordinates (in degrees). The operating mode is set to Solar time mode.
 .TP
 .BI "\-meridians "
 Start sunclock with meridians displayed (by default, they aren't).

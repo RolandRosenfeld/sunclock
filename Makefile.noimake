@@ -37,7 +37,7 @@ sunclock: $(OFILES) $(HFILES)
 install: sunclock
 	install -c -s sunclock $(DESTDIR)/$(XBINDIR)
 	cp -f Sunclock.ad $(DESTDIR)$(XAPPLOADDIR)/Sunclock
-	cp -f Sunclock_* /usr/lib/X11/app-defaults/
+	cp -f i18n/Sunclock_* $(DESTDIR)$(XAPPLOADDIR)
 
 clean:
 	rm -f core *.o *~ sunclock

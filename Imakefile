@@ -24,4 +24,4 @@ DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
 InstallAppDefaults(Sunclock)
-	cp -f Sunclock_* $(DESTDIR)$(XAPPLOADDIR)
+	cp -f i18n/Sunclock_* $(DESTDIR)$(XAPPLOADDIR)

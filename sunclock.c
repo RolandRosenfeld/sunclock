@@ -231,6 +231,7 @@ int		do_nocities = 0;
 int             progress_mode = 0;
 int		clock_mode = 0;
 char            map_mode = LEGALTIME;
+char *		CityInit = NULL;
 
 long		local_shift = 0;
 long		global_shift = 0;
@@ -252,8 +253,9 @@ usage()
 	 SP"[-clock] [-clockgeom +x+y] [-seconds]\n"
          SP"[-map] [-mapgeom +x+y] [-mapmode * <c,d,l,s>]\n"
          SP"[-placement (random, fixed, center, NW, NE, SW, SE)]\n"
+         SP"[-spot size(0,1,2,3)] [-shift timeshift(sec)]\n"
+         SP"[-city name] [-position latitude longitude]\n"
          SP"[-meridians] [-parallels] [-tropics] [-nocities]\n"
-         SP"[-shift timeshift(sec)] [-spot size(0,1,2,3)]\n"
          SP"[-bg color] [-fg color] [-textbg color] [-textfg color]\n"
          SP"[-citycolor0 color] [-citycolor1 color] [-citycolor2 color]\n"
          SP"[-markcolor1 color] [-markcolor2 color]\n"
@@ -265,24 +267,6 @@ usage()
 	fprintf(stderr, "%s %c : %s\n", Label[L_KEY], Option[2*i], Help[i]);
         fprintf(stderr, "\n");
 	exit(1);
-}
-
-/*
- *  Set the timezone of selected location
- */
-
-void
-setTZ(cptr)
-City	*cptr;
-{
-	char buf[80];
-
-	if (cptr)
-	        sprintf(buf, "TZ=%s", cptr->tz);
-	else
-	        strcpy(buf, "TZ");
-	putenv(buf);
-	tzset();
 }
 
 void
@@ -303,7 +287,6 @@ initValues()
 	mark1.status = 0;
 	mark2.city = NULL;
 	mark2.status = 0;
-	setTZ(NULL);
 }
 
 char *
@@ -570,6 +553,20 @@ register char **		argv;
 			strcpy(TextFgColor.name, *++argv);
 			--argc;
 		}
+		else if (strcmp(*argv, "-position") == 0 && argc>1) {
+			needMore(argc, argv);
+			pos1.lat = atof(*++argv);
+	                --argc;
+			needMore(argc, argv);
+			pos1.lon = atof(*++argv);
+			mark1.city = &pos1;
+			--argc;
+		}
+		else if (strcmp(*argv, "-city") == 0 && argc>1) {
+			needMore(argc, argv);
+			CityInit = *++argv;
+			--argc;
+		}
 		else if (strcmp(*argv, "-citycolor0") == 0 && argc>1) {
 			needMore(argc, argv);
 			strcpy(CityColor0.name, *++argv);
@@ -767,7 +764,7 @@ AdjustGeom()
 {
 	Window			root = RootWindow(dpy, scr);
         Window			win;
-	int dx, dy;
+	int			dx = 0, dy = 0;
 
         if (placement == CENTER) 
            dx = (map_icon_width - clock_icon_width)/2; else
@@ -1268,7 +1265,6 @@ SwitchWindows()
           xsh.y = MapGeom.y;
           xsh.flags = USPosition;
       	  if (placement) XSetNormalHints(dpy, Map, &xsh);
-	  setTZ(mark1.city);
           XMapWindow(dpy, Map);
 	  if (placement) XMoveWindow(dpy, Map, MapGeom.x, MapGeom.y);
 	  }
@@ -1280,7 +1276,6 @@ SwitchWindows()
           xsh.y = ClockGeom.y;
           xsh.flags = USPosition;
       	  if (placement) XSetNormalHints(dpy, Clock, &xsh);
-	  setTZ(NULL);
           XMapWindow(dpy, Clock);
 	  if (placement) XMoveWindow(dpy, Clock, ClockGeom.x, ClockGeom.y);
           }
@@ -1293,7 +1288,7 @@ int	rank, width;
 {
 	int j;
 
-	for (j=24*rank-width+20; j<=24*rank+20+width; j++)
+	for (j=CHWID*rank-width+CHWID-4; j<=CHWID*rank+CHWID-4+width; j++)
 	     XDrawLine(dpy, Map, BigFont_gc, j,map_icon_height, j,map_height);
 }
 
@@ -1330,11 +1325,11 @@ GC     *pgc;
 }
 
 /*
- * place_spot() - Put a spot (city or mark) on the map.
+ * placeSpot() - Put a spot (city or mark) on the map.
  */
 
 void
-place_spot(mode, lat, lon)
+placeSpot(mode, lat, lon)
 int    mode;
 double lat, lon;		/* Latitude and longtitude of the city */
 {
@@ -1375,7 +1370,7 @@ drawCities()
 City *c;
         if (spot_size) 
         for (c = cities; c; c = c->next)
-	    place_spot(c->mode, c->lat, c->lon);
+	    placeSpot(c->mode, c->lat, c->lon);
 }
 
 void
@@ -1385,9 +1380,9 @@ drawMarks()
 
         /* code for color mode */
         if (mark1.city == &pos1)
-	  place_spot(3, mark1.city->lat, mark1.city->lon);
+	  placeSpot(3, mark1.city->lat, mark1.city->lon);
         if (mark2.city == &pos2)
-	  place_spot(4, mark2.city->lat, mark2.city->lon);
+	  placeSpot(4, mark2.city->lat, mark2.city->lon);
 }
 
 /*
@@ -1481,14 +1476,14 @@ pulseMarks()
 int     done = 0;
 	if (mark1.city && mark1.status<0) {
            if (mark1.pulse) {
-	     place_spot(0, mark1.save_lat, mark1.save_lon);
+	     placeSpot(0, mark1.save_lat, mark1.save_lon);
 	     done = 1;
 	   }
 	   mark1.save_lat = mark1.city->lat;
 	   mark1.save_lon = mark1.city->lon;
            if (mark1.city == &pos1) {
 	      done = 1;
-              place_spot(0, mark1.save_lat, mark1.save_lon);
+              placeSpot(0, mark1.save_lat, mark1.save_lon);
 	      mark1.pulse = 1;
 	   } else
 	      mark1.pulse = 0;
@@ -1497,7 +1492,7 @@ int     done = 0;
 	else
         if (mark1.status>0) {
 	   if (mark1.city|| mark1.pulse) {
-              place_spot(0, mark1.save_lat, mark1.save_lon);
+              placeSpot(0, mark1.save_lat, mark1.save_lon);
 	      mark1.pulse = 1-mark1.pulse;
 	      done = 1;
 	   }
@@ -1506,13 +1501,13 @@ int     done = 0;
 
 	if (mark2.city && mark2.status<0) {
            if (mark2.pulse) {
-	     place_spot(0, mark2.save_lat, mark2.save_lon);
+	     placeSpot(0, mark2.save_lat, mark2.save_lon);
 	     done = 1;
 	   }
 	   mark2.save_lat = mark2.city->lat;
 	   mark2.save_lon = mark2.city->lon;
            if (mark2.city == &pos2) {
-              place_spot(0, mark2.save_lat, mark2.save_lon);
+              placeSpot(0, mark2.save_lat, mark2.save_lon);
 	      done = 1;
 	      mark2.pulse = 1;
 	   } else
@@ -1522,7 +1517,7 @@ int     done = 0;
 	else
         if (mark2.status>0) {
 	   if (mark2.city || mark2.pulse) {
-              place_spot(0, mark2.save_lat, mark2.save_lon);
+              placeSpot(0, mark2.save_lat, mark2.save_lon);
               mark2.pulse = 1 - mark2.pulse;
 	      done = 1;
 	   }
@@ -1739,7 +1734,6 @@ register struct sunclock *	s;
 	double			sunrv;
 	double			sunlong;
 	double			gt;
-	struct tm		lt;
 	short *			wtab_swap;
 	time_t                  gtime;
 
@@ -1763,10 +1757,7 @@ register struct sunclock *	s;
 		time(&s->s_time);
 	
   	gtime = s->s_time + global_shift;
-
-	lt = *localtime(&gtime);
 	ct = gmtime(&gtime);
-
 	jt = jtime(ct);
 	sunpos(jt, False, &sunra, &sundec, &sunrv, &sunlong);
 	gt = gmst(jt);
@@ -1810,19 +1801,41 @@ register struct sunclock *	s;
         drawSeparators();
 }
 
+/*
+ *  Set the timezone of selected location
+ */
+
+void
+setTZ(cptr)
+City	*cptr;
+{
+	char buf[80];
+
+	if (cptr && do_map)
+	        sprintf(buf, "TZ=%s", cptr->tz);
+	else
+	        strcpy(buf, "TZ");
+	putenv(buf);
+	tzset();
+}
+
 void
 showImage(s)
 register struct sunclock *	s;
 {
 	register char *		p;
-	struct tm		lt;
 	register struct tm *	gmtp;
+	struct tm		lt;
 	time_t                  ltime, gtime;
 
         ltime = s->s_time + global_shift;
+
+	setTZ(mark1.city);
 	lt = *localtime(&ltime);
+
         gtime = ltime + local_shift;
 	gmtp = gmtime(&gtime);
+ 
 	p = (*s->s_tfunc)(&lt, gmtp);
 
 	if (s->s_flags & S_DIRTY) {
@@ -1842,7 +1855,7 @@ register struct sunclock *	s;
    GMT time gt at that location */
 
 double
-Daylength(gt, lat)
+dayLength(gt, lat)
 double	gt, lat;
 {
 	double			duration;
@@ -1850,7 +1863,7 @@ double	gt, lat;
 	double			sundec;
 	double			sunrv;
 	double			sunlong;
-	double                  sinsun, sinpos, num, corr;
+	double                  sinsun, sinpos, num;
 
         /* Get sun position */
 
@@ -1900,11 +1913,13 @@ City *cptr;
         /* GMT time in julian days (and fraction of day) */
         gtm = gmtime(&ct);
 	gt = jtime(gtm);
+
 	/* legal time in julian days (and fraction of day) */
+	setTZ(cptr);
         ltm = localtime(&ct);
 	lt = jtime(ltm);
         /* Difference, in sec, between legal time and solar time */
-        shift = (lt -gt)*86400.0-mark1.city->lon*240.0;
+        shift = (lt -gt)*86400.0-cptr->lon*240.0;
 
         /* Correct GMT time so that we are at noon in solar time */ 
         corr = ltm->tm_hour/24.0-0.5+(ltm->tm_min)/1440.0 + 
@@ -1912,12 +1927,12 @@ City *cptr;
         gt  = gt - corr;
 
         /* get day length at that time and location*/
-        duration = Daylength(gt, cptr->lat);
+        duration = dayLength(gt, cptr->lat);
 
         /* improve approximation by reiterating calculation with
 	   gt = approx sunrise or approx sunset */
-	sr = 43200 - 0.5*Daylength(gt-5.78704E-6*duration, cptr->lat) + shift;
-	ss = 43200 + 0.5*Daylength(gt+5.78704E-6*duration, cptr->lat) + shift;
+	sr = 43200 - 0.5*dayLength(gt-5.78704E-6*duration, cptr->lat) + shift;
+	ss = 43200 + 0.5*dayLength(gt+5.78704E-6*duration, cptr->lat) + shift;
         dl = ss-sr;
         mark1.full = 1;
 	if (dl<=0) {dl = 0; mark1.full = 0;}
@@ -1978,7 +1993,6 @@ int x, y;      /* Screen co-ordinates of mouse */
    	   if (mark1.city) mark1.city->mode = 0;
            mark1.city = cptr;
            cptr->mode = 1;
-           setTZ(cptr);
 	}
 	break;
 
@@ -2095,10 +2109,8 @@ char	key;
 	     map_mode = COORDINATES;
 	     if (mark1.city == &pos1 || mark2.city == &pos2) updateMap();
              if (mark1.city == &pos1) mark1.city = NULL;
-	     if (mark1.city) {
-	       setTZ(mark1.city);
+	     if (mark1.city)
                setDayParams(mark1.city);
-	     }
              if (mark2.city) mark2.city->mode = 0;
              mark2.city = NULL;
 	     break;
@@ -2149,7 +2161,6 @@ char	key;
              if (mark2.city) mark2.city->mode = 0;
              mark1.city = NULL;
              mark2.city = NULL;
-	     setTZ(NULL);
 	     break;
 	   case 'm':
              do_merid = 1 - do_merid;
@@ -2189,7 +2200,7 @@ char	key;
 	   case 'x':
 	     if (Command) system(Command);
 	     break;
-	case 'z':
+	   case 'z':
 	     global_shift = 0;
 	     setDayParams(mark1.city);
 	     break;
@@ -2230,7 +2241,7 @@ char	key;
         if (do_map == 1 && y > map_icon_height) {
 	   if (progress_mode) {
               clearStrip();
-	      if (x <= 572) {
+	      if (x <= 24*CHWID -4) {
 		processKey('g');
 	        return;
 	      }
@@ -2239,7 +2250,7 @@ char	key;
 	   }
 	   ++do_help;
 	   if (do_help == 2) {
-	      click_pos = (x+3)/24;
+	      click_pos = (x+3)/CHWID;
 	      clearStrip();
 	      if (click_pos>=N_OPTIONS) {
 		 do_help = 0;
@@ -2249,7 +2260,7 @@ char	key;
 	   if (do_help == 3) {
 	      do_help = 0;
 	      clearStrip();
-	      if (x <= 572) {
+	      if (x <= 24*CHWID - 4) {
 	         key = Option[2*click_pos]+32;
 		 processKey(key);
 	      }
@@ -2270,6 +2281,7 @@ register struct sunclock *	s;
 
 	if (s->s_flags & S_CLOCK & !force_proj) {
 		time(&t);
+		setTZ(mark1.city);
 		s->s_timeout = 60 - localtime(&t)->tm_sec;
 	}
 	else
@@ -2370,6 +2382,41 @@ eventLoop()
 	}
 }
 
+void checkLocation(name)
+char *	name;
+{
+City *c;
+int  i; 
+	if (CityInit)
+        for (c = cities; c; c = c->next)
+	    if (!strcasecmp(c->name, CityInit)) {
+		map_mode = COORDINATES;
+		mark1.city = NULL;
+		i = do_map;
+		do_map = 1;
+		setTZ(c);
+		doTimeout();
+		mark1.city = c;
+                if (mono) mark1.status = -1;
+		c->mode = 1;
+		setDayParams(c);
+		do_map = i;
+		return;
+            }
+
+	if (mark1.city == &pos1) {
+		map_mode = SOLARTIME;
+		mark1.city = NULL;
+		setTZ(NULL);
+		doTimeout();
+		mark1.city = &pos1;
+                if (mono) mark1.status = -1;
+		pos1.name = Label[L_POINT];
+	        local_shift = (long) (pos1.lon * 240.0);
+		setDayParams(&pos1);
+        }	
+}
+
 int
 main(argc, argv)
 int				argc;
@@ -2403,6 +2450,7 @@ register char **		argv;
 	createWindows(argc, argv);
 	makeGCs();
 	makeMapContexts();
+	checkLocation(CityInit);
 	eventLoop();
 	exit(0);
 }
