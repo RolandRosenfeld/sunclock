@@ -56,6 +56,7 @@ extern struct Geometry  MenuGeom, FileselGeom, ZoomGeom, OptionGeom, UrbanGeom;
 extern char *	        ProgName;
 extern char *	        Title;
 extern char *           widget_type[7];
+extern char *           EditorCommand;
 
 extern char *	        ClassName;
 extern char *           ClockClassName;
@@ -125,6 +126,103 @@ int                     areaw, areah;
 int			urbanh;
 
 void shutDown();
+
+/* Is it really more secure than plain tmpnam() ?? */
+void 
+secure_tmpnam(char *name)
+{
+    char compl[4];
+    static int order = 0;
+    compl[0] = 'a' + ((order/676)%26);
+    compl[1] = 'a' + ((order/26)%26);
+    compl[2] = 'a' + (order%26);
+    compl[3] = '\0';
+    ++order;
+    sprintf(name, "%s/XXXXXX", P_tmpdir);
+    close(mkstemp(name));
+    unlink(name);
+    strcat(name, compl);
+}
+
+void 
+showManual()
+{
+int i=0, j, k, l, c, cp;
+char cmd[256];
+char tmpname[80];
+struct stat buf;
+char *ptr, *text;
+FILE *man;
+
+     secure_tmpnam(tmpname);
+     strcat(tmpname, "_sunclock.man");
+     sprintf(cmd, "man sunclock > %s", tmpname);
+     system(cmd);
+     man = fopen(tmpname, "r");
+     if (!man) {
+        unlink(tmpname);
+	return;
+     }
+     ptr = strdup(tmpname);
+     buf.st_mode = 0;
+     stat(ptr, &buf);
+     free(ptr);
+     text = malloc(buf.st_size+2);
+     if (!text) {
+        fclose(man);
+        return;
+     }
+     while ((c=fgetc(man))!=EOF) {
+       iter:
+        if (c=='_') {
+	   cp = fgetc(man);
+	   if (cp==EOF) break;
+	   if (cp==8) continue;
+	   text[i++] = (char)c;
+	   c = cp;
+           goto iter;
+	} else
+	if (c==8) {
+	   c = fgetc(man);
+	   if (c==EOF) break;
+	} else
+	   text[i++] = (char)c;
+     }
+     text[i] = '\0';
+     fclose(man);
+     man = fopen(tmpname, "w");
+     if (!man) {
+        free(text);
+        return;
+     }
+     for (j=0; j<i; j++) {
+         if (text[j]=='\n' && !strncmp(text+j+1, "Sunclock-", 6)) {
+	    k = j;
+	    while (isspace(text[k])) k--;
+	    while (text[k]!='\n') k++;
+	    ptr = strstr(text+j+1, "sunclock(1x)");
+	    if (ptr) ptr = strstr(ptr+2, "sunclock(1x)");
+	    if (ptr) {
+               j = ptr-text+1;
+	       while (text[j]!='\n') j++;
+	       while (isspace(text[j])) j++;
+	       while (text[j]!='\n') j--;
+	       for (l=k; l<j; l++) text[l] = '\0';
+	    } else
+	       for (l=k+3; l<j; l++) text[l] = '\0';
+	 }
+     }
+     for (j=0; j<i; j++) {
+         if (text[j]) fputc(text[j], man);
+     }
+     free(text);
+     fflush(man);
+     fclose(man);
+     chmod(tmpname, 0555);
+     sprintf(cmd, "(%s %s ; rm -f %s ) &", 
+	     EditorCommand, tmpname, tmpname);
+     system(cmd);
+}
 
 int 
 getState(w)
@@ -551,7 +649,7 @@ int clicked;
 
     XSetForeground(dpy, gc, pix[(clicked)?BUTTONFGCOLOR4:BUTTONFGCOLOR2]);
     XDrawLine(dpy, win, gc, x1+1, y2-1, x2-1, y2-1);
-    XDrawLine(dpy, win, gc, x2-1, y1+1, x2-1, y1+1);
+    XDrawLine(dpy, win, gc, x2-1, y1+1, x2-1, y2-1);
 
     XSetForeground(dpy, gc, pix[(clicked)?BUTTONFGCOLOR3:BUTTONFGCOLOR1]);
     XDrawLine(dpy, win, gc, x1, y2, x2, y2);
@@ -566,9 +664,9 @@ int clicked;
 {
 int i, j=0, b, d, x1=0, y1=0, x2=0, y2=0, x, y, w0=0;
 struct Sundata * Context=NULL;
-char c[2];
-char *keys=NULL;
+char c[2] = { '\0', '\0'};
 char *s = c;
+char *keys=NULL;
 int nkeys=0;
 int charspace;
 
@@ -580,7 +678,8 @@ int charspace;
     b = 0;
     for (i=0; i<=n; i++) {
         j = i*charspace + b;
-	b += 5*((i==nkeys-1) || (keys[2*i+1]==';'));
+        if (win!=Filesel)
+	   b += 5*((i==nkeys-1) || (keys[2*i+1]==';'));
     }
     x1 = j;
     y2 = y1+Context->gdata->menustrip;
@@ -589,13 +688,11 @@ int charspace;
 	   s = FileselBanner[n];
 	else {
            c[0] = keys[2*n];
-           c[1] = '\0';
 	}
         x2 = j+charspace-1;
     } else {
         if (win==Zoom && n==nkeys+1) {
 	   c[0] = (zoom_active)?'+':'-';
-           c[1] = '\0';
            x1 = areah+170, 
            y1 = 21;
            x2 = x1+charspace;
@@ -627,7 +724,8 @@ int charspace;
     d = (5*Context->gdata->charspace)/12;
     XSetBackground(dpy, Context->gdata->wingc, 
 		   Context->gdata->pixel[BUTTONCOLOR]);
-    if (win==Menu && do_dock && index(WeakChars,s[0])) 
+
+    if (win==Menu && do_dock && (s[0]==c[0]) && index(WeakChars,c[0]))
         XSetForeground(dpy, Context->gdata->wingc, 
                             Context->gdata->pixel[WEAKCOLOR]);
     else
@@ -708,7 +806,13 @@ char *hint;
                       ProgName, VERSION, i, Month_name[j-1], k, COPYRIGHT);
 	}
 	if (key == 'X') {
-	    sprintf(more+1, ": %s", (ExternAction)? ExternAction : "(null)");
+	    more[1] = ':';
+            more[2] = ' ';
+	    if (ExternAction)
+	       strncpy(more+3, ExternAction, 123);
+            else
+	       strcpy(more, "(null)");
+            more[126] = '0';
 	}
 
 	if (key == '=')
@@ -762,22 +866,26 @@ void
 setupMenu(mode)
 int mode;
 {
-	int i, d;
+	int i, l;
+        static int j=-1;
+        static char c;
 
 	if (!do_menu) return;
 
-	d = strlen(WeakChars);
+        if (j>=0) WeakChars[j] = c;
+	l = strlen(WeakChars);
+
         if (MenuCaller->wintype) {
-	   if (do_dock)
-              WeakChars[1] = '\0';
-           else 
-              WeakChars[0] = '\0';
+	   if (do_dock) j = 1; else j = 0;
 	} else {
+	   j = -1;
 	   if (do_dock) {
-	      if (MenuCaller != Seed)
-                 WeakChars[d-4] = '\0';
-	   } else
-	         WeakChars[d-5] = '\0';
+ 	      if (MenuCaller != Seed) j = l-4;
+	   } else j = l-5;
+	}
+        if (j>=0) {
+	   c = WeakChars[j] ;
+           WeakChars[j] = '\0';
 	}
 
         BasicSettings(MenuCaller);

@@ -57,6 +57,9 @@ DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 ComplexProgramTarget(sunclock)
 
+all::
+	cd editkit ; xmkmf ; make DESTDIR=$(DESTDIR)
+
 install.man::
 	if [ -r $(DESTDIR)$(MANDIR)/sunclock.1x.gz ] ; \
 	   then gzip -f $(DESTDIR)$(MANDIR)/sunclock.1x ; fi
@@ -67,11 +70,15 @@ install:: install.man
 	cd i18n ; rm -f *~ ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; rm -f *~ ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
+	cd editkit ; xmkmf ; make install DESTDIR=$(DESTDIR)
 	cat WARNING
 
 clean::
-	cd tools ; make clean
+	cd tools ; make clean DESTDIR=$(DESTDIR)
+	cd editkit ; xmkmf ; make clean DESTDIR=$(DESTDIR)
 
 realclean:: clean
 	rm -f Makefile
+	cd editkit ; xmkmf ; make realclean DESTDIR=$(DESTDIR)
+
 

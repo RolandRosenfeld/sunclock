@@ -2,14 +2,14 @@ Source: sunclock
 Section: x11
 Priority: optional
 Maintainer: Roland Rosenfeld <roland@debian.org>
-Standards-Version: 3.5.8
-Build-Depends: debhelper (>= 4), xlibs-dev (>= 4.0.1-11), xutils, libjpeg62-dev, zlib1g-dev
+Standards-Version: 3.6.1
+Build-Depends: debhelper (>= 4), libx11-dev, libxpm-dev, libxext-dev, xutils, libjpeg62-dev, zlib1g-dev, libpng12-dev
 
 Package: sunclock
 Architecture: any
-Depends: ${shlibs:Depends}, xterm | x-terminal-emulator
+Depends: ${shlibs:Depends}, sunclock-maps
 Suggests: imagemagick
-Description: Fancy clock showing time and geographical data
+Description: fancy clock showing time and geographical data
  sunclock is an X11 application that displays a map of the Earth and
  indicates the illuminated portion of the globe by drawing sunlit
  areas dark on light, night areas as light on dark.  In addition to
@@ -19,3 +19,21 @@ Description: Fancy clock showing time and geographical data
  Sunclock can display meridians, parallels, tropics and arctic
  circles.  It has builtin functions that accelerate the speed of time
  and show the evolution of seasons.
+ .
+  Homepage: http://frmas.free.fr/li_1.htm
+
+Package: sunclock-maps
+Architecture: all
+Depends: sunclock (>= 3.50pre1-3)
+Replaces: sunclock (<< 3.50pre1-3)
+Description: sunclock vector graphic maps
+ sunclock is an X11 application that displays a map of the Earth and
+ indicates the illuminated portion of the globe by drawing sunlit
+ areas dark on light, night areas as light on dark.  In addition to
+ providing local time for the default timezone, it also displays GMT
+ time, legal and solar time of major cities, their latitude and
+ longitude, and the mutual distances of arbitrary locations on Earth.
+ .
+ This package contains the vector graphic earthmaps.
+ .
+  Homepage: http://frmas.free.fr/li_1.htm

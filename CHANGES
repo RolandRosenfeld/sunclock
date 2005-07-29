@@ -10,6 +10,13 @@ Planned versions ... (features to appear in some order)
 - Spherical representation of Earth
 - Moon phases
 
+Version 3.54 July 29, 2005
+
+- Corrected segfault bug #315462 from Debian bug tracking system
+- Improved look of 3D buttons 
+- xterm or terminal-emulator no longer needed since sunclock now
+  includes its own utility (emx, a very small emacs clone...)
+
 Version 3.53 November 22, 2004
 
 - All menus now use buttons with a 3D look

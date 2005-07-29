@@ -4,7 +4,8 @@ Fri, 23 Oct 1998 17:14:14 +0200.
 It was downloaded from
 ftp://ftp.x.org/contrib/applications/sunclock-1.4.tar.gz
 ftp://ftp.dent.med.uni-muenchen.de/pub/wmglo/sunclock-1.5.tar.gz
-ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock-3.50pre1.tgz
+ftp://ftp.ac-grenoble.fr/ge/geosciences/sunclock-3.53.tar.bz2
+http://frmas.free.fr/files/sunclock-3.52.tar.bz2
 
 Upstream Author: John  Mackin <john@cs.su.oz.AU>
 Upstream maintainer: Jean-Pierre Demailly <demailly@fourier.ujf-grenoble.fr>
@@ -79,5 +80,34 @@ Copyright:
     program.  Please leave the original attribution information intact	so
     that credit and blame may be properly apportioned.
 */
+
+readgif.c:
+/* +-------------------------------------------------------------------+ */
+/* | Copyright 1990, 1991, 1993 David Koblas.                          | */
+/* | Copyright 1996 Torsten Martinsen.                                 | */
+/* |   Permission to use, copy, modify, and distribute this software   | */
+/* |   and its documentation for any purpose and without fee is hereby | */
+/* |   granted, provided that the above copyright notice appear in all | */
+/* |   copies and that both that copyright notice and this permission  | */
+/* |   notice appear in supporting documentation.  This software is    | */
+/* |   provided "as is" without express or implied warranty.           | */
+/* +-------------------------------------------------------------------+ */
+
+readpng.c:
+/* +-------------------------------------------------------------------+ */
+/* | This file is derived from                                         | */
+/* | Xpaint's readPNG routines, copyrighted                            | */
+/* | by Greg Roelofs (newt@pobox.com)                                  | */
+/* |                                                                   | */
+/* | Permission to use, copy, modify, and to distribute this software  | */
+/* | and its documentation for any purpose is hereby granted without   | */
+/* | fee, provided that the above copyright notice appear in all       | */
+/* | copies and that both that copyright notice and this permission    | */
+/* | notice appear in supporting documentation.  There is no           | */
+/* | representations about the suitability of this software for        | */
+/* | any purpose.  this software is provided "as is" without express   | */
+/* | or implied warranty.                                              | */
+/* |                                                                   | */
+/* +-------------------------------------------------------------------+ */
 
 The complete GPL can be found in /usr/share/common-licenses/GPL.

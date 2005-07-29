@@ -152,6 +152,8 @@ extern int  getState();
 
 extern Window newWindow();
 
+extern void showManual();
+
 extern void checkGeom();
 extern void adjustGeom();
 extern void setSizeHints();
@@ -224,7 +226,7 @@ char * vmfrange = NULL;
 char * vmfcoordformat = NULL;
 
 char * ExternAction = NULL;
-char * HelpCommand = NULL;
+char * EditorCommand = NULL;
 char **DateFormat = NULL;
 char * ListFormats = NULL;
 
@@ -584,7 +586,7 @@ initValues()
 
         StringReAlloc(&share_maps_dir, SHAREDIR"/earthmaps/");
         StringReAlloc(&ListFormats, STDFORMATS);
-        StringReAlloc(&HelpCommand, HELPCOMMAND);
+        StringReAlloc(&EditorCommand, EDITORCOMMAND);
 
         StringReAlloc(&image_dir, share_maps_dir);
         StringReAlloc(&Clock_img_file, Default_vmf);
@@ -1611,8 +1613,8 @@ char **                argv;
 		}
                 else if (!strcasecmp(*argv, "-command"))
                         StringReAlloc(&ExternAction, *++argv);
-                else if (!strcasecmp(*argv, "-helpcommand"))
-                        StringReAlloc(&HelpCommand, *++argv);
+                else if (!strcasecmp(*argv, "-editorcommand"))
+                        StringReAlloc(&EditorCommand, *++argv);
                 else if (!strcasecmp(*argv, "-dateformat"))
                         StringReAlloc(&ListFormats, *++argv);
                 else if (!strcasecmp(*argv, "-shading")) {
@@ -5305,8 +5307,10 @@ KeySym  keysym;
              if (!do_filesel)
                 PopFilesel(Context);
              else {
-                XMapWindow(dpy, Filesel);
-                XMapRaised(dpy, Filesel);
+		if (Filesel) {
+                   XMapWindow(dpy, Filesel);
+                   XMapRaised(dpy, Filesel);
+		}
                 if (FileselCaller != Context) {
                    PopFilesel(Context);
                    PopFilesel(Context);
@@ -5343,7 +5347,7 @@ KeySym  keysym;
                 } else {
 		   if (getState(Menu) == IsViewable) {
                       XMapRaised(dpy, Menu);
-                      system(HelpCommand);
+                      showManual();
 		   } else
                       XMapWindow(dpy, Menu);
 		}

@@ -18,7 +18,7 @@
 #include <time.h>
 #include "version.h"
 
-#define HELPCOMMAND     "x-terminal-emulator -e man sunclock &"
+#define EDITORCOMMAND   "emx -edit 0"
 #define	FAILFONT	"fixed"
 
 /* num of bitmaps to accomodate 1 mark and 2 spatial objets (Sun, Moon) */

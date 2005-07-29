@@ -1,0 +1,48 @@
+XCOMM Should install to /usr or /usr/local ??
+DESTIR_XRMAP=$(DESTDIR)/usr
+
+XCOMM Name of man subdirectory of DESTIR:
+MANDIR=/usr/X11R6/man/man1
+
+XCOMM Name of bin subdirectory of DESTIR: /X11R6/bin or maybe just  /bin
+BINDIR=/usr/X11R6/bin
+
+XCOMM Name of share subdirectory of DESTIR_XRMAP:
+SHARE_DIR=/share/editkit
+SHARE_DIR_EDITKIT=/usr/share/editkit
+
+XCOMM
+XCOMM Normally -- except for new architectures -- you should be done there.
+
+XCOMM
+XCOMM Compile options:
+XCOMM
+
+CFLAGS = -O2 -fomit-frame-pointer -pipe -Wall -DTHREED -DGREEK -DJUSTIFY -DSHARE_DIR="\"$(SHATE_DIR_EDITKIT)\""
+
+LOCAL_LIBRARIES=$(XLIB)
+DEPLIBS=		# I don't know what I'm doing, and I hate imake!
+
+SRCS=x11.c
+OBJS=x11.o
+
+ComplexProgramTarget(emx)
+
+x11.o:
+	$(CC) $(CFLAGS) -DEMACS -o x11.o -c x11.c
+
+emx.man:
+	ln -sf MANUAL.emacs emx.man
+
+install::
+	mkdir -p $(DESTIR_XRMAP)$(SHARE_DIR)
+	cp -f rc.example $(DESTIR_XRMAP)$(SHARE_DIR)/rc.common
+	cd $(DESTIR_XRMAP)$(SHARE_DIR); ln -sf rc.common emxrc
+	cp -f README $(DESTIR_XRMAP)$(SHARE_DIR)
+
+clean::
+	rm -f core *~ emx.man
+
+realclean:: clean
+	rm -f Makefile
+

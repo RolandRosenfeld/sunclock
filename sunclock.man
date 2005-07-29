@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "October 31, 2004"
+.TH SUNCLOCK 1 "July 28, 2005"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -12,47 +12,47 @@ data through a point and click interface.
 where the list of licit options is the following long list 
 (starting from (**) the options are configurable at runtime):
 .PP
-[-help] [-listmenu] [-version] [-citycheck] \
-[-display name] [-sharedir directory] [-citycategories value] \
-[-clock] [-map] [-dock] [-undock] \
-[-menu] [-nomenu] [-selector] [-noselector] \
-[-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]
+[\-help] [\-listmenu] [\-version] [\-citycheck] \
+[\-display name] [\-sharedir directory] [\-citycategories value] \
+[\-clock] [\-map] [\-dock] [\-undock] \
+[\-menu] [\-nomenu] [\-selector] [\-noselector] \
+[\-zoom] [\-nozoom] [\-option] [\-nooption] [\-urban] [\-nourban]
 .PP
-(**)  [-language name] [-dateformat string1|string2|...] \
-[-rcfile file] [-command string] [-helpcommand string] \
-[-mapmode * <L,C,S,D,E>] [-image file] \
-[-clockimage file] [-mapimage file] \
-[-clockgeom <geom>] [-mapgeom <geom>] \
-[-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>] \
-[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>] \
-[-title name] [-clockclassname name] [-mapclassname name] \
-[-auxilclassname name] [-classname name] \
-[-setfont <field>|<fontsetting>{|<languages>}] \
-[-verbose] [-silent] [-synchro] [-nosynchro] [-zoomsync] [-nozoomsync] \
-[-placement (random, fixed, center, NW, NE, SW, SE)] \
-[-placementshift x y] [-extrawidth value] \
-[-decimal] [-dms] [-city name] [-position latitude|longitude] \
-[-addcity size|name|lat|lon|tz] [-removecity name (name|lat|lon)] \
-[-rootdx value] [-rootdy value] [-fixedrootpos] [-randomrootpos] \
-[-screensaver] [-noscreensaver] [-rootperiod value (in seconds)] \
-[-animation] [-noanimation] [-animateperiod value (in seconds)] \
-[-progress number[s,m,h,d,M,Y]] [-jump number[s,m,h,d,M,Y]] \
-[-aspect mode] [-colorlevel level=0,1,2,3] \
-[-fillmode number=0,1,2] [-coastlines] [-contour] [-landfill] \
-[-shading mode=0,1,2,3,4,5] [-diffusion value] [-refraction value] \
-[-night] [-terminator] [-twilight] [-luminosity] [-lightgradient] \
-[-nonight] [-darkness value<=1.0] [-colorscale number>=1] \
-[-mag value] [-magx value] [-magy value] [-dx value ] [-dy value] \
-[-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)] \
-[-sizelimits w1|w2|w3|... (wi = zoom width values, 1<=i<=citycategories)] \
-[-citymode mode=0,1,2,3] [-objectmode mode=0,1,2] \
-[-sun] [-nosun] [-moon] [-nomoon] [-tropics] [-notropics] \
-[-meridianmode mode=0,1,2,3] [-parallelmode mode=0,1,2,3] \
-[-meridianspacing value] [-parallelspacing value] \
-[-dottedlines] [-plainlines] [-bottomline] [-nobottomline] \
-[-reformat] [-vmfcolors color1|color2|color3...] \
-[-vmfrange a|b|c|d] [-vmfcoordformat format] [-vmfflags integer] \
-[-setcolor field|color]
+(**)  [\-language name] [\-dateformat string1|string2|...] \
+[\-rcfile file] [\-command string] [\-editorcommand string] \
+[\-mapmode * <L,C,S,D,E>] [\-image file] \
+[\-clockimage file] [\-mapimage file] \
+[\-clockgeom <geom>] [\-mapgeom <geom>] \
+[\-auxilgeom <geom>] [\-menugeom <geom>] [\-selgeom <geom>] \
+[\-zoomgeom <geom>] [\-optiongeom <geom>] [\-urbangeom <geom>] \
+[\-title name] [\-clockclassname name] [\-mapclassname name] \
+[\-auxilclassname name] [\-classname name] \
+[\-setfont <field>|<fontsetting>{|<languages>}] \
+[\-verbose] [\-silent] [\-synchro] [\-nosynchro] [\-zoomsync] [\-nozoomsync] \
+[\-placement (random, fixed, center, NW, NE, SW, SE)] \
+[\-placementshift x y] [\-extrawidth value] \
+[\-decimal] [\-dms] [\-city name] [\-position latitude|longitude] \
+[\-addcity size|name|lat|lon|tz] [\-removecity name (name|lat|lon)] \
+[\-rootdx value] [\-rootdy value] [\-fixedrootpos] [\-randomrootpos] \
+[\-screensaver] [\-noscreensaver] [\-rootperiod value (in seconds)] \
+[\-animation] [\-noanimation] [\-animateperiod value (in seconds)] \
+[\-progress number[s,m,h,d,M,Y]] [\-jump number[s,m,h,d,M,Y]] \
+[\-aspect mode] [\-colorlevel level=0,1,2,3] \
+[\-fillmode number=0,1,2] [\-coastlines] [\-contour] [\-landfill] \
+[\-shading mode=0,1,2,3,4,5] [\-diffusion value] [\-refraction value] \
+[\-night] [\-terminator] [\-twilight] [\-luminosity] [\-lightgradient] \
+[\-nonight] [\-darkness value<=1.0] [\-colorscale number>=1] \
+[\-mag value] [\-magx value] [\-magy value] [\-dx value ] [\-dy value] \
+[\-spotsizes s1|s2|s3|... (0<=si<=4, 1<=i<=citycategories)] \
+[\-sizelimits w1|w2|w3|... (wi = zoom width values, 1<=i<=citycategories)] \
+[\-citymode mode=0,1,2,3] [\-objectmode mode=0,1,2] \
+[\-sun] [\-nosun] [\-moon] [\-nomoon] [\-tropics] [\-notropics] \
+[\-meridianmode mode=0,1,2,3] [\-parallelmode mode=0,1,2,3] \
+[\-meridianspacing value] [\-parallelspacing value] \
+[\-dottedlines] [\-plainlines] [\-bottomline] [\-nobottomline] \
+[\-reformat] [\-vmfcolors color1|color2|color3...] \
+[\-vmfrange a|b|c|d] [\-vmfcoordformat format] [\-vmfflags integer] \
+[\-setcolor field|color]
 
 .SH DESCRIPTION
 .I sunclock
@@ -65,33 +65,33 @@ zenith of Sun and Moon. Sunclock can display meridians, parallels,
 tropics and arctic circles. It has builtin functions that accelerate 
 the speed of time and show the evolution of seasons. Sunclock can be 
 internationalized for various western languages. It is possible to 
-customize the app-default file and enter additional city entries.
+customize the app\-default file and enter additional city entries.
 
 Sunclock can commute between two states, the "clock window" and
 the "map window". The clock window displays a small map of the Earth
 and therefore occupies little space on the screen, while the "map window" 
 displays a large map and offers more advanced functions. The Sunclock
 package includes a resizable and zoomable vector map . External
-Earth maps can also be loaded (starting with version 3.51, formats .jpg,
-.gif, .png, .xpm or .xpm.gz, .vmf can be read [.vmf is the specific 
-vector map format of  sunclock]). Some additional formats could 
-be added in the future.
+Earth maps can also be loaded (starting with version 3.51, 
+formats \.jpg, \.gif, \.png, \.xpm or \.xpm.gz, \.vmf can be read 
+[\.vmf is the specific vector map format of  sunclock]). 
+Some additional formats could be added in the future.
 
 The map window can work in five different modes:
 .PP
-- "Legal time" mode: legal time of default time zone and GMT time are 
+\- "Legal time" mode: legal time of default time zone and GMT time are 
 displayed.
 .PP
-- "Coordinate" mode: by clicking on a city, users get coordinates 
+\- "Coordinate" mode: by clicking on a city, users get coordinates 
 (latitude, longitude) of that city, legal time and sunrise/sunset.
 .PP
-- "Solar" mode: by clicking on a point of the map (either a city or 
+\- "Solar" mode: by clicking on a point of the map (either a city or 
 another point), solar time and day length are shown.
 .PP
-- "Hour Extension" mode: displays solar times from 00:00 to 23:00 in bottom
+\- "Hour Extension" mode: displays solar times from 00:00 to 23:00 in bottom
 strip, according to the Sun position.
 .PP
-- "Distance" mode: shows distances in km and miles between two arbitrary
+\- "Distance" mode: shows distances in km and miles between two arbitrary
 locations.
 .PP
 Depending on the mode chosen, the bottom line shows a short text
@@ -108,10 +108,10 @@ cities, the names of cities can be displayed on the map.
 
 All functionalities can be accessed though GUI actions on the main
 window or the auxiliary windows. The main window is resizable by
-pulling the window edges - as the current window manager permits it. 
+pulling the window edges \- as the current window manager permits it. 
 There are 5 auxiliary windows:
 .PP
-- Menu Window. This is the main menu, which offers a wide list of actions. 
+\- Menu Window. This is the main menu, which offers a wide list of actions. 
 The menu window is launched by typing 'H' or clicking on the bottom 
 strip with the left mouse button once. Each action can be obtained by using 
 the indicated keyboard shortcut or by clicking with the mouse on the 
@@ -121,29 +121,29 @@ in one direction, upper case in the other direction. For those switches,
 the left mouse button will have the same effect as lower case, and the 
 right mouse button the same effect as upper case.
 .PP
-- File Selector window. It can be accessed by clicking on the upper part 
+\- File Selector window. It can be accessed by clicking on the upper part 
 of the main window with the middle mouse button. It allows to select
 the Earth image file (in formats *.vmf *.xpm, *.xpm.gz, *.jpg, *.gif, *.png) 
 to be loaded.
 .PP
-- Zoom window. It can be accessed by clicking on the upper part
+\- Zoom window. It can be accessed by clicking on the upper part
 of the main window with the right mouse button. The zoom window
 allows to select a specific area on the Earth, to translate or zoom 
 it up to 100 times. High resolutions (larger than 10) are only recommended 
 with the "huge" Earthmap of 11 Mbytes, which offers clean images up to
 20 times magnification at least.
 .PP
-- Urban selector window. Allows to modify interactively the list of 
+\- Urban selector window. Allows to modify interactively the list of 
 shown cities and locations.
 .PP
-- Option window. Allows to reconfigure pretty much everything on the fly
+\- Option window. Allows to reconfigure pretty much everything on the fly
 (colors, fonts, etc), exactly as with the command line options.
 .SH OPTIONS
 The program does not use the Xt nor any other more advanced toolkit,
 and hence only (!) those options explicitly enumerated below may be used.
 The only needed resource is the list of coordinates and timezones of
 cities to be displayed. The system administrator can possibly customize 
-the system-wide prepackaged config file Sunclockrc before installing the
+the system\-wide prepackaged config file Sunclockrc before installing the
 package, while users can tweak their individual configuration file 
 ~/.sunclockrc at any time. The individual config file ~/.sunclockrc is 
 read *after* the system wide config file Sunclockrc, and therefore its
@@ -198,7 +198,7 @@ Style "*ShowTitle*"  Title, WindowListHit, Slippery
 .PP
 Style "*Sticky*"     Sticky
 .PP
-to get specify such a behaviour.
+to specify such a behaviour.
 .TP
 .B "\-setfont " <field>|<fontsetting>{|<languages>}
 Select the font for the given text field (clockstrip, menustrip, city,
@@ -265,8 +265,8 @@ that sunclock fits with the size of the dockable applets. As an example,
 sunclock could be invoked as follows:
 .TP
 .B " "
-sunclock -language fr -nobottomline -dock -clockgeom 63x42+2+190
--dateformat "%H:%M:%S|%a%_%d%_%b|%b%_%Y|%j%_%U/52" -command "xdiary"
+sunclock \-language fr \-nobottomline \-dock \-clockgeom 63x42+2+190
+\-dateformat "%H:%M:%S|%a%_%d%_%b|%b%_%Y|%j%_%U/52" \-command "xdiary"
 .TP
 .B "\-undock "
 Undocks sunclock. This option has no other effect than reallowing the
@@ -486,7 +486,7 @@ lines.
 .TP
 .BI "\-fillmode " 0,1,2
 Fillmode=0 is equivalent to -coastlines, fillmode=1 is equivalent to 
--contour, and fillmode=2 is equivalent to -landfill.
+\-contour, and fillmode=2 is equivalent to -landfill.
 .TP
 .BI "\-dottedlines "
 Use dotted lines to represent meridians and parallels.
@@ -505,10 +505,11 @@ Don't draw the bottom line. This is the default.
 Specify an external action or program that will be called through keyboard 
 shortcut 'x'. Default is empty command.
 .TP
-.BI "\-helpcommand " string
-Specify an external action or program that will be called through keyboard 
+.BI "\-editorcommand " string
+Specify an external file editor program that will be called through keyboard 
 shortcut double 'h' (call help). Default is 
-"xterm -fn 9x15 -cr green -ms red -e man sunclock &".
+"emx -edit 0"
+(included emx editor, in no-edit mode...)
 .TP
 .BI "\-jump " "number[unit] (where unit=s,m,h,d,M,Y)"
 Number of seconds (respectively minutes, hour, days, Months, Years) 
@@ -526,14 +527,14 @@ progress by other steps than the predefined ones (by default the steps
 cycle between the values 1 mn, 1 hour, 1 day, 7 days, 30 days).
 .TP
 .BI "\-rootdx " "value (between 0.0 and 1.0)"
-Options -rootdx and -rootdy allow to set the position where the sunclock
-map is copied on the root window in rootwindow or screensaver modes.
-'-rootdx 0.0' means on the left side, '-rootdx 1.0' on the right side,
-'-rootdy 0.0' means at the top, '-rootdy 1.0' at the bottom of the root
-window. Default is 0.5 for both values, i.e. a centered map.
+Options \-rootdx and \-rootdy allow to set the position where the 
+sunclock map is copied on the root window in rootwindow or screensaver 
+modes. '\-rootdx 0.0' means on the left side, '\-rootdx 1.0' on the right 
+side, '\-rootdy 0.0' means at the top, '\-rootdy 1.0' at the bottom of 
+the root window. Default is 0.5 for both values, i.e. a centered map.
 .TP
 .BI "\-rootdy " "value (degrees)"
-See -rootdx above.
+See \-rootdx above.
 .TP
 .BI "\-fixedrootpos "
 Use the above rootdx and rootdy values to fix the position of the map on 
