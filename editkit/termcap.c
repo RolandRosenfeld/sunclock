@@ -702,7 +702,7 @@ void read_rc()
 	}
 
 	if (!fr) {
-		sprintf(name, "%s/%s", SHARE_DIR, DEFAULT_RC);
+		sprintf(name, "%s/%s", SHAREDIR, DEFAULT_RC);
 		fr = fopen(name, "r");
 	}
 

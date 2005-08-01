@@ -2,7 +2,7 @@ Source: sunclock
 Section: x11
 Priority: optional
 Maintainer: Roland Rosenfeld <roland@debian.org>
-Standards-Version: 3.6.1
+Standards-Version: 3.6.2
 Build-Depends: debhelper (>= 4), libx11-dev, libxpm-dev, libxext-dev, xutils, libjpeg62-dev, zlib1g-dev, libpng12-dev
 
 Package: sunclock

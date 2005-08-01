@@ -609,7 +609,7 @@ int x, y;
 struct Sundata * Context=NULL;
 char *keys=NULL;
 int nkeys=0;
-int y1, w0, n, i, j, b, d;
+int y1, w0, n, i, j=0, b, d;
     getWinParams(win, &Context, &keys, &nkeys, &y1, &w0);
     n = -1;
     if (y<=y1 || y>=y1+Context->gdata->menustrip) return n;
@@ -952,7 +952,6 @@ processMenuAction(Context, x, y, button, evtype)
 Sundata * Context;
 int x, y, button, evtype;
 {
-static int move_pos = -1;
 static int click_pos = -1;
 int but_pos;
 KeySym key;
@@ -1533,7 +1532,7 @@ void
 setupZoom(mode)
 int mode;
 {
-    int b, i, j, j0, k;
+    int i, j, k;
     int zoomx, zoomy, zoomw, zoomh;
     char *num[] = { "1", "2", "5", "10", "20", "50", "100"};
     char *synchro = Label[L_SYNCHRO];
@@ -2001,7 +2000,7 @@ void
 setupOption(mode)
 int mode;
 {
-    int b, i, j, j0, vskip;
+    int i, vskip;
     char s[80];
 
     if (!do_option) return;
@@ -2352,7 +2351,7 @@ void
 setupUrban(mode)
 int mode;
 {
-    int b, i, j, j0, vskip;
+    int i, vskip;
     char s[80];
 
     if (!do_urban) return;

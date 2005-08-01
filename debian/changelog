@@ -1,3 +1,26 @@
+sunclock (3.54-2) unstable; urgency=low
+
+  * Add debian/watch with current FTP server.
+  * Correct URL in copyright file.
+  * Stop build-depending on libselinux1-dev but compile with
+    SELINUX_LIBS="" to work around the bug that xutils enables HasSELinux
+    by default, while this program doesn't use it (Closes: #320606).
+
+ -- Roland Rosenfeld <roland@debian.org>  Sun, 31 Jul 2005 13:33:12 +0200
+
+sunclock (3.54-1) unstable; urgency=low
+
+  * New upstream version 3.54.
+    - Corrects a segmentation fault (Closes: #315462).
+  * No longer depends on xterm because interal emx editor is now used.
+  * Upgrade to Standards-Version 3.6.2:
+    - Install emx (external editor for manual viewing) into
+      /usr/lib/sunclock (instead of /usr/bin).
+  * Add build depenency on libselinux1-dev until xutils is fixed to build
+    packages without HasSELinux again :-(
+
+ -- Roland Rosenfeld <roland@debian.org>  Sat, 30 Jul 2005 13:40:02 +0200
+
 sunclock (3.53-1) unstable; urgency=low
 
   * New upstream version 3.53.

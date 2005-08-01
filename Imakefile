@@ -10,6 +10,10 @@ BINDIR=/X11R6/bin
 XCOMM Name of share subdirectory of DESTDIR:
 SHAREDIR=/share/sunclock
 
+XCOMM Name of DOCDIR's subdirectories of DESTDIR:
+DOCDIR=/X11R6/lib/X11/doc 
+DOCHTMLDIR=/X11R6/lib/X11/doc/html
+
 XCOMM
 XCOMM Compile options:
 XCOMM
@@ -71,7 +75,7 @@ install:: install.man
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; rm -f *~ ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd editkit ; xmkmf ; make install DESTDIR=$(DESTDIR)
-	cat WARNING
+	cat MESSAGE
 
 clean::
 	cd tools ; make clean DESTDIR=$(DESTDIR)

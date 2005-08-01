@@ -41,7 +41,7 @@ OFILES=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
        readgif.o readjpeg.o readpng.o readvmf.o readxpm.o
 HFILES=bitmaps.h langdef.h sunclock.h version.h
 
-all: sunclock
+all: sunclock emx
 
 sunclock.o: $(HFILES)
 readgif.o: $(HFILES)
@@ -53,6 +53,9 @@ readxpm.o: $(HFILES)
 sunclock: $(OFILES) $(HFILES)
 	$(CC) $(OFILES) -o $@ $(CFLAGS) $(LFLAGS)
 
+emx:
+	cd editkit ; make -f Makefile.kit DESTDIR=$(DESTDIR)
+	
 install: install.man sunclock
 	$(MKDIRHIER) $(DESTDIR)/$(XBINDIR)
 	install -s -c sunclock $(DESTDIR)/$(XBINDIR)
@@ -61,7 +64,8 @@ install: install.man sunclock
 	cd i18n ; rm -f *~ ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; rm -f *~ ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
-	cat WARNING
+	cd editkit ; make -f Makefile.kit DESTDIR=$(DESTDIR) install	
+	cat MESSAGE
 
 install.man:
 	cp -f sunclock.man $(DESTDIR)$(MANDIR)/sunclock.1x
@@ -71,6 +75,7 @@ install.man:
 clean:
 	rm -f core *.bak *.o *~ sunclock
 	cd tools ; make clean
+	cd editkit ; make -f Makefile.kit clean
 
 realclean: clean
 	rm -f Makefile 

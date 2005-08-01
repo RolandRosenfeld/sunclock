@@ -802,9 +802,9 @@ void show_help(int mode)
 #ifdef EXTHELP
 	char name[NLEN];
 #ifdef EMACS
-	sprintf(name, "%s/%s", SHARE_DIR, "MANUAL.emacs");
+	sprintf(name, "%s/%s", SHAREDIR, "MANUAL.emacs");
 #else
-	sprintf(name, "%s/%s", SHARE_DIR, "MANUAL.wordstar");
+	sprintf(name, "%s/%s", SHAREDIR, "MANUAL.wordstar");
 #endif
 	new_edit(name);
 #else

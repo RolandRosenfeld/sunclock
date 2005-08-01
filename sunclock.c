@@ -149,6 +149,7 @@ extern char *tildepath();       /* Returns path to ~/<file> */
 
 extern int  getPlacement();
 extern int  getState();
+extern int getNumCmd();
 
 extern Window newWindow();
 
@@ -2846,8 +2847,8 @@ char *s;
 int l, mode;
 {
     XImage *xim;
-    XFontStruct *font;
-    Pixel pixel;
+    XFontStruct *font = NULL;
+    Pixel pixel = 0;
 
     int i, j, w, h, dy;
     char u = 0, test;
@@ -2866,6 +2867,7 @@ int l, mode;
        pixel = Context->vmfpixels[mode-3];
     }
 
+    if (!font) return;
     h = font->max_bounds.ascent + font->max_bounds.descent;
     dy = font->max_bounds.ascent;
     

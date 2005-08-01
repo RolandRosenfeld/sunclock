@@ -13,9 +13,9 @@
 # MINIMAL to remove bak files, /usr/share/edmtx and e**rc
 # TLL for Terry Loveall personal settings
 
-SHARE_DIR=/usr/share/editkit
+SHAREDIR=/usr/share/editkit
 
-CFLAGS = -O2 -fomit-frame-pointer -pipe -Wall -DTHREED -DGREEK -DJUSTIFY -DSHARE_DIR="\"$(SHARE_DIR)\""
+CFLAGS = -O2 -fomit-frame-pointer -pipe -Wall -DTHREED -DGREEK -DJUSTIFY -DSHAREDIR="\"$(SHAREDIR)\""
 
 #CFLAGS = -O2 -fomit-frame-pointer -pipe -Wall -DMINIMAL -DTWOBUTN -DVERTCURS -DTLL
 
@@ -47,16 +47,16 @@ emx: emx.o
 	gcc $(CFLAGS) -o emx emx.o $(XLIBS)
 	@ls -al $@;strip $@;ls -al $@
 
-edt.o: Makefile version.h messages.def termcap.c edit.h edit.c term_bind_ws.c
+edt.o: Makefile.kit version.h messages.def termcap.c edit.h edit.c term_bind_ws.c
 	gcc $(CFLAGS) -DWORDSTAR -o edt.o -c termcap.c
 
-emt.o: Makefile version.h messages.def termcap.c edit.h edit.c term_bind_em.c
+emt.o: Makefile.kit version.h messages.def termcap.c edit.h edit.c term_bind_em.c
 	gcc $(CFLAGS) -DEMACS -o emt.o -c termcap.c
 
-edx.o: Makefile version.h messages.def x11.c edit.h edit.c x11_bind_ws.c
+edx.o: Makefile.kit version.h messages.def x11.c edit.h edit.c x11_bind_ws.c
 	gcc $(CFLAGS) -DWORDSTAR -o edx.o -c x11.c
 
-emx.o: Makefile version.h messages.def x11.c edit.h edit.c x11_bind_em.c
+emx.o: Makefile.kit version.h messages.def x11.c edit.h edit.c x11_bind_em.c
 	gcc $(CFLAGS) -DEMACS -o emx.o -c x11.c
 
 install:
@@ -64,15 +64,15 @@ install:
 	if [ -x emt ]; then cp -f emt /usr/bin; fi
 	if [ -x edx ]; then cp -f edx /usr/X11R6/bin; fi
 	if [ -x emx ]; then cp -f emx /usr/X11R6/bin; fi
-	mkdir -p $(SHARE_DIR)
-	cp -f rc.example $(SHARE_DIR)/rc.common
-	cp -f README $(SHARE_DIR)
-	if [ -x edt ] || [ -x edx ]; then cp -f MANUAL.wo*ar $(SHARE_DIR); fi
-	if [ -x emt ] || [ -x emx ]; then cp -f MANUAL.emacs $(SHARE_DIR); fi
-	if [ -x edt ]; then cd $(SHARE_DIR); ln -sf rc.common edtrc; fi 
-	if [ -x emt ]; then cd $(SHARE_DIR); ln -sf rc.common emtrc; fi 
-	if [ -x edx ]; then cd $(SHARE_DIR); ln -sf rc.common edxrc; fi 
-	if [ -x emx ]; then cd $(SHARE_DIR); ln -sf rc.common emxrc; fi 
+	mkdir -p $(SHAREDIR)
+	cp -f rc.example $(SHAREDIR)/rc.common
+	cp -f README $(SHAREDIR)
+	if [ -x edt ] || [ -x edx ]; then cp -f MANUAL.wo*ar $(SHAREDIR); fi
+	if [ -x emt ] || [ -x emx ]; then cp -f MANUAL.emacs $(SHAREDIR); fi
+	if [ -x edt ]; then cd $(SHAREDIR); ln -sf rc.common edtrc; fi 
+	if [ -x emt ]; then cd $(SHAREDIR); ln -sf rc.common emtrc; fi 
+	if [ -x edx ]; then cd $(SHAREDIR); ln -sf rc.common edxrc; fi 
+	if [ -x emx ]; then cd $(SHAREDIR); ln -sf rc.common emxrc; fi 
 
 clean:
 	-rm -f *.o *~ edt emt edx emx

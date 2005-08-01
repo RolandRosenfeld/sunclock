@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 #
-# (C) 1998-2004 Roland Rosenfeld <roland@debian.org>, based on
+# (C) 1998-2005 Roland Rosenfeld <roland@debian.org>, based on
 # Sample debian/rules that uses debhelper. 
 # This file is public domain software, originally written by Joey Hess.
 
@@ -23,7 +23,7 @@ build-stamp:
 
 	xmkmf
 	$(MAKE) CDEBUGFLAGS="$(OPTIMIZE) -Wall -g" \
-		XAPPLOADDIR=/etc/X11/app-defaults
+		XAPPLOADDIR=/etc/X11/app-defaults SELINUX_LIBS=
 
 	touch build-stamp
 
@@ -45,7 +45,21 @@ install: build
 
 	$(MAKE) install install.man DESTDIR=$(INSTDIR)/usr \
 		BINDIR=/bin MANDIR=/share/man/man1 MANSUFFIX=1 \
-		DOCDIR=/usr/share/doc/sunclock
+		DOCDIR=/usr/share/doc/sunclock \
+		DESTIR_XRMAP=$(INSTDIR)/usr \
+		SHARE_DIR=/share/sunclock/emx \
+		SHARE_DIR_EDITKIT=/usr/share/sunclock/emx
+
+#	move emx to /usr/lib/sunclock
+	mv $(INSTDIR)/usr/bin/emx $(INSTDIR)/usr/lib/sunclock/emx
+
+# 	install emx documentation
+	mv $(INSTDIR)/usr/share/sunclock/emx/README \
+		$(INSTDIR)/usr/share/doc/sunclock/README.emx
+	install -m644 editkit/MANUAL.emacs \
+		$(INSTDIR)/usr/share/doc/sunclock/MANUAL.emx
+	install -m644 editkit/CHANGELOG \
+		$(INSTDIR)/usr/share/doc/sunclock/changelog.emx
 
 # 	little hack to have Sunclockrc in /etc:
 	mv $(INSTDIR)/usr/share/sunclock/Sunclockrc $(INSTDIR)/etc

@@ -188,7 +188,7 @@ i.e., sunclock.
 Change the specification of class application name. Default is
 Sunclock. Other specifications can be passed so that aware window
 managers might use it for configuration purposes. You might e.g.
-pass -classname NoTitle-Sticky, and configure properly your WM so
+pass \-classname NoTitle-Sticky, and configure properly your WM so
 that it removes the title bar, and make the window sticky with respect 
 to the Desktop Pager. With fvwm, you could use for instance
 .PP
@@ -210,10 +210,10 @@ the font setting applies to all languages.
 Read a configuration file that is different from the user 
 default ~/.sunclockrc (if this option is not set, the user config file 
 defaults to ~/.sunclockrc). Notice that the app-default config 
-file Sunclockrc is read first, and the file set by the -rcfile option is 
+file Sunclockrc is read first, and the file set by the \-rcfile option is 
 read afterwards; therefore its settings override those set by the system 
 wide config file. Reading further config files is possible at runtime, 
-using the option window. Set -rcfile with a void string "" if you wish 
+using the option window. Set \-rcfile with a void string "" if you wish 
 to bypass the user config file step.
 .TP
 .B "\-sharedir " directory
@@ -255,11 +255,11 @@ This option is meant to give sunclock the ability to be docked in the
 window manager buttons or menu bar, providing that the WM offers this
 possibility without requiring special hints (fvwm2 or windowmaker or
 afterstep will work perfectly well for that purpose, KDE or Gnome
-won't...) Under the -dock option, sunclock locks the size of the first
+won't...) Under the \-dock option, sunclock locks the size of the first
 launched window, which is necessarily a small clock. Also, that
 initial window can no longer be closed by typing 'K' or 'Q'. (The only
 way to exit the application, then, is to kill it with xkill, or to
-undock it first with the -undock option from the Option window).
+undock it first with the \-undock option from the Option window).
 The user might want to customize the size and suitable options so
 that sunclock fits with the size of the dockable applets. As an example,
 sunclock could be invoked as follows:
@@ -270,7 +270,7 @@ sunclock \-language fr \-nobottomline \-dock \-clockgeom 63x42+2+190
 .TP
 .B "\-undock "
 Undocks sunclock. This option has no other effect than reallowing the
-use of options that were "frozen" under -dock. It can be used e.g. to 
+use of options that were "frozen" under \-dock. It can be used e.g. to 
 exit the application when sunclock has been started in dock mode.
 .TP
 .B "\-synchro "
@@ -377,7 +377,7 @@ This is the default when the zoom window has not been opened
 When set, the zoom window will open in non-synchro mode. Synchronizing
 the zoom will still be possible, though, by clicking on the "Synchro"
 button. By default, synchronization does not occur when the zoom window
-is opened, unless option -zoomsync has been set.
+is opened, unless option \-zoomsync has been set.
 .TP
 .BI "\-mapmode * (single character = C, D, E, L or S)"
 Start the map functions in mode (C)oordinates, (D)istances, hour (E)xtension,
@@ -392,15 +392,15 @@ user defined placement. Default is NW placement.
 .TP
 .BI "\-placementshift " x\ y
 Relative displacement <clock window> --> <map window>, to apply with
-respect to the -placement specification. If placement is NW, then
+respect to the \-placement specification. If placement is NW, then
 the NW window corner will move by (x,y) pixels. Defaut is (0,0), i.e.
-no modification to apply to the -placement specification.
+no modification to apply to the \-placement specification.
 .TP
 .BI "\-extrawidth " value
 When using the 'enlarge window' command specified by key '>', the width
 of the full X display is used, minus some default width equal to 10 pixels.
 This is enough the accomodate the width of window borders of most window
-managers. In case it is not, -extrawidth <value> can be used to change
+managers. In case it is not, \-extrawidth <value> can be used to change
 this setting.
 .TP
 .BI "\-clockgeom " (width)x(height)+(x coord)+(y coord)
@@ -424,26 +424,26 @@ ignored. The default relative position is x = 0, y = 30.
 .BI "\-selgeom " (width)x(height)+(x coord)+(y coord)
 Specify the geometry of the selector window. The position specification 
 is relative to the main window (or to the menu, when the menu is raised).
-See above option -menugeom for further explanations. The default geometry
+See above option \-menugeom for further explanations. The default geometry
 of the selector window is 600x180+0+30.
 .TP
 .BI "\-zoomgeom " (width)x(height)+(x coord)+(y coord)
 Specify the geometry of the zoom window. The position specification 
 is relative to the main window (or to the menu, when the menu is raised).
-See above option -menugeom for further explanations. The default geometry
+See above option \-menugeom for further explanations. The default geometry
 of the zoom window is 500x320+0+30.
 .TP
 .BI "\-optiongeom " (width)x(height)+(x coord)+(y coord)
 Specify the geometry of the option window. The position specification 
 is relative to the main window (or to the menu, when the menu is raised).
-See above option -menugeom for further explanations. The height
+See above option \-menugeom for further explanations. The height
 specification depends solely on the selected menufont and is therefore
 ignored. The default geometry of the option window is 630x80+0+30. 
 .TP
 .BI "\-urbangeom " +(x coord)+(y coord)
 Specify the relative position (x = horizontal shift, y = vertical shift)
 of the urban window with respect to the main window (or to the menu, when 
-the menu is raised). See above option -menugeom for further explanations. 
+the menu is raised). See above option \-menugeom for further explanations. 
 .TP
 .BI "\-auxilgeom " +(x coord)+(y coord)
 Specify the relative position (x = horizontal shift, y = vertical shift)
@@ -456,20 +456,20 @@ be at least equal to 1.0. This means that the window only shows a fraction
 of the entire map namely, 1/<value> x 1/<value>. Default value is 1.0.
 .TP
 .BI "\-magx " value
-Same as for the -mag option, but only the x direction (width) is rescaled. 
+Same as for the \-mag option, but only the x direction (width) is rescaled. 
 Default value for magx is 1.0.
 .TP
 .BI "\-magy " value
-Same as for the -mag option, but only the y direction (height) is rescaled. 
+Same as for the \-mag option, but only the y direction (height) is rescaled. 
 Default value for magy is 1.0.
 .TP
 .BI "\-dx " "value (degrees)"
-Options -dx and -dy allow to set the longitude, respectively the latitude,
+Options \-dx and \-dy allow to set the longitude, respectively the latitude,
 of the city or location at which the zoom area should be centered.
 The values should be given in degrees. Default (dx,dy) is (0.0,0.0). 
 .TP
 .BI "\-dy " "value (degrees)"
-See -dx above.
+See \-dx above.
 .TP
 .BI "\-coastlines "
 In the builtin vector map, generate coast lines without filling the
@@ -485,8 +485,8 @@ In the builtin vector map, fill the land areas without generating coast
 lines.
 .TP
 .BI "\-fillmode " 0,1,2
-Fillmode=0 is equivalent to -coastlines, fillmode=1 is equivalent to 
-\-contour, and fillmode=2 is equivalent to -landfill.
+Fillmode=0 is equivalent to \-coastlines, fillmode=1 is equivalent to 
+\-contour, and fillmode=2 is equivalent to \-landfill.
 .TP
 .BI "\-dottedlines "
 Use dotted lines to represent meridians and parallels.
@@ -508,7 +508,7 @@ shortcut 'x'. Default is empty command.
 .BI "\-editorcommand " string
 Specify an external file editor program that will be called through keyboard 
 shortcut double 'h' (call help). Default is 
-"emx -edit 0"
+"emx \-edit 0"
 (included emx editor, in no-edit mode...)
 .TP
 .BI "\-jump " "number[unit] (where unit=s,m,h,d,M,Y)"
@@ -538,13 +538,13 @@ See \-rootdx above.
 .TP
 .BI "\-fixedrootpos "
 Use the above rootdx and rootdy values to fix the position of the map on 
-the root window. This is the default unless -screensaver has been
+the root window. This is the default unless \-screensaver has been
 specified.
 .TP
 .BI "\-randomrootpos "
 Instead of using the above rootdx and rootdy values to fix the position 
 of the map on the root window, just use a random position instead.
-This is the default in case the -screensaver option has been set.
+This is the default in case the \-screensaver option has been set.
 .TP
 .BI "\-screensaver "
 Start sunclock in screensaver mode (no window nor any GUI controls
@@ -571,7 +571,7 @@ modes by typing key ' (apostrophe) at runtime.
 .BI "\-animateperiod " "value (in seconds, between 0 and 5 sec)"
 Set the period for animating the map. Default is 0 seconds, which means that
 images are switched as fast as sunclock can compute them. Otherwise time
-is shifted by the current progress value (as set by the -progess option)
+is shifted by the current progress value (as set by the \-progess option)
 after waiting the number of seconds prescribed by the animateperiod value.
 This takes effect only when the animation is active (strike on the ' key 
 or hit the relevant box in the Option window).
@@ -628,15 +628,15 @@ at start-up, not at runtime. The default value is 5.
 .BI "\-spotsizes " "s1|s2|s3|... (0<=si<=5, 1<=i<=citycategories)"
 With this setting, major cities (category 1) will be represented by the 
 symbol of size s1, category 2 cities by the symbol off size s2, etc. 
-The default setting is -spotsize 1|2|3|4|5. Assigning size si=0 means that 
+The default setting is \-spotsize 1|2|3|4|5. Assigning size si=0 means that 
 the corresponding category of cities (rank i) will not be displayed. 
 If there are less data than the number of city categories (5 by default), 
 the last given data is repeated as many times as needed, e.g.
--spotsizes 2 is equivalent to -spotsizes 2|2|2|2|2.
-Example: specifying -spotsizes 0|2|0|3|0 will let appear only city
+-spotsizes 2 is equivalent to \-spotsizes 2|2|2|2|2.
+Example: specifying \-spotsizes 0|2|0|3|0 will let appear only city
 categories 2 and 4, but those of category 4 will appear with the symbol
 normally allocated to cities of category 3. This is useful in combination
-with the option -sizelimits (see below).
+with the option \-sizelimits (see below).
 .TP
 .BI "\-sizelimits " w1|w2|w3|... 
 (wi = zoom width values, 1<=i<=citycategories)
@@ -646,8 +646,8 @@ if the Earth would be entirely displayed...) . The default is
 0|580|2500|6000|12000 (no constraint for major cities, rank 4 cities appear
 only if the width is at least 6000 pixels, e.g. if an original window
 of width 800, say, has been applied a zoom at least equal to 7.5).
-Thus -sizelimits 0 is equivalent to -sizelimits 0|0|0|0|0, -sizelimits 0|400
-is equivalent to -sizelimits 0|400|400|400|400.
+Thus \-sizelimits 0 is equivalent to \-sizelimits 0|0|0|0|0, \-sizelimits 0|400
+is equivalent to \-sizelimits 0|400|400|400|400.
 .TP
 .BI "\-shading " mode=0,1,2,3,4,5
 Start sunclock with the specified shading mode. Mode 0 means that the night
@@ -764,14 +764,14 @@ default colors back.
 .TP 
 .BI "\-vmfrange " "a|b|c|d"
 Define the range in which point coordinates (latitude, longitude) should 
-vary in the *.vmf files, default is -90|90|-180|180. This option can be useful
-in combination with -reformat to make a linear change of coordinates in
+vary in the *.vmf files, default is \-90|90|\-180|180. This option can be useful
+in combination with \-reformat to make a linear change of coordinates in
 a *.vmf file.
 .TP 
 .BI "\-vmcoordformat " "format"
-Set the format for the output of double values produced via the -reformat
+Set the format for the output of double values produced via the \-reformat
 option. The default format is "%7.3f %8.3f" (format for latitude and 
-longitude, respectively), unless the -vmfrange has been modified, in which
+longitude, respectively), unless the \-vmfrange has been modified, in which
 case the default becomes "%g %g" (from the POSIX rules, this stands for 
 6 significant digits in any position).
 .TP 
@@ -781,8 +781,8 @@ flag. The zeroth order bit (i.e. &1) determines whether features which have
 their own zeroth bit set are to be drawn in clock window mode (if the zeroth 
 bit is not set, the feature will always be drawn). Other bits are used
 to control whether given features are to be drawn or not. For instance setting
--vmfflags 2 with timezones.vmf will let the timezone regions appear,  
-while -vmfflags 6 will also show the timezone boundary lines. (Only
+\-vmfflags 2 with timezones.vmf will let the timezone regions appear,  
+while \-vmfflags 6 will also show the timezone boundary lines. (Only
 bits 0, 1, 2 are currently used in timezones.vmf).
 .TP 
 .BI "\-setcolor " "field|color"
