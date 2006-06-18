@@ -24,7 +24,7 @@ Description: fancy clock showing time and geographical data
 
 Package: sunclock-maps
 Architecture: all
-Depends: sunclock (>= 3.50pre1-3)
+Conflicts: sunclock (<< 3.50pre1-3)
 Replaces: sunclock (<< 3.50pre1-3)
 Description: sunclock vector graphic maps
  sunclock is an X11 application that displays a map of the Earth and

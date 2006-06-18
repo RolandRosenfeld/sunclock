@@ -54,7 +54,11 @@ sunclock: $(OFILES) $(HFILES)
 	$(CC) $(OFILES) -o $@ $(CFLAGS) $(LFLAGS)
 
 emx:
-	cd editkit ; make -f Makefile.kit DESTDIR=$(DESTDIR)
+	cd editkit ; make -f Makefile.kit emx \
+	    DESTDIR=$(DESTDIR) \
+	    BINDIR=$(SHAREDIR)/bin \
+	    MANDIR=$(SHAREDIR)/editkit/man \
+	    SHAREDIR=$(SHAREDIR)/editkit/rc	
 	
 install: install.man sunclock
 	$(MKDIRHIER) $(DESTDIR)/$(XBINDIR)
@@ -64,7 +68,12 @@ install: install.man sunclock
 	cd i18n ; rm -f *~ ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; rm -f *~ ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
-	cd editkit ; make -f Makefile.kit DESTDIR=$(DESTDIR) install	
+	cd editkit ; make -f Makefile.kit emx \
+	    DESTDIR=$(DESTDIR) \
+	    BINDIR=$(SHAREDIR)/bin \
+	    MANDIR=$(SHAREDIR)/editkit/man \
+	    SHAREDIR=$(SHAREDIR)/editkit/rc ; \
+	make -f Makefile.kit install DESTDIR=$(DESTDIR)
 	cat MESSAGE
 
 install.man:

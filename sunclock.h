@@ -18,7 +18,7 @@
 #include <time.h>
 #include "version.h"
 
-#define EDITORCOMMAND   "emx -edit 0"
+#define EDITORCOMMAND SHAREDIR"/bin/emx -edit 0 -fn 9x15"  /* Default text editor */
 #define	FAILFONT	"fixed"
 
 /* num of bitmaps to accomodate 1 mark and 2 spatial objets (Sun, Moon) */

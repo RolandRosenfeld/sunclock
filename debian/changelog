@@ -1,3 +1,16 @@
+sunclock (3.54.1-1) unstable; urgency=low
+
+  * New upstream version 3.54.1.
+  * Again install the emx shared libraries to /usr/share/sunclock/emx
+    instead of /usr/share/editkit.
+  * Ged rid of circular dependeny between sunclock and sunclock-maps.
+    sunclock-maps now conflicts with the old version of sunclock, which it
+    was split off, to avoid problems with files moving from one package to
+    the other (Closes: #339927).
+  * Replace Latin1 chars in man page by groff ASCII char names.
+
+ -- Roland Rosenfeld <roland@debian.org>  Sun, 11 Dec 2005 17:52:17 +0100
+
 sunclock (3.54-2) unstable; urgency=low
 
   * Add debian/watch with current FTP server.

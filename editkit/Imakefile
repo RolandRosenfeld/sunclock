@@ -1,20 +1,30 @@
 XCOMM Should install to /usr or /usr/local ??
-#ifndef DESTDIR
-DESTDIR=/usr
-#endif
+  #ifndef DESTDIR
+    DESTDIR=/usr
+  #endif
 
 XCOMM Name of man subdirectory of DESTDIR:
-MANDIR=/X11R6/man/man1
+  #ifndef MANDIR
+    MANDIR=/X11R6/man/man1
+  #endif
 
 XCOMM Name of bin subdirectory of DESTDIR: /X11R6/bin or maybe just  /bin
-BINDIR=/X11R6/bin
+  #ifndef BINDIR
+    BINDIR=/X11R6/bin
+  #endif
 
 XCOMM Name of share subdirectory of DESTDIR_XRMAP:
-SHAREDIR=$(DESTDIR)/share/editkit
+  #ifndef SHAREDIR
+    SHAREDIR=$(DESTDIR)/share/editkit
+  #endif
 
 XCOMM Name of DOCDIR's subdirectories of DESTDIR:
-DOCDIR=/X11R6/lib/X11/doc 
-DOCHTMLDIR=/X11R6/lib/X11/doc/html
+  #ifndef DOCDIR
+    DOCDIR=/X11R6/lib/X11/doc
+  #endif
+  #ifndef DOCHTMLDIR
+    DOCHTMLDIR=/X11R6/lib/X11/doc/html
+  #endif
 
 XCOMM
 XCOMM Normally -- except for new architectures -- you should be done there.
@@ -43,7 +53,7 @@ install.man::
 	if [ -r $(DESTDIR)$(MANDIR)/emx.1x.gz ] ; \
 	   then gzip -f $(DESTDIR)$(MANDIR)/emx.1x ; fi
 
-install:: install.man
+install::
 	mkdir -p $(SHAREDIR)
 	cp -f rc.example $(SHAREDIR)/rc.common
 	cd $(SHAREDIR); ln -sf rc.common emxrc

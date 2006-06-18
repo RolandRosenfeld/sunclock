@@ -9,10 +9,10 @@
 @d xdiary &
 @e DIR=%s; ROOTNAME=`echo %s |rev| cut -d"." -f 2- |rev`; emx $ROOTNAME.log &
 @l DIR=%s; latex %s &
-@m DIR=%s; xrmap -rcfile %s &
 @p DIR=%s; xenscript %s &
 @t DIR=%s; tex %s &
 @v DIR=%s; ROOTNAME=`echo %s |rev| cut -d"." -f 2- |rev`; xdvi -s 6 $ROOTNAME.dvi &
+@x DIR=%s; xrmap -rcfile %s &
 @z cd %s; rxvt -font 8x13 -pr red -cr green -sl 500 -sr +st -geometry 80x30 &
 
 

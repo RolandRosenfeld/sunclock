@@ -68,8 +68,6 @@ extern char *           CityInit;
 
 extern char *           share_maps_dir;
 extern char **          dirtable;
-extern char *           SmallFont_name;
-extern char *           BigFont_name;
 extern char *           image_dir;
 extern char *           Help[N_HELP];
 extern char *           Label[L_END];
@@ -77,7 +75,7 @@ extern char *           FileselBanner[N_FILESEL];
 extern char             WeakChars[];
 
 extern char             language[4];
-extern char             Default_vmf[];
+extern char *           Landwater_img_file;
 
 extern char *           Clock_img_file;
 extern char *           Map_img_file;
@@ -1600,7 +1598,7 @@ int mode;
        ZoomCaller->zoom.height = ZoomCaller->geom.height = areah;
        ZoomCaller->zoom.dx = ZoomCaller->zoom.dy = 0;
 
-       readVMF(Default_vmf, ZoomCaller);
+       readVMF(Landwater_img_file, ZoomCaller);
 
        if (ZoomCaller->bits) {
           zoompix = XCreatePixmapFromBitmapData(dpy, Root,
@@ -2146,8 +2144,6 @@ activateOption()
 	oldflags = gflags;
 	gflags.animate += 2;
 	oldzoom = gzoom;
-	oldbf = BigFont_name;
-	oldsf = SmallFont_name;
 	runlevel = RUNTIMEOPTION;
 	i = parseCmdLine(option_entry.string);
 	correctValues();

@@ -284,7 +284,6 @@ Sundata * Context;
     free(png_data);
     free(row_pointers);
     free(scan);
-    free(ys);
     fclose(fp);
 
     /* fill intermediate lines in output, if necessary*/
@@ -310,7 +309,8 @@ Sundata * Context;
 	  }
        }
     }
-   
+
+    free(ys);   
     return 0;
 
 } /* end function ReadPNG() */

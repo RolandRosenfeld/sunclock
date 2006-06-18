@@ -45,10 +45,7 @@ install: build
 
 	$(MAKE) install install.man DESTDIR=$(INSTDIR)/usr \
 		BINDIR=/bin MANDIR=/share/man/man1 MANSUFFIX=1 \
-		DOCDIR=/usr/share/doc/sunclock \
-		DESTIR_XRMAP=$(INSTDIR)/usr \
-		SHARE_DIR=/share/sunclock/emx \
-		SHARE_DIR_EDITKIT=/usr/share/sunclock/emx
+		DOCDIR=/usr/share/doc/sunclock
 
 #	move emx to /usr/lib/sunclock
 	mv $(INSTDIR)/usr/bin/emx $(INSTDIR)/usr/lib/sunclock/emx
@@ -60,6 +57,7 @@ install: build
 		$(INSTDIR)/usr/share/doc/sunclock/MANUAL.emx
 	install -m644 editkit/CHANGELOG \
 		$(INSTDIR)/usr/share/doc/sunclock/changelog.emx
+	rm -f $(INSTDIR)/usr/share/man/man1/emx.1
 
 # 	little hack to have Sunclockrc in /etc:
 	mv $(INSTDIR)/usr/share/sunclock/Sunclockrc $(INSTDIR)/etc

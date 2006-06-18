@@ -78,7 +78,7 @@ int expose;
 int vtot, vcur, pos, ftheight; /* global variables for scrollbar */
 
 int Width, Height;
-int fwidth, fheight;	/* font character width, height */
+int fwidth, fheight, ycur = 0;	/* font character width, height */
 
 /* Foreground, Background normal and highlight colores */
 XColor FgXColor, BgXColor, CrXColor, 
@@ -327,13 +327,15 @@ void show_vbar()
 	lowvideo();
 }
 
-void scroll_text(int ycur)
+void scroll_text()
 {
-	int m, newy, rep;
+	int m, rep;
 
-	m = ycur - ftheight;
-	newy = (m*ytot)/vtot;
-	rep = 1+abs(ytru-newy)/screen_height;
+        if (ycur<0) { y=0 ; scroll_down(); ycur = 0; }
+        if (ycur>ytot) ycur = ytot;
+
+        m = (ycur * vtot) / (ytot? ytot : 1);
+	rep = abs(ytru-ycur)/screen_height;
 
 	if(m<0) scroll_down();					/* if cursor at top of screen */
 	else if(m>vtot+ftheight) scroll_up();	/* if cursor at bottom of screen */
@@ -345,7 +347,8 @@ void scroll_text(int ycur)
 	     for (m=0; m<rep; m++)
 	         cursor_pagedown();	/* if cursor below thumb */
 	}
-	else goto_y(newy);	/* else cursor on thumb so track it */
+
+	goto_y(ycur);  /* cursor on thumb so track it */
 
 	scr_update(); /* does show_vbar */
 }
@@ -896,8 +899,11 @@ int main(int argc,char *argv[])
 				break;
 			case MotionNotify:
 				if (buttonpressed==-1) {
-				        if (executive == MAIN)
-						scroll_text(event.xbutton.y);
+				        if (executive == MAIN) {
+					   ycur = 
+				     ((event.xbutton.y - ftheight)*ytot)/vtot;
+					   scroll_text();
+					}
 					break;
 				}
 #ifndef TWOBUTN
@@ -954,6 +960,18 @@ int main(int argc,char *argv[])
 				}
 				break;
 			case ButtonPress:
+				if (event.xbutton.button>Button3 &&
+				    executive==MAIN) {
+				   if (event.xbutton.button==Button4) {
+				      ycur -= 3;
+				      scroll_text();
+				   }
+				   if (event.xbutton.button==Button5) {
+				      ycur += 3;
+				      scroll_text();
+				   }
+				   break;
+				}
 				help_done = 0;
 				undraw_cursor();
 			        if (event.xbutton.x>=Width-10) {
@@ -1081,6 +1099,3 @@ int main(int argc,char *argv[])
 
 	}
 }
-
-
-

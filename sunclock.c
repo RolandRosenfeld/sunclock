@@ -202,7 +202,6 @@ void doTimeout();
 
 char share_i18n[] = SHAREDIR"/i18n/Sunclock.**";
 char app_default[] = SHAREDIR"/Sunclockrc";
-char Default_vmf[] = SHAREDIR"/earthmaps/vmf/landwater.vmf";
 
 char * ProgName;
 char * Title = NULL;
@@ -216,6 +215,8 @@ char * ClockClassName = NULL;
 char * MapClassName = NULL;
 char * AuxilClassName = NULL;
 
+char * Default_img_file = NULL;
+char * Landwater_img_file = NULL;
 char * Clock_img_file = NULL;
 char * Map_img_file = NULL;
 
@@ -259,7 +260,7 @@ char    *DefaultColor[NUMPIXELS] = {
 "Black", "Black", "Red", "Black",
 "SkyBlue2", "Brown", "SkyBlue2", "Blue", "Magenta", 
 "Red", "Orange", "Red", "Red3", "Pink1", "Pink2",
-"Yellow", "Khaki", "White", "White", "White", "White"};
+"Yellow", "Khaki", "Black", "Black", "Black", "Black"};
 
 #define FALLBACKTOWHITE 8
 
@@ -364,6 +365,8 @@ int             num_formats;
 int             runlevel;
 int             verbose = 1;
 int             reformat = 0;
+int		min_zoomwidth = 0;
+int		min_zoomheight = 0;
 int             citycheck = 0;
 int             num_lines;
 int             num_table_entries;
@@ -479,10 +482,10 @@ Usage()
      SP"[-clock] [-map] [-dock] [-undock]\n"
      SP"[-menu] [-nomenu] [-filesel] [-nofilesel]\n"
      SP"[-zoom] [-nozoom] [-option] [-nooption] [-urban] [-nourban]\n"
-"**" SP"[-language name] [-dateformat string1|string2|...]\n"
-     SP"[-rcfile file] [-command string] [-helpcommand string]\n"
-     SP"[-mapmode * <L,C,S,D,E>] [-image file]\n"
-     SP"[-clockimage file] [-mapimage file]\n"
+"**" SP"[-language name] [-rcfile file]\n"
+     SP"[-command string] [-helpcommand string]\n"
+     SP"[-mapmode * <L,C,S,D,E>] [-dateformat string1|string2|...]\n"
+     SP"[-defimage file] [-image file] [-clockimage file] [-mapimage file]\n"
      SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
      SP"[-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>]\n"
      SP"[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>]\n"
@@ -566,7 +569,7 @@ initValues()
         gflags.meridian = 0;
         gflags.parallel = 0;
 
-        gzoom.mode = 2;
+        gzoom.mode = 0;
         gzoom.fx = 1.0;
         gzoom.fy = 1.0;
         gzoom.fdx = 0.5;
@@ -584,14 +587,17 @@ initValues()
 
         position.lat = 100.0;
         position.tz = NULL;
-
+   
         StringReAlloc(&share_maps_dir, SHAREDIR"/earthmaps/");
+        StringReAlloc(&image_dir, share_maps_dir);
+
+        StringReAlloc(&Default_img_file, SHAREDIR"/earthmaps/vmf/timezones.vmf");
+        StringReAlloc(&Landwater_img_file, SHAREDIR"/earthmaps/vmf/landwater.vmf");
+        StringReAlloc(&Clock_img_file, Default_img_file);
+        StringReAlloc(&Map_img_file, Default_img_file);
+   
         StringReAlloc(&ListFormats, STDFORMATS);
         StringReAlloc(&EditorCommand, EDITORCOMMAND);
-
-        StringReAlloc(&image_dir, share_maps_dir);
-        StringReAlloc(&Clock_img_file, Default_vmf);
-        StringReAlloc(&Map_img_file, Default_vmf);
         StringReAlloc(&SpotSizes, "1|2|3|4|5");
         StringReAlloc(&SizeLimits, "0|580|2500|6000|12000");
 
@@ -1405,6 +1411,12 @@ char **                argv;
                         getGeom(*++argv, &MapGeom);
 			option_changes |= 16;
                 }
+                else if (!strcasecmp(*argv, "-defimage")) {
+		        StringReAlloc(&Default_img_file, *++argv);
+                        StringReAlloc(&Clock_img_file, *argv);
+                        StringReAlloc(&Map_img_file, *argv);
+		        option_changes |= 32|64;
+		}
                 else if (!strcasecmp(*argv, "-image")) {
                         StringReAlloc(&Clock_img_file, *++argv);
                         StringReAlloc(&Map_img_file, *argv);
@@ -3119,20 +3131,31 @@ void
 drawLabels(Context)
 struct Sundata * Context;
 {
-   int ilon, ilat, width;
+   int ilon, ilat, width, dw = 0;
    struct TextLabel * label;
    if(!Context->wintype) return;
+   char *text, *text0, *ptr;
 
    label = Context->label;
    while (label) if (label->text && *label->text) {
       ilon = int_longitude(Context, label->lon);
       ilat = int_latitude(Context, label->lat);
-      width = XTextWidth(Context->gdata->font[LABELFONT],
-                         label->text, strlen(label->text));
-      if (label->position==0) ilon -= width/2;
-      if (label->position==-1) ilon -= width;
-      XPutStringImage(Context, ilon, ilat, label->text, 
-		      strlen(label->text), label->color+3);
+      text = text0 = strdup(label->text);
+      while(text) {
+	 ptr = index(text,'\n');
+	 if (ptr) *ptr = '\0';
+         width = XTextWidth(Context->gdata->font[LABELFONT], 
+			    text, strlen(text));
+         if (label->position==0) dw = width/2;
+         else
+	 if (label->position==-1) dw = width;
+         XPutStringImage(Context, ilon-dw, ilat, text,
+   	                 strlen(text), label->color+3);
+	 ilat += Context->gdata->font[LABELFONT]->ascent+
+	         Context->gdata->font[LABELFONT]->descent+2;
+	 if (ptr) text = ptr+1; else text = NULL;
+      }
+      free(text0);
       label = label->next;
    }
 }
@@ -4320,11 +4343,11 @@ struct Sundata * Context;
       }
    }
 
-   if (*path && strcmp(path, Default_vmf)) {
+   if (*path && strcmp(path, Default_img_file)) {
       if ((fd = fopen(path, "r"))) 
          fclose(fd);
       else {
-         file = Default_vmf;
+         file = Default_img_file;
          fprintf(stderr, "File %s doesn't seem to exist !!\n"
                          "Trying default  %s\n",
                          path, file);
@@ -4355,9 +4378,9 @@ struct Sundata * Context;
        createGCs(Context);
        return 0;
      } else {
-       if (strcmp(path, Default_vmf)) {
+       if (strcmp(path, Default_img_file)) {
           report_failure(path, 1);
-          strcpy(path, Default_vmf);
+          strcpy(path, Default_img_file);
           report_failure(path, 7);
           goto retry;
        }
@@ -4383,8 +4406,8 @@ struct Sundata * Context;
 
    if (code) {
       report_failure(path, code);
-      if (strcmp(path, Default_vmf)) {
-         file = Default_vmf;
+      if (strcmp(path, Default_img_file)) {
+         file = Default_img_file;
          report_failure(file, 7);
          goto do_path;
       }
@@ -5667,6 +5690,10 @@ struct Sundata * Context = (struct Sundata *) NULL;
            if (button==3) {
               /* Open new window */
               if (evtype==ButtonPress || !focus_in) return;
+	      if (pressed3) {
+		 y = Context->geom.height-1;
+		 goto rect;
+	      }
               processKey(win, XK_w);
               return;
            }
@@ -5741,6 +5768,7 @@ struct Sundata * Context = (struct Sundata *) NULL;
                     processKey(win, XK_z);
 		    return;
 		 }
+	       rect:
                  Context->newzoom.fdx += 
                     (((double)(u+w/2)/(double)Context->geom.width)-0.5)/
                        Context->newzoom.fx;

@@ -51,6 +51,8 @@ extern int              bytes_per_pixel;
 extern int              color_alloc_failed;
 extern int              verbose;
 extern int              reformat;
+extern int		min_zoomwidth;
+extern int		min_zoomheight;
 
 static struct Sundata *map;
 #define pixels map->vmfpixels   /* Pointer to list of colors */
@@ -66,6 +68,8 @@ static int *palette;  /* Pointer to list of color codes */
 static int uu, cc, vv, vv1, vv2, full;
 static int num_palette;
 static int default_color;
+
+static double txmin=1E27, txmax=-1E27, tymin=1E27, tymax=-1E27;
 
 char *
 salloc(nbytes)
@@ -437,6 +441,8 @@ struct Sundata * Context;
   buffer = NULL;
   palette = NULL;
   grid = NULL;
+  min_zoomwidth = 0;
+  min_zoomheight = 0;   
 
   if (!path) {
      ret_value = 1;
@@ -633,6 +639,14 @@ struct Sundata * Context;
            printf("%s\n", str);
         opencurves = 0;
      } else
+     if (!strcmp(str, "zoomwidth")) {
+        str = getdata(fd);
+	min_zoomwidth = atoi(str);
+     } else
+     if (!strcmp(str, "zoomheight")) {
+        str = getdata(fd);
+	min_zoomheight = atoi(str);
+     } else
      if (!strcmp(str, "fillmode")) {
         str = getdata(fd);
         if (!str) goto abort;
@@ -696,18 +710,18 @@ struct Sundata * Context;
         ptr = NULL;
         l = 0;
 #ifdef ZLIB
-        while (!gzeof(fd) && str && *str !=';') {
+        while (!gzeof(fd)) {
            str = gzgets(fd, buffer, LINELENGTH);
 #else
         while (!feof(fd)) {
            str = fgets(buffer, LINELENGTH, fd);
 #endif
+	   if (!str) break;
            if (reformat) {
 	      printf("%s", str);
 	   }
-	   if (!str) break;
-	   if (*str != ' ') break;
-           ++str;
+	   if (*str == ';') break;
+           if (*str == ' ') ++str; /* remove any initial blank space */
            k = strlen(str);
    	   if (k>=2 && str[k-1]=='\n' && str[k-2]=='\\' &&
                (k==2 || (k>=3 && str[k-3]!='\\'))) {
@@ -718,18 +732,22 @@ struct Sundata * Context;
            strcpy(ptr + l, str);
            l += k;
 	}
-	l -= 1;
-	if (l>=0 && ptr[l]=='\n') ptr[l] = '\0';
-        str = (char *)Context->label;
-        Context->label = (struct TextLabel *)salloc(sizeof(TextLabel));
-        Context->label->text = ptr;
-        Context->label->lon = fx;
-        Context->label->lat = fy;
-        Context->label->color = color;
-        Context->label->position = position;
-        Context->label->next = (struct TextLabel *)str;
+	if (ptr && *ptr) {
+	   l -= 1;
+	   if (l>=0 && ptr[l]=='\n') ptr[l] = '\0';
+           if (Context->zoom.width<min_zoomwidth) goto iter;
+           if (Context->zoom.height<min_zoomheight) goto iter;
+           str = (char *)Context->label;
+           Context->label = (struct TextLabel *)salloc(sizeof(TextLabel));
+           Context->label->text = ptr;
+           Context->label->lon = fx;
+           Context->label->lat = fy;
+           Context->label->color = color;
+           Context->label->position = position;
+           Context->label->next = (struct TextLabel *)str;
+	}
      }
-     goto iter;
+  goto iter;
   } else
   if (*str == '#') {
      num = 0;
@@ -750,6 +768,12 @@ struct Sundata * Context;
      str = getdata(fd);
      if (!str) goto abort;
      fx = atof(str);
+     if (verbose) {
+        if (fx<txmin) txmin = fx;
+        if (fx>txmax) txmax = fx;
+        if (fy<tymin) tymin = fy;
+        if (fy>tymax) tymax = fy;
+     }
      if (num == 0) {
 	fx0 = fx;
 	fy0 = fy;
@@ -764,6 +788,7 @@ struct Sundata * Context;
   flag = run_flag & map->flags.vmfflags;
   if (!flag) goto iter;
   if ((flag&1) && !map->wintype) goto iter;
+  if (map->zoom.width<min_zoomwidth) goto iter;
 
   theta = (fx - fxmin) / fdx;
   phi = (fymax - fy) / fdy;
@@ -842,5 +867,7 @@ struct Sundata * Context;
   if (buffer) free(buffer); 
   if (grid) free(grid); 
   if (palette) free(palette);
+  if (verbose)
+     fprintf(stderr, "ymin = %9.3f ymax = %9.3f   xmin = %9.3f xmax = %9.3f\n", tymin, tymax, txmin, txmax);
   return ret_value;
 }

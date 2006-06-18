@@ -1,11 +1,17 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-In 3.47, the VMF format has SUBSTANTIALLY CHANGED. A new fancy vector map
-timezones.vmf displays the timezones !! 
-A NEW X UTILITY 'xrmap' can be used to visualize and produce extremely 
-accurate vector maps of the Earth, from the CIA world data bank II.
-
 In 3.51, support for GIF and PNG images has been ADDED
+
+In 3.55, the VMF format has been SLIGHTLY IMPROVED. Three vector maps are
+now provided in the source package :
+  timezones.vmf (time zone boundaries = new default map)
+  countries.vmf (political boundaries)
+  landwater.vmf (simple land/water boundaries, used in zoom widget)
+
+Our companion program 'xrmap' can be used to visualize and produce more
+accurate vector maps of the Earth, using the CIA world data bank II and
+other public domain data, check
+   ftp://ftp.ac-grenoble.fr/ge/geosciences/xrmap
 
 More information on geographic names, city coordinates, timezones can be 
 obtained from

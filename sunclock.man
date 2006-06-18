@@ -18,10 +18,10 @@ where the list of licit options is the following long list
 [\-menu] [\-nomenu] [\-selector] [\-noselector] \
 [\-zoom] [\-nozoom] [\-option] [\-nooption] [\-urban] [\-nourban]
 .PP
-(**)  [\-language name] [\-dateformat string1|string2|...] \
-[\-rcfile file] [\-command string] [\-editorcommand string] \
-[\-mapmode * <L,C,S,D,E>] [\-image file] \
-[\-clockimage file] [\-mapimage file] \
+(**)  [\-language name] [\-rcfile file] \
+[\-command string] [\-editorcommand string] \
+[\-mapmode * <L,C,S,D,E>] [\-dateformat string1|string2|...] \
+[\-defimage file] [\-image file] [\-clockimage file] [\-mapimage file] \
 [\-clockgeom <geom>] [\-mapgeom <geom>] \
 [\-auxilgeom <geom>] [\-menugeom <geom>] [\-selgeom <geom>] \
 [\-zoomgeom <geom>] [\-optiongeom <geom>] [\-urbangeom <geom>] \
@@ -219,6 +219,9 @@ to bypass the user config file step.
 .B "\-sharedir " directory
 Set the directory where system wide shared Earthmaps are located.
 Default is /usr/share/sunclock/earthmaps.
+.TP
+.B "\-defimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
+Use specified file as default image when opening a new window
 .TP
 .B "\-image " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the clock and
@@ -508,7 +511,7 @@ shortcut 'x'. Default is empty command.
 .BI "\-editorcommand " string
 Specify an external file editor program that will be called through keyboard 
 shortcut double 'h' (call help). Default is 
-"emx \-edit 0"
+"/usr/share/sunclock/bin/emx \-edit 0 \-fn 9x15"
 (included emx editor, in no-edit mode...)
 .TP
 .BI "\-jump " "number[unit] (where unit=s,m,h,d,M,Y)"
@@ -657,7 +660,7 @@ increasingly sophisticated shading algorithms. Mode 1 stands for no shading
 terminator area -- the area in which the sun is partially hidden by the 
 horizon. Mode 3 shades the region in which there is still substantial 
 luminosity left after sunset (depending on the diffusion parameter below). 
-Default is 3° below horizon. Mode 4 additionally represents the luminosity 
+Default is 3\[ao] below horizon. Mode 4 additionally represents the luminosity 
 values in all parts of the illuminated area. Mode 5 represents the gradient
 of luminosity from the brightest area (facing the sun) to the darkest area
 (opposite to the sun); this has nothing to do, though, with the actual
@@ -747,7 +750,7 @@ These options just negate the above ones.
 Mode=0 stands for no objects (Sun, Moon) at all, mode=1 for objects just
 drawn by their symbol, mode=2 for objects drawn with their symbol
 and coordinates in decimal degrees (or degrees, minutes, seconds, using
-the ° key switch).
+the \[ao] key switch).
 .TP 
 .BI "\-reformat"
 This option only produces an effect when a *.vmf file is loaded. The file
@@ -923,7 +926,7 @@ Sydney, Australia, <john@cs.su.oz.AU>, wrote the X11 version out of Suntools.
 Stephen Martin, Fujitsu Systems Business of Canada, smartin@fujitsu.ca,
 added support for interactive map.
 .PP
-Jean-Pierre Demailly, Université de Grenoble I, 
+Jean-Pierre Demailly, Universit\['e] de Grenoble I, 
 demailly@fourier.ujf-grenoble.fr worked out versions 3.xx, which add many 
 new major features (loading maps, shading, zoom functionalities, 
 configuration of options on the fly at runtime, through a point and click
