@@ -363,7 +363,7 @@ void update()
 		if (executive == DIALOG) {
 			undraw_cursor();
 			show_gets(comment, diabuf, dblen, dialogCB);
-			gotoxy(diastart+col,y1);
+			gotoxy(diastart+col,yl1);
 			draw_cursor();
 		}
 }
@@ -771,7 +771,7 @@ void handle_key(char *astr, int skey, int state)
 
 		/* display keyboard shift/control/alt status */
 		highvideo();
-		gotoxy(0,y1);
+		gotoxy(0,yl1);
 		for(n=5;n;chstr[n--]=' ');
 		if(state & ShiftMask) chstr[n++] = 'S';
 		if(state & Mod1Mask) chstr[n++] = 'A';
@@ -846,7 +846,7 @@ int main(int argc,char *argv[])
 {
 	Atom WM_PROTOCOLS = 0;
 	struct sigaction sig;
-	int y0 = 0, y1 = 0, yf, yt;
+	int yp0 = 0, yp1 = 0, yf, yt;
 
 	init(argc,argv);
 
@@ -941,12 +941,12 @@ int main(int argc,char *argv[])
 						if (yf) goto finish;
 #endif
 						moveto();
-						yf = y0;
+						yf = yp0;
 						if (y<yf) yf = y;
-						if (y1<yf) yf = y1;
-						yt = y0;
+						if (yp1<yf) yf = yp1;
+						yt = yp0;
 						if (y>yt) yt = y;
-						if (y1>yt) yt = y1;
+						if (yp1>yt) yt = yp1;
 						show_scr(yf, yt);
 #ifndef TWOBUTN
 					finish:
@@ -955,7 +955,7 @@ int main(int argc,char *argv[])
 						cur_pos = get_cur();
 						gotoxy(x-1,y+1);
 						draw_cursor();
-						y1 = y;
+						yp1 = y;
 					}
 				}
 				break;
@@ -991,7 +991,7 @@ int main(int argc,char *argv[])
 				if (event.xbutton.time - eve_time < DBLCLICK) break;
 				eve_time = event.xbutton.time;
 				moveto();
-				y0 = y;
+				yp0 = y;
 				flag[SHW] = 1;
 				cur_pos = get_cur();
 				if (flag[BLK]) {

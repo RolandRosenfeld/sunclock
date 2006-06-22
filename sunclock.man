@@ -1,4 +1,4 @@
-.TH SUNCLOCK 1 "July 28, 2005"
+.TH SUNCLOCK 1 "June 22, 2006"
 .SH NAME
 sunclock \- a fancy clock for the X Window system, providing local time
 (legal time and solar time), sunrise, sunset and various geographical 
@@ -21,7 +21,7 @@ where the list of licit options is the following long list
 (**)  [\-language name] [\-rcfile file] \
 [\-command string] [\-editorcommand string] \
 [\-mapmode * <L,C,S,D,E>] [\-dateformat string1|string2|...] \
-[\-defimage file] [\-image file] [\-clockimage file] [\-mapimage file] \
+[\-image file] [\-clockimage file] [\-mapimage file] [\-zoomimage file] \
 [\-clockgeom <geom>] [\-mapgeom <geom>] \
 [\-auxilgeom <geom>] [\-menugeom <geom>] [\-selgeom <geom>] \
 [\-zoomgeom <geom>] [\-optiongeom <geom>] [\-urbangeom <geom>] \
@@ -220,9 +220,6 @@ to bypass the user config file step.
 Set the directory where system wide shared Earthmaps are located.
 Default is /usr/share/sunclock/earthmaps.
 .TP
-.B "\-defimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
-Use specified file as default image when opening a new window
-.TP
 .B "\-image " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the clock and
 map windows. The same map is then used for both windows, but
@@ -233,6 +230,9 @@ Start sunclock with an Earth map image loaded in the map window.
 .TP
 .B "\-clockimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
 Start sunclock with an Earth map image loaded in the clock window. 
+.TP
+.B "\-zoomimage " *.jpg (or *.gif, *.png, *.vmf, *.xpm, *.xpm.gz)
+Use specified file as image in the zoom widget
 .TP
 .B "\-colorlevel " level=0,1,2,3
 Sets the color level (0=monochrome, 1=few colors, 2=many colors,

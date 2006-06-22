@@ -75,10 +75,10 @@ extern char *           FileselBanner[N_FILESEL];
 extern char             WeakChars[];
 
 extern char             language[4];
-extern char *           Landwater_img_file;
 
 extern char *           Clock_img_file;
 extern char *           Map_img_file;
+extern char *           Zoom_img_file;
 
 extern int              city_cat;
 extern int              *city_spotsizes;
@@ -1585,7 +1585,7 @@ int mode;
        XClearArea(dpy, Zoom,  41, 51, 9, areah, False);
 
     if (!zoompix) {
-       int oldlevel, oldfill;
+       int oldlevel, oldfill, code, num;
 
        oldlevel = ZoomCaller->flags.colorlevel;
        oldfill = ZoomCaller->flags.fillmode;
@@ -1598,17 +1598,25 @@ int mode;
        ZoomCaller->zoom.height = ZoomCaller->geom.height = areah;
        ZoomCaller->zoom.dx = ZoomCaller->zoom.dy = 0;
 
-       readVMF(Landwater_img_file, ZoomCaller);
-
+       code = readVMF(Zoom_img_file, ZoomCaller);
+       if (code) {
+	  if (ZoomCaller->bits) free(ZoomCaller->bits);
+	  ZoomCaller->bits = NULL;
+       }
+       if (!ZoomCaller->bits) {
+          num = ((ZoomCaller->geom.width+7)/8)*
+	                       ZoomCaller->geom.height*sizeof(char);
+	  ZoomCaller->bits = (char *) salloc(num);
+       }
+       if (code && ZoomCaller->bits)
+	  memset(ZoomCaller->bits, 0xFF, num);
        if (ZoomCaller->bits) {
           zoompix = XCreatePixmapFromBitmapData(dpy, Root,
-                      ZoomCaller->bits, ZoomCaller->geom.width,
-                      ZoomCaller->geom.height, 0, 1, 1);
+                     ZoomCaller->bits, ZoomCaller->geom.width,
+                     ZoomCaller->geom.height, 0, 1, 1);
           free(ZoomCaller->bits);
-       } else {
-	  PopZoom(ZoomCaller);
-	  return;
        }
+       
        ZoomCaller->zoom = ZoomCaller->newzoom;
        ZoomCaller->geom.width = i;
        ZoomCaller->geom.height = j;
@@ -1649,6 +1657,7 @@ int mode;
                       ZoomCaller->gdata->pixel[ZOOMBGCOLOR]);
        XSetForeground(dpy, ZoomCaller->gdata->wingc, 
                       ZoomCaller->gdata->pixel[ZOOMFGCOLOR]);
+       
        if (zoomy)
           XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
                 0, 0, areaw-1, zoomy, 61, 51, 1);
@@ -1670,8 +1679,9 @@ int mode;
        } else
           XSetBackground(dpy, ZoomCaller->gdata->wingc, 
                       ZoomCaller->gdata->pixel[CHOICECOLOR]);
+
        XCopyPlane(dpy, zoompix, Zoom, ZoomCaller->gdata->wingc, 
-                zoomx, zoomy, zoomw+1, zoomh+1, 61+zoomx, 51+zoomy, 1);
+                  zoomx, zoomy, zoomw+1, zoomh+1, 61+zoomx, 51+zoomy, 1);
 
        if (ZoomCaller->newzoom.fx!=ZoomCaller->zoom.fx || 
            ZoomCaller->newzoom.fy!=ZoomCaller->zoom.fy || 

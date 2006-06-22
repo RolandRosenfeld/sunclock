@@ -2,11 +2,11 @@
 
 In 3.51, support for GIF and PNG images has been ADDED
 
-In 3.55, the VMF format has been SLIGHTLY IMPROVED. Three vector maps are
-now provided in the source package :
+Strating with 3.55/3.56, the VMF format has been SLIGHTLY IMPROVED. Three
+vector maps are now provided in the source package :
   timezones.vmf (time zone boundaries = new default map)
   countries.vmf (political boundaries)
-  landwater.vmf (simple land/water boundaries, used in zoom widget)
+  landwater.vmf (simple land/water boundaries, = default in zoom widget)
 
 Our companion program 'xrmap' can be used to visualize and produce more
 accurate vector maps of the Earth, using the CIA world data bank II and

@@ -109,7 +109,7 @@ int x_offset;					/* offset of xtru from line_start */
 int xtru = 0, ytru = 0; 				/* file position */
 int ytot = 0;						/* 0 <= ytru <= ytot */
 
-int y1, y2; 				  /* 1st, 2nd line of window */
+int yl1, yl2; 				  /* 1st, 2nd line of window */
 int tabsize=4;				  /* tab size */
 int doCtrlC = 0;				/* decode next char from ^C function */
 int doCtrlK = 0;				/* decode next char from ^K function */

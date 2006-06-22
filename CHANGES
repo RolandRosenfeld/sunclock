@@ -10,6 +10,12 @@ Planned versions ... (features to appear in some order)
 - Spherical representation of Earth
 - Moon phases
 
+Version 3.56 June 22, 2006
+
+- Minor bug fixes (segfault bug in -mostly obsolete?- colorlevel 0)
+- added -zoomimage <file> (zoom image file) as new command line option
+  so as to change the vmf file used in the zoom widget.
+
 Version 3.55 June 18, 2006
 
 - The default clock/map image file is now 'timezones.vmf'
@@ -19,7 +25,6 @@ Version 3.55 June 18, 2006
 - Completely reworked the explanations on the VMF format file in VMF.txt
 - Change default zoom mode to 0 (=no attempt to correct aspect ratio
   as default behaviour)
-- added -defimage <file> (default image file) as new command line option
 - Corrected minor bug in the mouse tracking procedure for area selection.
 - Installing now 'emx' in sunclock's SHAREDIR/bin subdirectory, in order to 
   avoid possible conflicts with 'emx' from the xrmap package.

@@ -498,7 +498,7 @@ void show_scr(int fr, int to)
 	/* first line */
 	screen_start++;
 	do {
-		gotoxy(0,fr+y2);
+		gotoxy(0,fr+yl2);
 		if(screen_start<file_end && strlen(screen_start) > xlo) {
 #ifndef X11
 			clreol();
@@ -568,7 +568,7 @@ void scr_update()
 #endif
 	show_pos();
 	lowvideo();
-	gotoxy(x-1,y+y2);
+	gotoxy(x-1,y+yl2);
 #ifdef X11
         show_vbar();
 	draw_cursor();
@@ -577,13 +577,13 @@ void scr_update()
 
 void show_sdn(int line)
 {
-	gotoxy(0,y2+line);
+	gotoxy(0,yl2+line);
 	show_scr(0, screen_height-1);
 }
 
 void show_flag(int x, int g)
 {
-	gotoxy(20+x-1,y1);
+	gotoxy(20+x-1,yl1);
 	putch(g? fsym[x]: '.');
 	flag[x] = g;
 }
@@ -603,7 +603,7 @@ void dialog(int key)
 
 #ifdef X11
 	undraw_cursor();
-	gotoxy(diastart+col,y1);
+	gotoxy(diastart+col,yl1);
 	skey = key & 0xff;
 	if(keve->state & ControlMask) skey &= 0x1f;
 	/* special controls for search&replace Y/N/Esc/! */
@@ -645,7 +645,7 @@ void dialog(int key)
 			default: {
 				if(col < 0 || !first) {
 					col = 0;
-					gotoxy(diastart+col,y1);
+					gotoxy(diastart+col,yl1);
 					clreol();
 				}
 				if (col < dblen) {
@@ -662,7 +662,7 @@ void dialog(int key)
 #else
 	skey = key & 0xff;
 
-	gotoxy(diastart+col,y1);
+	gotoxy(diastart+col,yl1);
 
 	/* special control for search&replace Y/N/Esc/! */
 	if (dialogCB == do_sar) {
@@ -704,7 +704,7 @@ void dialog(int key)
 			default: {
 				if(col < 0 || !first) {
 					col = 0;
-					gotoxy(diastart+col,y1);
+					gotoxy(diastart+col,yl1);
 					clreol();
 				}
 				diabuf[col++] = key;
@@ -720,7 +720,7 @@ void dialog(int key)
 
 void show_note(char *prp)
 {
-	gotoxy(32,y1);
+	gotoxy(32,yl1);
 	clreol();
 	cputs(prp);
 	diastart = outxy.X+2;
@@ -757,7 +757,7 @@ void show_pos()
 
 	if(executive != MAIN) return;
 	highvideo();
-	gotoxy(5,y1);
+	gotoxy(5,yl1);
 	sprintf(tbuf,"%d %d     ", ytru+1, xtru);
 	cputs(tbuf);
 }
@@ -774,7 +774,7 @@ void show_top()
 #else
 	if(executive != MAIN || !exitf) return;
 #endif
-	gotoxy(0,y1);
+	gotoxy(0,yl1);
 	highvideo();
 	clreol();
 	show_pos();
@@ -783,7 +783,7 @@ void show_top()
 	sprintf(tbuf,"   "HELP"=F1   %s", cfdpath);
 	cputs(tbuf);
 	lowvideo();
-	gotoxy(x-1,y+y2);
+	gotoxy(x-1,y+yl2);
 }
 
 /* chdir to working directory and fire up another copy of the editor */
@@ -818,7 +818,7 @@ void show_help(int mode)
 	mk = (void*) -1;
 	clrscr();
 	show_top();
-	gotoxy(0,y2);
+	gotoxy(0,yl2);
 
 #ifdef X11
 
@@ -1047,8 +1047,8 @@ void do_save()
 /* go to top of file and reset to known condition */
 void top()
 {
-	y1 = YTOP;
-	y2 = y1+1;
+	yl1 = YTOP;
+	yl2 = yl1+1;
 	line_start = edbuf;
 	x_offset = 1;
 	xtru = x = 1;
@@ -1191,7 +1191,7 @@ void file_resize(char *s, char *d)
 	*file_end = EOL;	/* last line may not complete */
 	if(!flag[CHG] ) {
 		show_flag(CHG, 1);
-		gotoxy(x-1,y+y2);
+		gotoxy(x-1,y+yl2);
 		clreol();
 	}
 }
@@ -1448,7 +1448,7 @@ void do_sar()
 	if((s =(char*) goto_find(cur_pos,0))) {
 		slen = strlen(sbuf);
 		show_scr(0, screen_height-1);
-		gotoxy(x-1,y+y2);
+		gotoxy(x-1,y+yl2);
 		highvideo();
 		i = slen;
 		sb = s;

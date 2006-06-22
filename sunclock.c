@@ -110,6 +110,8 @@
 */
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <sys/stat.h>
@@ -216,9 +218,9 @@ char * MapClassName = NULL;
 char * AuxilClassName = NULL;
 
 char * Default_img_file = NULL;
-char * Landwater_img_file = NULL;
 char * Clock_img_file = NULL;
 char * Map_img_file = NULL;
+char * Zoom_img_file = NULL;
 
 char * share_maps_dir = NULL;
 char * image_dir = NULL;
@@ -253,22 +255,22 @@ char    *Color[NUMPIXELS];
 
 char    *DefaultColor[NUMPIXELS] = {
 "White", "White", "Grey92", "Grey92", "Grey92", 
-"White", "White", "White",
+"White", "White", "Grey84", "White", 
 "Black", "Black", "Black", 
-"Grey84", "Black", "Grey50", "Grey95", "White",
+"Black", "Grey50", "Grey95", "White",
 "Black", "Black", 
 "Black", "Black", "Red", "Black",
 "SkyBlue2", "Brown", "SkyBlue2", "Blue", "Magenta", 
 "Red", "Orange", "Red", "Red3", "Pink1", "Pink2",
 "Yellow", "Khaki", "Black", "Black", "Black", "Black"};
 
-#define FALLBACKTOWHITE 8
+#define FALLBACKTOWHITE 9
 
 char *colorfield[NUMPIXELS] =
-{ "clockbg", "mapbg", "menubg", "clockstripbg", "mapstripbg", 
-  "zoombg", "optionbg", "star", 
+{ "clockbg", "mapbg", "menubg", "clockstripbg", "mapstripbg",
+  "zoombg", "optionbg", "buttonbg", "star", 
   "clockfg", "mapfg", "menufg",  
-  "buttonbg", "buttonfg1", "buttonfg2", "buttonfg3", "buttonfg4",
+  "buttonfg1", "buttonfg2", "buttonfg3", "buttonfg4",
   "clockstripfg", "mapstripfg", 
   "zoomfg", "optionfg", "weak", "root",
   "caret", "change", "choice", "directory", "image", "cityname",
@@ -485,7 +487,7 @@ Usage()
 "**" SP"[-language name] [-rcfile file]\n"
      SP"[-command string] [-helpcommand string]\n"
      SP"[-mapmode * <L,C,S,D,E>] [-dateformat string1|string2|...]\n"
-     SP"[-defimage file] [-image file] [-clockimage file] [-mapimage file]\n"
+     SP"[-image file] [-clockimage file] [-mapimage file] [-zoomimage file]\n"
      SP"[-clockgeom <geom>] [-mapgeom <geom>]\n"
      SP"[-auxilgeom <geom>] [-menugeom <geom>] [-selgeom <geom>]\n"
      SP"[-zoomgeom <geom>] [-optiongeom <geom>] [-urbangeom <geom>]\n"
@@ -592,7 +594,7 @@ initValues()
         StringReAlloc(&image_dir, share_maps_dir);
 
         StringReAlloc(&Default_img_file, SHAREDIR"/earthmaps/vmf/timezones.vmf");
-        StringReAlloc(&Landwater_img_file, SHAREDIR"/earthmaps/vmf/landwater.vmf");
+        StringReAlloc(&Zoom_img_file, SHAREDIR"/earthmaps/vmf/landwater.vmf");
         StringReAlloc(&Clock_img_file, Default_img_file);
         StringReAlloc(&Map_img_file, Default_img_file);
    
@@ -1411,12 +1413,6 @@ char **                argv;
                         getGeom(*++argv, &MapGeom);
 			option_changes |= 16;
                 }
-                else if (!strcasecmp(*argv, "-defimage")) {
-		        StringReAlloc(&Default_img_file, *++argv);
-                        StringReAlloc(&Clock_img_file, *argv);
-                        StringReAlloc(&Map_img_file, *argv);
-		        option_changes |= 32|64;
-		}
                 else if (!strcasecmp(*argv, "-image")) {
                         StringReAlloc(&Clock_img_file, *++argv);
                         StringReAlloc(&Map_img_file, *argv);
@@ -1430,6 +1426,10 @@ char **                argv;
                         StringReAlloc(&Map_img_file, *++argv);
 			option_changes |= 64;
                 }
+                else if (!strcasecmp(*argv, "-zoomimage")) {
+		        StringReAlloc(&Zoom_img_file, *++argv);
+		        option_changes |= 2;
+		}
                 else if (!strcasecmp(*argv, "-auxilgeom")) {
                         getGeom(*++argv, &MenuGeom);
 			option_changes |= 2;
@@ -2866,7 +2866,8 @@ int l, mode;
     char u = 0, test;
     
     if (!s || !strlen(s)) return;
-    if (mode<=1) {
+
+    if (mode <= 1) {
        font = Context->gdata->font[COORDFONT];
        pixel = Context->gdata->pixel[PARALLELCOLOR-mode];
     } else
@@ -2876,7 +2877,10 @@ int l, mode;
     } else
     if (mode >= 3) {
        font = Context->gdata->font[LABELFONT];
-       pixel = Context->vmfpixels[mode-3];
+       if (Context->flags.colorlevel <= MANYCOLORS)
+          pixel = Context->gdata->pixel[CITYNAMECOLOR];	   
+       else
+          pixel = Context->vmfpixels[mode-3];
     }
 
     if (!font) return;
@@ -2896,12 +2900,16 @@ int l, mode;
     if (!textpix) {
        textpix = XCreatePixmap(dpy, Context->win, textwidth, textheight, 1);
     }
-    /*printf("%d (%s): %d/%d %d/%d\n", mode, s, textwidth, w, textheight, h);*/
 
     XSetForeground(dpy, Context->gdata->pixgc, black);
     XFillRectangle(dpy, textpix, Context->gdata->pixgc, 0, 0, w, h);
     XSetForeground(dpy, Context->gdata->pixgc, white);
     XSetFont(dpy, Context->gdata->pixgc, font->fid);
+    if (Context->flags.colorlevel <= MANYCOLORS) {
+       XDrawString(dpy, Context->mappix, Context->gdata->pixgc, 
+		   x+1, y-dy, s, l);
+       return;
+    }
     XDrawString(dpy, textpix, Context->gdata->pixgc, 0, dy, s, l);
     xim = XGetImage(dpy, textpix, 0, 0, w, h, 1, XYPixmap);
     if (!xim) return;
@@ -2910,7 +2918,8 @@ int l, mode;
        if (y-dy+j >= (int)Context->geom.height) break;
        for (i=0; i<w; ++i) {
 	  if ((i&7) == 0) u = xim->data[j*xim->bytes_per_line+i/8];
-          if (u&test) SetPixelLight(Context, x+i+1, y-dy+j, pixel);
+          if (u&test)
+	     SetPixelLight(Context, x+i+1, y-dy+j, pixel);
 	  u = (bigendian)? u<<1 : u>>1;
        }
     }
@@ -4366,8 +4375,8 @@ struct Sundata * Context;
 
    if (gflags.colorlevel < FULLCOLORS) {
    retry:
-     readVMF(path, Context);
-     if (Context->bits) {
+     code = readVMF(path, Context);
+     if (code==0 && Context->bits) {
        Context->mappix = XCreatePixmapFromBitmapData(dpy, Root,
           Context->bits, Context->geom.width,
           Context->geom.height, 0, 1, 1);
