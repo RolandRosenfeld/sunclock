@@ -3142,9 +3142,9 @@ struct Sundata * Context;
 {
    int ilon, ilat, width, dw = 0;
    struct TextLabel * label;
-   if(!Context->wintype) return;
    char *text, *text0, *ptr;
 
+   if(!Context->wintype) return;
    label = Context->label;
    while (label) if (label->text && *label->text) {
       ilon = int_longitude(Context, label->lon);

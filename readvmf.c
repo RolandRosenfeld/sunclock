@@ -29,6 +29,7 @@
 #include <math.h>
 #ifdef ZLIB
 #include <zlib.h>
+#include <errno.h>
 #endif
 
 #include "sunclock.h"
@@ -433,6 +434,8 @@ struct Sundata * Context;
   char *str, *ptr;
 #ifdef ZLIB
   gzFile * fd;
+  int plen;
+  char *zpath;
 #else
   FILE *fd;
 #endif
@@ -460,6 +463,28 @@ struct Sundata * Context;
     fprintf(stderr, "Loading vector map %s\n", path);
 #ifdef ZLIB
   fd = gzopen(path, "r");
+  #define	Z_PATH_EXT	".gz"
+  #define	Z_PATH_LEN	( sizeof( Z_PATH_EXT)- 1)
+  if ( fd == NULL && errno == ENOENT
+       && ( ( plen= strlen( path)) < Z_PATH_LEN
+            || strcmp( &path[ plen- Z_PATH_LEN], Z_PATH_EXT) != 0))
+    {	/* try to open gzip'd file... (ThMO) */
+  #if	__GNUC__ >= 2
+      zpath= alloca( plen+ Z_PATH_LEN+ 1);
+  #else
+      zpath= salloc( plen+ Z_PATH_LEN+ 1);
+  #endif
+      memcpy( zpath, path, plen);
+      memcpy( zpath+ plen, Z_PATH_EXT, Z_PATH_LEN+ 1);
+      if ( verbose)
+        fprintf( stderr, "Try loading vector map %s\n", zpath);
+      fd= gzopen( zpath, "r");
+  #if	!( __GNUC__ >= 2)
+      free( zpath);
+  #endif
+    }
+  #undef	Z_PATH_EXT
+  #undef	Z_PATH_LEN
 #else
   fd = fopen(path, "r");
 #endif
@@ -627,7 +652,7 @@ struct Sundata * Context;
         if (!str) goto abort;
 	run_flag = atoi(str);
         if (reformat) 
-           printf("flag %d\n\n", run_flag);
+           printf("flag %d\n", run_flag);
      } else
      if (!strcmp(str, "opencurves")) {
         if (reformat) 
@@ -705,6 +730,7 @@ struct Sundata * Context;
         if (reformat) {
            printf("\nlabel %d %d %d ", count, color, position);
            printf(coordformat, fy, fx);
+           printf("\n");
         }
         ++count;
         ptr = NULL;

@@ -248,6 +248,8 @@ unsigned int *w, *h;
       return 1;
    }
    
+   if (parent == root) parent = win;
+
    XGetGeometry(dpy, parent, &root, x, y, w, h, &b, &d);
 
    XTranslateCoordinates(dpy, win, parent, 0, 0, x, y, &junk);
@@ -2142,7 +2144,6 @@ activateOption()
         Sundata *Context;
 	Flags oldflags;
         ZoomSettings oldzoom;
-	char *oldbf, *oldsf;
         int i, size;
 	short *ptr, *oldptr, *newptr;
 	double *zptr, *zoldptr, *znewptr;

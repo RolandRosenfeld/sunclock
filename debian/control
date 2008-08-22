@@ -2,8 +2,9 @@ Source: sunclock
 Section: x11
 Priority: optional
 Maintainer: Roland Rosenfeld <roland@debian.org>
-Standards-Version: 3.6.2
-Build-Depends: debhelper (>= 4), libx11-dev, libxpm-dev, libxext-dev, xutils, libjpeg62-dev, zlib1g-dev, libpng12-dev
+Standards-Version: 3.8.0
+Build-Depends: debhelper (>= 5), libx11-dev, libxpm-dev, xutils-dev, libjpeg62-dev, zlib1g-dev, libpng12-dev, dpatch
+Homepage: http://www.arvernes.com/wiki/index.php/Sunclock
 
 Package: sunclock
 Architecture: any
@@ -19,8 +20,6 @@ Description: fancy clock showing time and geographical data
  Sunclock can display meridians, parallels, tropics and arctic
  circles.  It has builtin functions that accelerate the speed of time
  and show the evolution of seasons.
- .
-  Homepage: http://frmas.free.fr/li_1.htm
 
 Package: sunclock-maps
 Architecture: all
@@ -35,5 +34,3 @@ Description: sunclock vector graphic maps
  longitude, and the mutual distances of arbitrary locations on Earth.
  .
  This package contains the vector graphic earthmaps.
- .
-  Homepage: http://frmas.free.fr/li_1.htm

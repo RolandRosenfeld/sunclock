@@ -1,9 +1,64 @@
+sunclock (3.57-1) unstable; urgency=low
+
+  * New upstream version 3.57.
+
+ -- Jean-Pierre Demailly <demailly@fourier.ujf-grenoble.fr>  Fri, 22 Aug 2008 16:27:42 +0200
+
+sunclock (3.56-5) unstable; urgency=low
+ 
+  * Build-Depends on xutils-dev instead of xutils, because imake was moved
+    (Closes: #485218)
+  * Upgrade to Standards-Version 3.8.0:
+    - Fix Homepage header in control file.
+  * 08_manpage_hyphen.dpatch: Fix hyphen used as minus sign in man page.
+
+ -- Roland Rosenfeld <roland@debian.org>  Sat, 14 Jun 2008 11:46:24 +0200
+
+sunclock (3.56-4) unstable; urgency=low
+ 
+  * Migrate all patches to dpatch mechanism.
+  * 06_CET-1CDT: Fix timezones for Budapest, Warsaw, Bratislava and the
+    Torun Radiotelescope from CET-2CDT to CET-1CDT (Closes: #438761).
+  * 07_zlib_largefile_workaround: Workaround for zlib.h bug, which
+    requires _LARGEFILE64_SOURCE if _FILE_OFFSET_BITS is set to 64
+    (see #439980) (Closes: #438924).
+
+ -- Roland Rosenfeld <roland@debian.org>  Sun, 09 Sep 2007 15:41:54 +0200
+ 
+sunclock (3.56-3) unstable; urgency=low
+ 
+  * Do not strip emx in Imakefile install (Closes: #438076).
+  * Check existence of Makefile instead of avoiding output of make clean.
+  * menu: move from Apps/Tools to Applications/Science/Geoscience.
+
+ -- Roland Rosenfeld <roland@debian.org>  Sat, 18 Aug 2007 14:21:56 +0200
+ 
+
+sunclock (3.56-2) unstable; urgency=low
+
+  * Update debian/watch file.
+  * Update debian/copyright.
+  * Remove $(XLIB) from LOCAL_LIBRARIES in Imakefiles. This removes
+    unnecessary libXext from binaries.
+
+ -- Roland Rosenfeld <roland@debian.org>  Sat, 30 Sep 2006 10:50:42 +0200
+
+sunclock (3.56-1) unstable; urgency=low
+
+  * New upstream version 3.56.
+  * Avoid compressing MANUAL.emx, because this has to be opened by emx.
+  * Upgrade to debhelper v5.
+  * Upgrade to Standards-Version 3.7.2 (no changes).
+  * Install emx to /usr/share/sunclock/bin and fix all references to this.
+
+ -- Roland Rosenfeld <roland@debian.org>  Sun,  2 Jul 2006 14:20:54 +0200
+
 sunclock (3.54.1-1) unstable; urgency=low
 
   * New upstream version 3.54.1.
   * Again install the emx shared libraries to /usr/share/sunclock/emx
     instead of /usr/share/editkit.
-  * Ged rid of circular dependeny between sunclock and sunclock-maps.
+  * Ged rid of circular dependency between sunclock and sunclock-maps.
     sunclock-maps now conflicts with the old version of sunclock, which it
     was split off, to avoid problems with files moving from one package to
     the other (Closes: #339927).

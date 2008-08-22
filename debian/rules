@@ -1,11 +1,14 @@
 #!/usr/bin/make -f
 #
-# (C) 1998-2005 Roland Rosenfeld <roland@debian.org>, based on
-# Sample debian/rules that uses debhelper. 
-# This file is public domain software, originally written by Joey Hess.
+# (C) 2002-2008 Roland Rosenfeld <roland@debian.org>, based on
+# Sample debian/rules that uses debhelper.
+# This file is public domain software, originally written by Joey Hess. 
 
 # Uncomment this to turn on verbose mode. 
 #export DH_VERBOSE=1
+
+# Include dpatch stuff.
+include /usr/share/dpatch/dpatch.make
 
 INSTDIR=`pwd`/debian/sunclock
 INSTMAPDIR=`pwd`/debian/sunclock-maps
@@ -23,21 +26,23 @@ build-stamp:
 
 	xmkmf
 	$(MAKE) CDEBUGFLAGS="$(OPTIMIZE) -Wall -g" \
-		XAPPLOADDIR=/etc/X11/app-defaults SELINUX_LIBS=
+		XAPPLOADDIR=/etc/X11/app-defaults SELINUX_LIBS= \
+		DOCDIR=/usr/share/doc/sunclock
 
 	touch build-stamp
 
-clean:
+clean: clean1 unpatch
+clean1:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp 
 
-	-$(MAKE) clean
+	[ ! -f Makefile ] || $(MAKE) clean
 	rm -f Makefile Makefile.bak
 
 	dh_clean
 
-install: build
+install: build-stamp
 	dh_testdir
 	dh_testroot
 	dh_clean -k
@@ -47,25 +52,23 @@ install: build
 		BINDIR=/bin MANDIR=/share/man/man1 MANSUFFIX=1 \
 		DOCDIR=/usr/share/doc/sunclock
 
-#	move emx to /usr/lib/sunclock
-	mv $(INSTDIR)/usr/bin/emx $(INSTDIR)/usr/lib/sunclock/emx
-
 # 	install emx documentation
-	mv $(INSTDIR)/usr/share/sunclock/emx/README \
+	mv $(INSTDIR)/usr/share/sunclock/editkit/README \
 		$(INSTDIR)/usr/share/doc/sunclock/README.emx
-	install -m644 editkit/MANUAL.emacs \
+	mv $(INSTDIR)/usr/share/sunclock/editkit/MANUAL.emacs \
 		$(INSTDIR)/usr/share/doc/sunclock/MANUAL.emx
 	install -m644 editkit/CHANGELOG \
 		$(INSTDIR)/usr/share/doc/sunclock/changelog.emx
 	rm -f $(INSTDIR)/usr/share/man/man1/emx.1
 
 # 	little hack to have Sunclockrc in /etc:
-	mv $(INSTDIR)/usr/share/sunclock/Sunclockrc $(INSTDIR)/etc
-	(cd $(INSTDIR)/usr/share/sunclock; ln -s /etc/Sunclockrc)
+#	Oddly, Debian seems to prefer having Sunclockrc in /etc ...
+#	mv $(INSTDIR)/usr/share/sunclock/Sunclockrc $(INSTDIR)/etc
+#	(cd $(INSTDIR)/usr/share/sunclock; ln -s /etc/Sunclockrc)
 
 #	fix name of swedish i18n file:
-	mv $(INSTDIR)/usr/share/sunclock/i18n/Sunclock.se \
-	   $(INSTDIR)/usr/share/sunclock/i18n/Sunclock.sv
+#	mv $(INSTDIR)/usr/share/sunclock/i18n/Sunclock.se \
+#	   $(INSTDIR)/usr/share/sunclock/i18n/Sunclock.sv
 
 	for x in wm_icons/*.xpm; do \
 		install -m644 $$x $(INSTDIR)/usr/share/pixmaps/; \
@@ -78,7 +81,7 @@ install: build
 #	dh_install
 
 # Build architecture-independent files here.
-binary-indep: build install
+binary-indep: build-stamp install
 	dh_testdir -i
 	dh_testroot -i
 	dh_installchangelogs -i CHANGES
@@ -107,7 +110,7 @@ binary-indep: build install
 	dh_builddeb -i
 
 # Build architecture-dependent files here.
-binary-arch: build install
+binary-arch: build-stamp install
 	dh_testdir -a
 	dh_testroot -a
 	dh_installchangelogs -a CHANGES
@@ -127,7 +130,7 @@ binary-arch: build install
 	dh_installman -a
 	dh_strip -a
 	dh_link -a
-	dh_compress -a
+	dh_compress -a -XMANUAL.emx
 	dh_fixperms -a
 #	dh_perl -a
 #	dh_python -a
@@ -139,4 +142,6 @@ binary-arch: build install
 	dh_builddeb -a
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install
+
+.PHONY: build clean binary-indep binary-arch binary install patch unpatch \
+	clean1

@@ -10,6 +10,14 @@ Planned versions ... (features to appear in some order)
 - Spherical representation of Earth
 - Moon phases
 
+Version 3.57 August 22, 2008
+
+- Included patch from Thomas M.Ott <thmo-13@gmx.de> : improvement of
+  German localization and management of gzip-compressed *.vmf files.
+- Corrected minor defects in timezones.vmf
+- Fixed somewhat -reformat option.
+- Imakefile change : VMF files now installed compressed by default.
+
 Version 3.56 June 22, 2006
 
 - Minor bug fixes (segfault bug in -mostly obsolete?- colorlevel 0)

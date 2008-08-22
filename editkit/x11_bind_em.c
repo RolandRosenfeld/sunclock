@@ -81,7 +81,7 @@ void key_func(int key)
 		switch(key) {
 		case XK_Tab		: word_mark(); break;			/* ^Tab mark cursor word */
 #ifndef MINIMAL
-		case XK_F1		: new_edit(SHAREDIR"/MANUAL.emacs"); break;			/* ^F1 open emx Manual */
+		case XK_F1		: new_edit(DOCDIR"/MANUAL.emx"); break;			/* ^F1 open emx Manual */
 #endif
 		case XK_F9		: new_edit(""); break;			/* ^F3 open new emx */
 		case XK_Home	: top(); break; 				/* ^Home bof */

@@ -1,6 +1,6 @@
 ?package(sunclock): \
 	needs="X11" \
-	section="Apps/Tools" \
+	section="Applications/Science/Geoscience" \
 	title="SunClock" \
 	longtitle="Sun Clock: Show illuminated portion of Earth" \
 	command="/usr/bin/sunclock" \

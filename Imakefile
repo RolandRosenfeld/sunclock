@@ -10,6 +10,12 @@ BINDIR=/X11R6/bin
 XCOMM Name of share subdirectory of DESTDIR:
 SHAREDIR=/share/sunclock
 
+XCOMM Name of library subdirectory of DESTDIR:
+EMXBINDIR=/share/sunclock/bin
+
+XCOMM Name of library subdirectory of DESTDIR:
+LIBDIR=/lib/sunclock
+
 XCOMM Name of DOCDIR's subdirectories of DESTDIR:
 DOCDIR=/X11R6/lib/X11/doc 
 DOCHTMLDIR=/X11R6/lib/X11/doc/html
@@ -48,14 +54,14 @@ CCOPTIONS = -Ae $(XPMINC) $(JINC) -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
 #ZLIBDIR=-L/usr/lib
 #JINC=-I/usr/include
 
-CCOPTIONS=-O -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\"
+CCOPTIONS=-O -DZLIB -DSHAREDIR=\"$(DESTDIR)$(SHAREDIR)\" -DEMXBINDIR=\"$(DESTDIR)$(EMXBINDIR)\"
 #endif
 
 SRCS=sunclock.c astro.c widgets.c tildepath.c dirlist.c \
      readvmf.c readxpm.c readgif.c readjpeg.c readpng.c
 OBJS=sunclock.o astro.o widgets.o tildepath.o dirlist.o \
      readvmf.o readxpm.o readgif.o readjpeg.o readpng.o
-LOCAL_LIBRARIES=$(XLIB) $(XPMLIBDIR) -lXpm $(ZLIBDIR) -lz \
+LOCAL_LIBRARIES=-lX11 $(XPMLIBDIR) -lXpm $(ZLIBDIR) -lz \
      $(JLIBDIR) -ljpeg -lpng -lm
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
@@ -64,22 +70,24 @@ ComplexProgramTarget(sunclock)
 all::
 	cd editkit ; xmkmf ; make emx \
           DESTDIR=$(DESTDIR) \
-	  BINDIR=$(SHAREDIR)/bin \
-	  MANDIR=$(SHAREDIR)/editkit \
-	  SHAREDIR=$(DESTDIR)$(SHAREDIR)/editkit
+	  BINDIR=$(EMXBINDIR) \
+	  MANDIR=$(DESTDIR)$(SHAREDIR)/editkit \
+	  SHAREDIR=$(DESTDIR)$(SHAREDIR)/editkit \
+          DOCDIR=$(DOCDIR)
 
 install.man::
 	if [ -r $(DESTDIR)$(MANDIR)/sunclock.1x.gz ] ; \
 	   then gzip -f $(DESTDIR)$(MANDIR)/sunclock.1x ; fi
 
-install:: install.man
+install:: all install.man
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/i18n
 	cp -f Sunclockrc $(DESTDIR)$(SHAREDIR)
 	cd i18n ; rm -f *~ ; cp -f Sunclock.* $(DESTDIR)$(SHAREDIR)/i18n
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
 	cd vmf ; rm -f *~ ; cp -f * $(DESTDIR)$(SHAREDIR)/earthmaps/vmf
-	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/bin
-	install -c -s editkit/emx $(DESTDIR)$(SHAREDIR)/bin
+	cd $(DESTDIR)$(SHAREDIR)/earthmaps/vmf ; gzip -f *.vmf
+	$(MKDIRHIER) $(DESTDIR)$(EMXBINDIR)
+	install -c -s editkit/emx $(DESTDIR)$(EMXBINDIR)/
 	$(MKDIRHIER) $(DESTDIR)$(SHAREDIR)/editkit
 	cd editkit ; install -c -m 444 rc.example README MANUAL.emacs \
 		$(DESTDIR)$(SHAREDIR)/editkit
@@ -91,7 +99,7 @@ clean::
 	cd editkit ; xmkmf ; make clean DESTDIR=$(DESTDIR)
 
 realclean:: clean
-	rm -f Makefile
+	rm -f Makefile build-stamp
 	cd editkit ; xmkmf ; make realclean DESTDIR=$(DESTDIR)
 
-
+distclean:: realclean

@@ -511,7 +511,7 @@ shortcut 'x'. Default is empty command.
 .BI "\-editorcommand " string
 Specify an external file editor program that will be called through keyboard 
 shortcut double 'h' (call help). Default is 
-"/usr/share/sunclock/bin/emx \-edit 0 \-fn 9x15"
+"/usr/lib/sunclock/emx \-edit 0 \-fn 9x15"
 (included emx editor, in no-edit mode...)
 .TP
 .BI "\-jump " "number[unit] (where unit=s,m,h,d,M,Y)"

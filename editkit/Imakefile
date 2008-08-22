@@ -33,9 +33,9 @@ XCOMM
 XCOMM Compile options:
 XCOMM
 
-CFLAGS = -O2 -fomit-frame-pointer -pipe -Wall -DTHREED -DGREEK -DJUSTIFY -DSHAREDIR="\"$(SHAREDIR)\""
+CFLAGS = -O2 -fomit-frame-pointer -pipe -Wall -DTHREED -DGREEK -DJUSTIFY -DSHAREDIR="\"$(SHAREDIR)\"" -DDOCDIR="\"$(DOCDIR)\""
 
-LOCAL_LIBRARIES=$(XLIB)
+LOCAL_LIBRARIES=-lX11
 DEPLIBS=		# I don't know what I'm doing, and I hate imake!
 
 SRCS=x11.c
